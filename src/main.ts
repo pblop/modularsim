@@ -1,17 +1,44 @@
-import type Config from "./types/config.js";
-import ISimulator from "./types/simulator";
+import type { ModuleConfig, Config } from "./types/config.js";
+import { ISimulator, SimulatorBase, SimulatorConstructor } from "./general/simulator.js";
+import { ModuleConstructor } from "./general/module.js";
 
-async function loadConfigFromUrl(url: string): Promise<Config> {
-  const response = await fetch(url);
-  return response.json();
+const DEFAULT_CONFIG_URL = "config.json";
+
+class Controller {
+  async init() {
+    // Load config from URL
+    const configUrl = this.getConfigURL();
+    const config = await this.loadConfigFromUrl(configUrl);
+
+    // Load the code for the modules and the simulator.
+    const Simulator = (await import(config.simulator.url)).default as SimulatorConstructor;
+    const modules = await this.loadModules(config.simulator.modules);
+    const simulator = new Simulator(config.simulator, modules);
+  }
+
+  getConfigURL(): string {
+    const query = new URLSearchParams(window.location.search);
+    return query.get("config") ?? DEFAULT_CONFIG_URL;
+  }
+  async loadConfigFromUrl(url: string): Promise<Config> {
+    const response = await fetch(url);
+    return response.json();
+  }
+
+  // Load the modules in parallel.
+  async loadModules(modules: ModuleConfig[]): Promise<ModuleConstructor[]> {
+    const promises = [];
+    for (const module of modules) {
+      promises.push(this.loadModule(module));
+    }
+    return await Promise.all(promises);
+  }
+  async loadModule(module_config: ModuleConfig): Promise<ModuleConstructor> {
+    console.debug("Controller", `Loading module ${module_config.name} from ${module_config.url}`);
+    const Module = (await import(module_config.url)).default as ModuleConstructor;
+    return Module;
+  }
 }
 
-// Load config from URL
-const query = new URLSearchParams(window.location.search);
-const configUrl = query.get("config") ?? "config.json";
-console.log("Cargando la configuración de la url: " + configUrl);
-const config = (await loadConfigFromUrl(configUrl)) as Config;
-
-// Load simulator
-const Simulator = (await import(config.simulator.url)).default as ISimulator;
-const simulator = new Simulator(config.simulator);
+const controller = new Controller();
+controller.init();

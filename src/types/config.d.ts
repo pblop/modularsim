@@ -4,7 +4,7 @@ export type SimulatorConfig = {
   modules: ModuleConfig[];
 };
 
-type ModuleConfig = {
+export type ModuleConfig = {
   name: string;
   type: string;
   url: string;
@@ -22,10 +22,8 @@ type ProgramConfig = {
   url: string;
 };
 
-type Config = {
+export type Config = {
   simulator: SimulatorConfig;
   views: ExtensionConfig[];
   programs: ProgramConfig[];
 };
-
-export default Config;

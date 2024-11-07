@@ -1,14 +1,16 @@
 {
   "simulator": {
     "name": "Simulator",
-    "url": "m6809/base.js",
+    "url": "./m6809/base.js",
     "modules": [
       {
         "name": "Memory",
         "type": "memory",
-        "url": "m6809/memory.js",
+        "url": "./m6809/memory.js",
         "config": {
-          "size": 65536
+          "size": 65536,
+          "start": 0,
+          "type": "ram"
         }
       }
     ]
@@ -16,7 +18,7 @@
   "extensions": [
     {
       "name": "Extension 1",
-      "url": "exts/extension1.js",
+      "url": "./exts/extension1.js",
       "config": {
         "foo": "bar"
       }
@@ -25,7 +27,7 @@
   "programs": [
     {
       "name": "Hola Mundo",
-      "url": "progs/hola-mundo.s19"
+      "url": "./progs/hola-mundo.s19"
     }
   ]
 }

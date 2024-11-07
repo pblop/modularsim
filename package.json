@@ -9,7 +9,7 @@
     "build-public": "cp -r ./public/* ./dist/",
     "build": "npm run clean && npm run build-ts && npm run build-public",
     "start": "serve -l 8080 ./dist/",
-    "dev": "nodemon -e ts,js,json --watch './src/*' --exec 'npm run build && npm run start'"
+    "dev": "nodemon -e ts,js,json,html --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start'"
   },
   "devDependencies": {
     "nodemon": "^3.1.7",
