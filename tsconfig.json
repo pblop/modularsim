@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    // Project options
+    "lib": ["ESNext", "dom"],
+    "target": "es2022",
+    "outDir": "./dist",
+    "module": "es2022",
+
+    // Source map
+    "sourceMap": true,
+    "sourceRoot": "/source/",
+
+    "strict": true
+    // Strict checks
+    // "alwaysStrict": true,
+    // "allowUnreachableCode": false,
+    // "noImplicitAny": true
+  },
+  "include": ["./src/**/*.ts"]
+}

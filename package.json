@@ -1,0 +1,22 @@
+{
+  "name": "tfg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clear": "rm -r ./dist/",
+    "build-ts": "tsc && cp -r ./src/ ./dist/source/",
+    "build-public": "cp -r ./public/* ./dist/",
+    "build": "npm run clear && npm run build-ts && npm run build-public",
+    "start": "serve -l 8080 ./dist/",
+    "dev": "nodemon -e ts,js,json --watch './src/*' --exec 'npm run build && npm run start'"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7",
+    "serve": "^11.3.2",
+    "typescript": "^4.3.5"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GPL-3.0-or-later"
+}
