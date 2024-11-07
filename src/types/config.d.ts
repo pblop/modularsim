@@ -24,7 +24,7 @@ type ProgramConfig = {
 
 type Config = {
   simulator: SimulatorConfig;
-  extensions: ExtensionConfig[];
+  views: ExtensionConfig[];
   programs: ProgramConfig[];
 };
 

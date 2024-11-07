@@ -1,24 +1,24 @@
-import type Config from "./types/config.js";
+import type Config from "types/config.js";
 
 const config: Config = {
   simulator: {
     name: "Simulator",
-    url: "/m6809/base.js",
+    url: "m6809/base.js",
     modules: [
       {
         name: "Memory",
         type: "memory",
-        url: "/m6809/memory.js",
+        url: "m6809/memory.js",
         config: {
           size: 0x10000,
         },
       },
     ],
   },
-  extensions: [
+  views: [
     {
       name: "Extension 1",
-      url: "/exts/extension1.js",
+      url: "exts/extension1.js",
       config: {
         foo: "bar",
       },
@@ -27,7 +27,7 @@ const config: Config = {
   programs: [
     {
       name: "Hola Mundo",
-      url: "/progs/hola-mundo.s19",
+      url: "progs/hola-mundo.s19",
     },
   ],
 };
