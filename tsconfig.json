@@ -10,7 +10,9 @@
     "sourceMap": true,
     "sourceRoot": "/source/",
 
-    "strict": true
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true
     // Strict checks
     // "alwaysStrict": true,
     // "allowUnreachableCode": false,
