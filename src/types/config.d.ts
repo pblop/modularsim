@@ -1,4 +1,4 @@
-type SimulatorConfig = {
+export type SimulatorConfig = {
   name: string;
   url: string;
   modules: ModuleConfig[];
