@@ -19,9 +19,9 @@ class Memory implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["memory:read", "memory:write"],
+			provided: ["memory:read:result"],
       required: [],
-      optional: [],
+			optional: ["memory:read", "memory:write"],
     };
   }
 
