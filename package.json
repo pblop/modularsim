@@ -12,6 +12,7 @@
     "dev": "nodemon -e ts,js,json,html --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start'"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "nodemon": "^3.1.7",
     "serve": "^11.3.2",
     "typescript": "^4.3.5"

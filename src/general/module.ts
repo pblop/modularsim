@@ -1,14 +1,10 @@
-import { EventDeclaration } from "../types/event";
-import { ISimulator } from "./simulator";
+import type { EventDeclaration } from "../types/event";
+import type { ISimulator } from "./simulator";
 
-export interface IModule {}
-
-export abstract class ModuleBase implements IModule {
-  constructor(config: any | undefined, simulator: ISimulator) {}
-
-  abstract getEventDeclaration(): EventDeclaration;
+export interface IModule {
+	getEventDeclaration(): EventDeclaration;
 }
 
 export type ModuleConstructor = {
-  new (config: any | undefined, simulator: ISimulator): ModuleBase;
+	new (config: Record<string, unknown> | undefined, simulator: ISimulator): IModule;
 };
