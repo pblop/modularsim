@@ -1,8 +1,8 @@
 import type { SimulatorConfig } from "../types/config.js";
 import type { ModuleConstructor } from "./module.js";
-import type { TypedEventEmitter } from "../types/event.js";
+import type { TypedEventTransceiver } from "../types/event.js";
 
-export interface ISimulator extends TypedEventEmitter {}
+export interface ISimulator extends TypedEventTransceiver {}
 
 export type SimulatorConstructor = {
 	new (config: SimulatorConfig, modules: ModuleConstructor[]): ISimulator;

@@ -17,7 +17,7 @@ export type EventParams<E extends EventNames> = EventMap[E];
 
 type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
 // Typed event emitter interface.
-export interface TypedEventEmitter {
+export interface TypedEventTransceiver {
   on<E extends EventNames>(event: E, listener: EventCallback<E>): void;
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void;
 }

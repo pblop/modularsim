@@ -8,13 +8,13 @@ export type ModuleConfig = {
   name: string;
   type: string;
   url: string;
-  config?: any;
+  config?: Record<string, unknown>;
 };
 
 type ExtensionConfig = {
   name: string;
   url: string;
-  config?: any;
+  config?: Record<string, unknown>;
 };
 
 type ProgramConfig = {

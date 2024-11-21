@@ -1,6 +1,6 @@
 import type { IModule } from "../general/module.js";
 import type { ISimulator } from "../general/simulator.js";
-import type { EventDeclaration } from "../types/event.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../types/event.js";
 
 type MemoryType = "ram" | "rom";
 type MemoryConfig = {
@@ -20,7 +20,7 @@ function validate_memory_config(config: Record<string, unknown>): MemoryConfig {
 }
 
 class Memory implements IModule {
-	simulator: ISimulator;
+	event_transceiver: TypedEventTransceiver;
 
 	memory: Uint8Array;
 	start: number;
@@ -37,7 +37,8 @@ class Memory implements IModule {
 	constructor(config: Record<string, unknown> | undefined, simulator: ISimulator) {
 		console.log("[Memory] Initializing module.");
 
-		this.simulator = simulator;
+		// We use the simulator to emit/receive events.
+		this.event_transceiver = simulator;
 
 		// Verify that configuration is ok.
 		if (!config) throw new Error("[Memory] No configuration provided");
@@ -49,13 +50,13 @@ class Memory implements IModule {
 		this.start = start;
 		this.type = type;
 
-		this.add_listeners();
+		this.addListeners();
 		console.log(`[Memory] Initialized ${type} memory at ${start} with size ${size}`);
 	}
 
-	add_listeners(): void {
-		this.simulator.on("memory:read", this.on_memory_read);
-		this.simulator.on("memory:write", this.on_memory_write);
+	addListeners(): void {
+		this.event_transceiver.on("memory:read", this.on_memory_read);
+		this.event_transceiver.on("memory:write", this.on_memory_write);
 	}
 	on_memory_read = (address: number): void => {
 		// If the address is out of bounds, do nothing.
@@ -63,7 +64,7 @@ class Memory implements IModule {
 
 		const data = this.memory[address - this.start];
 		// TODO: Add delays here.
-		this.simulator.emit("memory:read:result", address, data);
+		this.event_transceiver.emit("memory:read:result", address, data);
 	};
 	on_memory_write = (address: number, data: number): void => {
 		// If the address is out of bounds, do nothing.

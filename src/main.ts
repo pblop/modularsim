@@ -1,6 +1,6 @@
 import type { ModuleConfig, Config } from "./types/config.js";
-import { ISimulator, SimulatorBase, SimulatorConstructor } from "./general/simulator.js";
-import { ModuleConstructor } from "./general/module.js";
+import type { ISimulator, SimulatorConstructor } from "./general/simulator.js";
+import type { ModuleConstructor } from "./general/module.js";
 
 const DEFAULT_CONFIG_URL = "config.json";
 
@@ -22,7 +22,7 @@ class Controller {
     simulator.on("memory:read:result", (address, data) => {
       console.info(
         "Controller",
-        `Memory read at 0x${address.toString(16)} returned 0x${data.toString(16)}`
+        `Memory read at 0x${address.toString(16)} returned 0x${data.toString(16)}`,
       );
     });
     simulator.emit("memory:read", 0x1000);
