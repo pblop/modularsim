@@ -2,7 +2,8 @@
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "javascript": {
     "formatter": {
-      "lineWidth": 100
+      "lineWidth": 100,
+      "indentStyle": "space"
     }
   }
 }

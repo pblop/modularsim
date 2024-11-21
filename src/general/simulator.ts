@@ -5,5 +5,5 @@ import type { TypedEventTransceiver } from "../types/event.js";
 export interface ISimulator extends TypedEventTransceiver {}
 
 export type SimulatorConstructor = {
-	new (config: SimulatorConfig, modules: ModuleConstructor[]): ISimulator;
+  new (config: SimulatorConfig, modules: ModuleConstructor[]): ISimulator;
 };

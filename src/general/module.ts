@@ -2,9 +2,9 @@ import type { EventDeclaration } from "../types/event";
 import type { ISimulator } from "./simulator";
 
 export interface IModule {
-	getEventDeclaration(): EventDeclaration;
+  getEventDeclaration(): EventDeclaration;
 }
 
 export type ModuleConstructor = {
-	new (config: Record<string, unknown> | undefined, simulator: ISimulator): IModule;
+  new (config: Record<string, unknown> | undefined, simulator: ISimulator): IModule;
 };
