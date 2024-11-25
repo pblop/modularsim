@@ -8,13 +8,16 @@ class Controller {
   simulator?: ISimulator;
 
   async init() {
-    // Load config from URL
+    // Load config from the config url (default or from query).
     const configUrl = this.getConfigURL();
     const config = await this.loadConfigFromUrl(configUrl);
 
-    // Load the code for the modules and the simulator.
+    // Load the code for the simulator, and for the modules (these are loaded in
+    // parallel).
     const Simulator = (await import(config.simulator.url)).default as SimulatorConstructor;
     const modules = await this.loadModules(config.simulator.modules);
+    // Create the actual simulator instance, it will load the modules, and
+    // verify its own config.
     const simulator = new Simulator(config.simulator, modules);
     this.simulator = simulator;
 
@@ -48,7 +51,7 @@ class Controller {
     return await Promise.all(promises);
   }
   async loadModule(module_config: ModuleConfig): Promise<ModuleConstructor> {
-    console.debug("Controller", `Loading module ${module_config.name} from ${module_config.url}`);
+    console.debug("Controller", `Loading module ${module_config.id} from ${module_config.url}`);
     const Module = (await import(module_config.url)).default as ModuleConstructor;
     return Module;
   }

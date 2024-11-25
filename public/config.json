@@ -4,7 +4,7 @@
     "url": "./m6809/base.js",
     "modules": [
       {
-        "name": "Memory",
+        "id": "main_memory",
         "type": "memory",
         "url": "./m6809/memory.js",
         "config": {
@@ -12,22 +12,23 @@
           "start": 0,
           "type": "ram"
         }
+      },
+      {
+        "id": "gui",
+        "type": "gui",
+        "url": "./m6809/gui.js",
+        "config": {
+          "panels": [
+            {
+              "id": "main_memory",
+              "width": 640,
+              "height": 480,
+              "x": 0,
+              "y": 0
+            }
+          ]
+        }
       }
     ]
-  },
-  "extensions": [
-    {
-      "name": "Extension 1",
-      "url": "./exts/extension1.js",
-      "config": {
-        "foo": "bar"
-      }
-    }
-  ],
-  "programs": [
-    {
-      "name": "Hola Mundo",
-      "url": "./progs/hola-mundo.s19"
-    }
-  ]
+  }
 }

@@ -27,11 +27,21 @@ class M6809Simulator implements ISimulator {
 
     const required_events = [];
     const provided_events = [];
+    const module_ids: string[] = [];
 
     for (let i = 0; i < config.modules.length; i++) {
       const module_config = config.modules[i];
-      const Module = modules[i];
 
+      // Check that the module has an id, and that it's unique.
+      if (!module_config.id) throw new Error(`Module #${i} has no id`);
+      if (module_ids.includes(module_config.id))
+        throw new Error(`Module ${module_config.id} is duplicated`);
+      module_ids.push(module_config.id);
+
+      // Get the module constructor (that the controller has pre-loaded for us),
+      // and create an instance of the module. The module will check its own
+      // config.
+      const Module = modules[i];
       const module = new Module(module_config.config, this);
 
       required_events.push(...module.getEventDeclaration().required);

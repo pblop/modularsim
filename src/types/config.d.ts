@@ -5,25 +5,19 @@ export type SimulatorConfig = {
 };
 
 export type ModuleConfig = {
-  name: string;
+  // Unique identifier for the module.
+  id: string;
+  // The module type.
   type: string;
+  // The url to load the module from.
   url: string;
+  // The module config.
   config?: Record<string, unknown>;
-};
-
-type ExtensionConfig = {
-  name: string;
-  url: string;
-  config?: Record<string, unknown>;
-};
-
-type ProgramConfig = {
-  name: string;
-  url: string;
+  // Removed child modules for now.
+  // // Child modules.
+  // modules?: ModuleConfig[];
 };
 
 export type Config = {
   simulator: SimulatorConfig;
-  views: ExtensionConfig[];
-  programs: ProgramConfig[];
 };
