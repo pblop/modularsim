@@ -2,7 +2,7 @@ import type { ModuleConfig, Config } from "./types/config.js";
 import type { ISimulator, SimulatorConstructor } from "./general/simulator.js";
 import type { ModuleConstructor } from "./general/module.js";
 
-const DEFAULT_CONFIG_URL = "config.json";
+const DEFAULT_CONFIG_URL = "config.jsonc";
 
 class Controller {
   simulator?: ISimulator;
@@ -39,7 +39,13 @@ class Controller {
   }
   async loadConfigFromUrl(url: string): Promise<Config> {
     const response = await fetch(url);
-    return response.json();
+    const jsonc = await response.text();
+    // Using the json comment stripper found in the json-easy-strip npm module.
+    // https://github.com/tarkh/json-easy-strip/blob/master/index.js
+    const json = jsonc.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) =>
+      g ? "" : m,
+    );
+    return JSON.parse(json);
   }
 
   // Load the modules in parallel.

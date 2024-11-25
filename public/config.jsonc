@@ -1,0 +1,36 @@
+{
+	"simulator": {
+		// "url" es la ruta del archivo que contiene el simulador
+		"url": "./m6809/base.js",
+		"modules": [
+			{
+				// "id" es un identificador único para cada módulo
+				"id": "main_memory",
+				"type": "memory",
+				// "url" es la ruta del archivo que contiene el módulo
+				"url": "./m6809/memory.js",
+				"config": {
+					"size": 65536,
+					"start": 0,
+					"type": "ram"
+				}
+			},
+			{
+				"id": "gui",
+				"type": "gui",
+				"url": "./m6809/gui.js",
+				"config": {
+					"panels": [
+						{
+							"id": "main_memory",
+							"width": 640,
+							"height": 480,
+							"x": 0,
+							"y": 0
+						}
+					]
+				}
+			}
+		]
+	}
+}
