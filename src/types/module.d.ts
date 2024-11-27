@@ -6,5 +6,5 @@ export interface IModule {
 }
 
 export type ModuleConstructor = {
-  new (config: Record<string, unknown> | undefined, simulator: ISimulator): IModule;
+  new (id: string, config: Record<string, unknown> | undefined, simulator: ISimulator): IModule;
 };

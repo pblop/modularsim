@@ -2,6 +2,11 @@ export interface EventMap {
   "memory:read": [address: number];
   "memory:write": [address: number, data: number];
   "memory:read:result": [address: number, data: number];
+  "memory:write:result": [address: number, data: number];
+
+  "gui:panel_created": [id: string, panel: HTMLElement];
+
+  "system:load_finish": [];
   // Add more events here.
 }
 

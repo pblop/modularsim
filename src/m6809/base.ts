@@ -10,7 +10,8 @@ import type { ISimulator } from "../types/simulator.js";
 // - Cargar la configuración en el constructor del simulador, hacer comprobaciones
 //   ahí, y luego cargar los módulos en un método init.
 class M6809Simulator implements ISimulator {
-  modules: IModule[] = [];
+  modules: Record<string, IModule> = {};
+
   // Any is used here because the event names can be dynamic (while developing
   // the app, all events are known, but because of the extensibility of the
   // architecture, it's better to allow any string as an event name).
@@ -42,19 +43,25 @@ class M6809Simulator implements ISimulator {
       // and create an instance of the module. The module will check its own
       // config.
       const Module = modules[i];
-      const module = new Module(module_config.config, this);
+      const module = new Module(module_config.id, module_config.config, this);
 
       required_events.push(...module.getEventDeclaration().required);
       provided_events.push(...module.getEventDeclaration().provided);
-      this.modules.push(module);
+      this.modules[module_config.id] = module;
     }
 
     // Check that all required events are provided.
     for (const event of required_events) {
+      // Skip system events, they we provide them.
+      if (event.startsWith("system:")) continue;
+
       if (!provided_events.includes(event)) {
         throw new Error(`[M6809Simulator] Event ${event} is required but not provided`);
       }
     }
+
+    console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
+    this.emit("system:load_finish");
   }
 
   // Add a new event listener.

@@ -16,13 +16,18 @@
 				}
 			},
 			{
+				"id": "main_memory_ui",
+				"type": "ui",
+				"url": "./m6809/memory_ui.js"
+			},
+			{
 				"id": "gui",
 				"type": "gui",
 				"url": "./m6809/gui.js",
 				"config": {
 					"panels": [
 						{
-							"id": "main_memory",
+							"id": "main_memory_ui",
 							"width": 640,
 							"height": 480,
 							"x": 0,

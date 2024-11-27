@@ -28,6 +28,7 @@ function validate_memory_config(config: Record<string, unknown>): MemoryConfig {
 
 class Memory implements IModule {
   event_transceiver: TypedEventTransceiver;
+  id: string;
 
   memory: Uint8Array;
   start: number;
@@ -43,14 +44,15 @@ class Memory implements IModule {
     };
   }
 
-  constructor(config: Record<string, unknown> | undefined, simulator: ISimulator) {
-    console.log("[Memory] Initializing module.");
-
+  constructor(id: string, config: Record<string, unknown> | undefined, simulator: ISimulator) {
     // We use the simulator to emit/receive events.
     this.event_transceiver = simulator;
+    this.id = id;
+
+    console.log(`[${this.id}] Initializing module.`);
 
     // Verify that configuration is ok.
-    if (!config) throw new Error("[Memory] No configuration provided");
+    if (!config) throw new Error(`[${this.id}] No configuration provided`);
 
     const parsed_config = validate_memory_config(config);
     const { size, start, type } = parsed_config;
@@ -62,7 +64,7 @@ class Memory implements IModule {
     this.write_delay = parsed_config.write_delay ?? 95;
 
     this.addListeners();
-    console.log(`[Memory] Initialized ${type} memory at ${start} with size ${size}`);
+    console.log(`[${this.id}] Initialized ${type} memory at ${start} with size ${size}`);
   }
 
   addListeners(): void {
