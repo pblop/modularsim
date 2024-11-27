@@ -18,7 +18,14 @@
 			{
 				"id": "main_memory_ui",
 				"type": "ui",
-				"url": "./m6809/memory_ui.js"
+				"url": "./m6809/memory_ui.js",
+				"css": "./m6809/memory_ui.css"
+			},
+			{
+				"id": "ui2",
+				"type": "ui",
+				"url": "./m6809/memory_ui.js",
+				"css": "./m6809/memory_ui.css"
 			},
 			{
 				"id": "gui",
@@ -32,6 +39,13 @@
 							"height": 480,
 							"x": 0,
 							"y": 0
+						},
+						{
+							"id": "ui2",
+							"width": 240,
+							"height": 100,
+							"x": 100,
+							"y": 450
 						}
 					]
 				}
