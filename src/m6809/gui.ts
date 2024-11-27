@@ -1,5 +1,5 @@
-import type { IModule } from "../general/module.js";
-import type { ISimulator } from "../general/simulator.js";
+import type { IModule } from "../types/module.js";
+import type { ISimulator } from "../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../types/event.js";
 
 type GuiPanelConfig = {

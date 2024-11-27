@@ -1,5 +1,5 @@
-import type { EventDeclaration } from "../types/event";
-import type { ISimulator } from "./simulator";
+import type { EventDeclaration } from "./event";
+import type { ISimulator } from "../types/simulator";
 
 export interface IModule {
   getEventDeclaration(): EventDeclaration;

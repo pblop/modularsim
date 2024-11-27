@@ -1,7 +1,7 @@
 import type { SimulatorConfig } from "../types/config.js";
-import type { IModule, ModuleConstructor } from "../general/module.js";
+import type { IModule, ModuleConstructor } from "../types/module.js";
 import type { EventNames, EventCallback, EventParams } from "../types/event.js";
-import type { ISimulator } from "../general/simulator.js";
+import type { ISimulator } from "../types/simulator.js";
 
 // NOTA: Ahora mismo estoy utilizando un método init para cargar los módulos y
 // preparar el simulador. Veo otras opciones:
