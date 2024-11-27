@@ -1,0 +1,4 @@
+.gui-panel {
+  overflow: auto;
+  border: 1px solid #000;
+}

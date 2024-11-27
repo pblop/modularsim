@@ -11,7 +11,7 @@ class MemoryUI implements IModule {
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["memory:read", "memory:write"],
-      required: ["gui:panel_created"],
+      required: ["gui:panel_created", "memory:read:result", "memory:write:result"],
       optional: [],
     };
   }
@@ -28,6 +28,8 @@ class MemoryUI implements IModule {
 
   addListeners(): void {
     this.event_transceiver.on("gui:panel_created", this.onGuiPanelCreated);
+    this.event_transceiver.on("memory:read:result", this.onMemoryReadResult);
+    this.event_transceiver.on("memory:write:result", this.onMemoryWriteResult);
   }
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
@@ -35,9 +37,66 @@ class MemoryUI implements IModule {
     console.log(`[${this.id}] obtained GUI panel`);
 
     this.panel = panel;
+    this.panel.classList.add("memory-ui");
 
-    this.panel.style.backgroundColor = "lightblue";
+    this.createMemoryUI();
   };
+
+  onMemoryReadResult = (address: number, data: number): void => {
+    if (!this.panel) return;
+
+    const output = this.panel.querySelector(".memory-output");
+    if (!output) return;
+
+    output.textContent = `Read 0x${data.toString(16)} from 0x${address.toString(16)}`;
+  };
+
+  onMemoryWriteResult = (address: number, data: number): void => {
+    if (!this.panel) return;
+
+    const output = this.panel.querySelector(".memory-output");
+    if (!output) return;
+
+    output.textContent = `Wrote 0x${data.toString(16)} to 0x${address.toString(16)}`;
+  };
+
+  createMemoryUI(): void {
+    if (!this.panel) return;
+
+    const addrinput = document.createElement("input");
+    addrinput.type = "text";
+    addrinput.setAttribute("placeholder", "Memory address");
+    this.panel.appendChild(addrinput);
+    const valinput = document.createElement("input");
+    valinput.type = "text";
+    valinput.setAttribute("placeholder", "Value");
+    this.panel.appendChild(valinput);
+
+    const write_button = document.createElement("button");
+    write_button.textContent = "Write";
+    write_button.onclick = () => {
+      const address = Number.parseInt(addrinput.value, 16);
+      const data = Number.parseInt(valinput.value, 16);
+      if (Number.isNaN(address)) return;
+      if (Number.isNaN(data)) return;
+      this.event_transceiver.emit("memory:write", address, data);
+    };
+    this.panel.appendChild(write_button);
+
+    const read_button = document.createElement("button");
+    read_button.textContent = "Read";
+    read_button.onclick = () => {
+      const address = Number.parseInt(addrinput.value, 16);
+      if (Number.isNaN(address)) return;
+      this.event_transceiver.emit("memory:read", address);
+    };
+
+    this.panel.appendChild(read_button);
+
+    const output = document.createElement("div");
+    output.classList.add("memory-output");
+    this.panel.appendChild(output);
+  }
 }
 
 export default MemoryUI;

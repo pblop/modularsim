@@ -31,6 +31,7 @@
 				"id": "gui",
 				"type": "gui",
 				"url": "./m6809/gui.js",
+				"css": "./m6809/gui.css",
 				"config": {
 					"panels": [
 						{

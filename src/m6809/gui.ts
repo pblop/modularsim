@@ -85,8 +85,8 @@ class Gui implements IModule {
         position: "absolute",
         left: `${panel.x}px`,
         top: `${panel.y}px`,
-        border: "1px solid black",
       });
+      panel_element.classList.add("gui-panel");
       this.root_element.appendChild(panel_element);
 
       // Notify other modules that the panel has been created
