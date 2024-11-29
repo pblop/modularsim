@@ -1,6 +1,6 @@
-import type { IModule } from "../types/module.js";
-import type { ISimulator } from "../types/simulator.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../types/event.js";
+import type { IModule } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 
 class MemoryUI implements IModule {
   event_transceiver: TypedEventTransceiver;
