@@ -17,11 +17,13 @@ class Clock implements IModule {
   config: ClockConfig;
   event_transceiver: TypedEventTransceiver;
 
+  interval_id?: number;
+
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["clock:cycle_start"],
       required: [],
-      optional: [],
+      optional: ["ui:clock:start", "ui:clock:pause", "ui:clock:step_cycle"],
     };
   }
 
@@ -30,13 +32,47 @@ class Clock implements IModule {
     this.config = validate_clock_config(config);
     this.event_transceiver = simulator;
 
-    // Send a clock cycle start event every 1/frequency seconds.
-    setInterval(() => {
-      simulator.emit("clock:cycle_start");
-    }, 1000 / this.config.frequency);
+    this.addListeners();
 
+    this.createInterval();
     console.log(`[${this.id}] Module initialized.`);
   }
+
+  stopInterval(): void {
+    if (this.interval_id == null) return;
+
+    clearInterval(this.interval_id);
+    this.interval_id = undefined;
+  }
+  createInterval(): void {
+    // Emit a cycle start event immediately, because setInterval will wait for
+    // the delay before calling the function the first time.
+    this.event_transceiver.emit("clock:cycle_start");
+
+    // Send a clock cycle start event every 1/frequency seconds.
+    this.interval_id = setInterval(() => {
+      this.event_transceiver.emit("clock:cycle_start");
+    }, 1000 / this.config.frequency);
+  }
+
+  addListeners(): void {
+    this.event_transceiver.on("ui:clock:start", this.onStartRequested);
+    this.event_transceiver.on("ui:clock:pause", this.onPauseRequested);
+    this.event_transceiver.on("ui:clock:step_cycle", this.onStepCycleRequested);
+  }
+
+  onStartRequested = (): void => {
+    // If the interval is already running, do nothing.
+    if (this.interval_id != null) return;
+
+    this.createInterval();
+  };
+  onPauseRequested = (): void => {
+    this.stopInterval();
+  };
+  onStepCycleRequested = (): void => {
+    this.event_transceiver.emit("clock:cycle_start");
+  };
 }
 
 export default Clock;
