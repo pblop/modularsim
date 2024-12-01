@@ -34,9 +34,18 @@ class Clock implements IModule {
 
     this.addListeners();
 
+    // NOTE: Debería de crear el intervalo sólo cuando se haya recibido la señal de
+    // reset. Y esta señal no sé quién la debería enviar.
     this.createInterval();
     console.log(`[${this.id}] Module initialized.`);
   }
+
+  sendCycleEvent = (): void => {
+    console.log(`[${this.id}] Clock cycle started`);
+
+    // The function that will be called every clock cycle.
+    this.event_transceiver.emit("clock:cycle_start");
+  };
 
   stopInterval(): void {
     if (this.interval_id == null) return;
@@ -44,15 +53,14 @@ class Clock implements IModule {
     clearInterval(this.interval_id);
     this.interval_id = undefined;
   }
+
   createInterval(): void {
     // Emit a cycle start event immediately, because setInterval will wait for
     // the delay before calling the function the first time.
-    this.event_transceiver.emit("clock:cycle_start");
+    this.sendCycleEvent();
 
     // Send a clock cycle start event every 1/frequency seconds.
-    this.interval_id = setInterval(() => {
-      this.event_transceiver.emit("clock:cycle_start");
-    }, 1000 / this.config.frequency);
+    this.interval_id = setInterval(this.sendCycleEvent, 1000 / this.config.frequency);
   }
 
   addListeners(): void {
