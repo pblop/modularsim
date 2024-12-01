@@ -7,6 +7,13 @@ export interface EventMap {
   "gui:panel_created": [id: string, panel: HTMLElement];
 
   "system:load_finish": [];
+
+  "clock:cycle_start": [];
+
+  "ui:clock:pause": [];
+  "ui:clock:start": [];
+  "ui:clock:step_cycle": [];
+  "ui:clock:step_instruction": [];
   // Add more events here.
 }
 

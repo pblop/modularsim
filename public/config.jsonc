@@ -47,9 +47,30 @@
 							"height": 100,
 							"x": 100,
 							"y": 450
+						},
+						{
+							"id": "clock_ui",
+							"width": 200,
+							"height": 100,
+							"x": 800,
+							"y": 0
 						}
 					]
 				}
+			},
+			{
+				"id": "clock",
+				"type": "clock",
+				"url": "./m6809/hardware/clock.js",
+				"config": {
+					"frequency": 1 // Hz
+				}
+			},
+			{
+				"id": "clock_ui",
+				"type": "ui",
+				"url": "./m6809/ui/clock_ui.js",
+				"css": "./m6809/ui/clock_ui.css"
 			}
 		]
 	}
