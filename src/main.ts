@@ -64,7 +64,9 @@ class Controller {
     const css_urls = new Set<string>();
     for (const module of modules) {
       if (module.css) {
-        css_urls.add(module.css);
+        for (const url of module.css) {
+          css_urls.add(url);
+        }
       }
     }
 

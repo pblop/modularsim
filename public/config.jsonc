@@ -19,19 +19,19 @@
         "id": "main_memory_ui",
         "type": "ui",
         "url": "./m6809/ui/memory_ui.js",
-        "css": "./m6809/ui/memory_ui.css"
+        "css": ["./m6809/ui/memory_ui.css"]
       },
       {
         "id": "ui2",
         "type": "ui",
         "url": "./m6809/ui/memory_ui.js",
-        "css": "./m6809/ui/memory_ui.css"
+        "css": ["./m6809/ui/memory_ui.css"]
       },
       {
         "id": "gui",
         "type": "gui",
         "url": "./m6809/ui/gui.js",
-        "css": "./m6809/ui/gui.css",
+        "css": ["./m6809/ui/gui.css"],
         "config": {
           "panels": [
             {
@@ -70,7 +70,7 @@
         "id": "clock_ui",
         "type": "ui",
         "url": "./m6809/ui/clock_ui.js",
-        "css": "./m6809/ui/clock_ui.css"
+        "css": ["./m6809/ui/clock_ui.css"]
       }
     ]
   }

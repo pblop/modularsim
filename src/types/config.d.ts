@@ -10,8 +10,8 @@ export type ModuleConfig = {
   type: string;
   // The url to load the module from.
   url: string;
-  // The css to load with the module.
-  css?: string;
+  // The css files to load with the module.
+  css?: string[];
   // The module config.
   config?: Record<string, unknown>;
   // Removed child modules for now.
