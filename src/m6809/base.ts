@@ -52,7 +52,7 @@ class M6809Simulator implements ISimulator {
 
     // Check that all required events are provided.
     for (const event of required_events) {
-      // Skip system events, they we provide them.
+      // Skip system events, we provide them.
       if (event.startsWith("system:")) continue;
 
       if (!provided_events.includes(event)) {
