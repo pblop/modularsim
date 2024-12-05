@@ -20,9 +20,13 @@ class MemoryUI implements IModule {
     };
   }
 
-  constructor(id: string, config: Record<string, unknown> | undefined, simulator: ISimulator) {
+  constructor(
+    id: string,
+    config: Record<string, unknown> | undefined,
+    eventTransceiver: TypedEventTransceiver,
+  ) {
     // We use the simulator to emit/receive events.
-    this.event_transceiver = simulator;
+    this.event_transceiver = eventTransceiver;
     this.id = id;
 
     console.log(`[${this.id}] Memory Initializing module.`);

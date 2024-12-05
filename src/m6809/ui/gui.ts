@@ -43,11 +43,14 @@ class Gui implements IModule {
     };
   }
 
-  // TODO: Change ISimulator to TypedEventTransceiver.
   // TODO: Change the cases of the variables to camelCase.
-  constructor(id: string, config: Record<string, unknown> | undefined, simulator: ISimulator) {
+  constructor(
+    id: string,
+    config: Record<string, unknown> | undefined,
+    eventTransceiver: TypedEventTransceiver,
+  ) {
     // We use the simulator to emit/receive events.
-    this.event_transceiver = simulator;
+    this.event_transceiver = eventTransceiver;
     this.id = id;
 
     console.log(`[${this.id}] Initializing module.`);

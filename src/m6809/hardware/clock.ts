@@ -33,10 +33,14 @@ class Clock implements IModule {
     };
   }
 
-  constructor(id: string, config: Record<string, unknown>, simulator: ISimulator) {
+  constructor(
+    id: string,
+    config: Record<string, unknown>,
+    eventTransceiver: TypedEventTransceiver,
+  ) {
     this.id = id;
     this.config = validate_clock_config(config);
-    this.event_transceiver = simulator;
+    this.event_transceiver = eventTransceiver;
 
     console.log(`[${this.id}] Module initialized.`);
   }

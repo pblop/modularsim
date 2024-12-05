@@ -26,9 +26,13 @@ class ClockUI implements IModule {
     };
   }
 
-  constructor(id: string, config: Record<string, unknown>, simulator: ISimulator) {
+  constructor(
+    id: string,
+    config: Record<string, unknown>,
+    eventTransceiver: TypedEventTransceiver,
+  ) {
     this.id = id;
-    this.event_transceiver = simulator;
+    this.event_transceiver = eventTransceiver;
 
     this.state = {
       machineState: "stopped",
