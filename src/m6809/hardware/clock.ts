@@ -61,11 +61,16 @@ class Clock implements IModule {
   }
 
   addListeners(): void {
-    this.event_transceiver.on("signal:reset", this.onStartRequested);
+    this.event_transceiver.on("signal:reset", this.onResetSignal);
     this.event_transceiver.on("ui:clock:start", this.onStartRequested);
     this.event_transceiver.on("ui:clock:pause", this.onPauseRequested);
     this.event_transceiver.on("ui:clock:step_cycle", this.onStepCycleRequested);
   }
+
+  onResetSignal = (): void => {
+    this.stopInterval();
+    this.createInterval();
+  };
 
   onStartRequested = (): void => {
     // If the interval is already running, do nothing.
