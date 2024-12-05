@@ -17,9 +17,12 @@ class ClockUI implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: [],
-      required: ["clock:cycle_start", "gui:panel_created"],
-      optional: [],
+      provided: ["signal:reset"],
+      required: {
+        "clock:cycle_start": this.onCycleStart,
+        "gui:panel_created": this.onGuiPanelCreated,
+      },
+      optional: {},
     };
   }
 
@@ -27,19 +30,12 @@ class ClockUI implements IModule {
     this.id = id;
     this.event_transceiver = simulator;
 
-    this.addListeners();
-
     this.state = {
       machineState: "stopped",
       lastCycleTime: 0,
     };
 
     console.log(`[${this.id}] Module initialized.`);
-  }
-
-  addListeners(): void {
-    this.event_transceiver.on("clock:cycle_start", this.onCycleStart);
-    this.event_transceiver.on("gui:panel_created", this.onGuiPanelCreated);
   }
 
   onCycleStart = (): void => {

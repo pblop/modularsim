@@ -1,6 +1,12 @@
 import type { SimulatorConfig } from "../types/config.js";
 import type { IModule, ModuleConstructor } from "../types/module.js";
-import type { EventNames, EventCallback, EventParams } from "../types/event.js";
+import type {
+  EventNames,
+  EventCallback,
+  EventParams,
+  EventDeclaration,
+  EventMap,
+} from "../types/event.js";
 import type { ISimulator } from "../types/simulator.js";
 
 // NOTA: Ahora mismo estoy utilizando un método init para cargar los módulos y
@@ -11,6 +17,7 @@ import type { ISimulator } from "../types/simulator.js";
 //   ahí, y luego cargar los módulos en un método init.
 class M6809Simulator implements ISimulator {
   modules: Record<string, IModule> = {};
+  event_declarations: Record<string, EventDeclaration> = {};
 
   // Any is used here because the event names can be dynamic (while developing
   // the app, all events are known, but because of the extensibility of the
@@ -31,23 +38,37 @@ class M6809Simulator implements ISimulator {
     const module_ids: string[] = [];
 
     for (let i = 0; i < config.modules.length; i++) {
+      // TODO: Check that the config is valid.
       const module_config = config.modules[i];
+      const moduleId = module_config.id;
 
       // Check that the module has an id, and that it's unique.
-      if (!module_config.id) throw new Error(`Module #${i} has no id`);
-      if (module_ids.includes(module_config.id))
-        throw new Error(`Module ${module_config.id} is duplicated`);
-      module_ids.push(module_config.id);
+      if (!moduleId) throw new Error(`Module #${i} has no id`);
+
+      if (module_ids.includes(moduleId)) throw new Error(`Module ${moduleId} is duplicated`);
+      module_ids.push(moduleId);
 
       // Get the module constructor (that the controller has pre-loaded for us),
       // and create an instance of the module. The module will check its own
       // config.
       const Module = modules[i];
-      const module = new Module(module_config.id, module_config.config, this);
 
-      required_events.push(...module.getEventDeclaration().required);
-      provided_events.push(...module.getEventDeclaration().provided);
-      this.modules[module_config.id] = module;
+      // We create an anonymous object with the emit and on methods, but instead
+      // of calling this class' methods, call the namedEmit and namedOn methods.
+      // This way, the module can only emit and listen to the events it has
+      // declared.
+      const module = new Module(moduleId, module_config.config, {
+        emit: (event, ...args) => this.namedEmit(moduleId, event, ...args),
+        on: (event, callback) => this.namedOn(moduleId, event, callback),
+      });
+
+      const eventDeclaration = module.getEventDeclaration();
+      required_events.push(...Object.keys(eventDeclaration.required));
+      provided_events.push(...eventDeclaration.provided);
+
+      // Store the event declaration and the module instance.
+      this.event_declarations[moduleId] = eventDeclaration;
+      this.modules[moduleId] = module;
     }
 
     // Check that all required events are provided.
@@ -60,25 +81,68 @@ class M6809Simulator implements ISimulator {
       }
     }
 
+    // Add all the event listeners.
+    for (const eventDeclaration of Object.values(this.event_declarations)) {
+      // We know that the event name is in the provided events (it's a valid
+      // event declaration), so we can cast it to EventNames.
+      // We know that the event is in the event declaration, so we can just
+      // call on (instead of onNamed).
+      for (const [name, callback] of Object.entries(eventDeclaration.required))
+        this.on(name as EventNames, callback as EventCallback<EventNames>);
+      for (const [name, callback] of Object.entries(eventDeclaration.optional))
+        this.on(name as EventNames, callback as EventCallback<EventNames>);
+    }
+
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
     this.emit("system:load_finish");
   }
 
-  // Add a new event listener.
-  // NOTE: Don't forget to correctly bind the function to the class instance
-  //       when calling this method.
+  /**
+   * Add a new event listener.
+   * **NOTE: Don't forget to correctly bind the function to the class instance
+   *       when calling this method.**
+   */
   on<E extends EventNames>(event: E, callback: EventCallback<E>): void {
     if (!this.events[event]) this.events[event] = [];
     this.events[event].push(callback);
   }
-  // Emit an event.
+  /**
+   * Add a new event listener, but check that the event is declared in the module.
+   * **NOTE: Don't forget to correctly bind the function to the class instance
+   *       when calling this method.**
+   */
+  namedOn<E extends EventNames>(caller: string, event: E, callback: EventCallback<E>): void {
+    if (!this.event_declarations[caller])
+      throw new Error(`[${caller}] Module has no event declaration`);
+    const eventDeclaration = this.event_declarations[caller];
+    if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
+      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
+
+    this.on(event, callback);
+  }
+  /**
+   * Emit an event.
+   */
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void {
+    console.debug(`[${this.constructor.name}] Emitting event ${event}`);
     // If there are no listeners for this event, do nothing.
     if (!this.events[event]) return;
 
     for (const callback of this.events[event]) {
       callback(...args);
     }
+  }
+  /**
+   * Emit an event, but check that the event is declared in the module.
+   */
+  namedEmit<E extends EventNames>(caller: string, event: E, ...args: EventParams<E>): void {
+    if (!this.event_declarations[caller])
+      throw new Error(`[${caller}] Module has no event declaration`);
+    const eventDeclaration = this.event_declarations[caller];
+    if (!eventDeclaration.provided.includes(event))
+      throw new Error(`[${caller}] Cannot emit event ${event}.`);
+
+    this.emit(event, ...args);
   }
 }
 

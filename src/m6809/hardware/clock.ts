@@ -22,8 +22,14 @@ class Clock implements IModule {
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["clock:cycle_start"],
-      required: [],
-      optional: ["ui:clock:start", "ui:clock:pause", "ui:clock:step_cycle"],
+      required: {
+        "signal:reset": this.onResetSignal,
+      },
+      optional: {
+        "ui:clock:start": this.onStartRequested,
+        "ui:clock:pause": this.onPauseRequested,
+        "ui:clock:step_cycle": this.onStepCycleRequested,
+      },
     };
   }
 
@@ -31,8 +37,6 @@ class Clock implements IModule {
     this.id = id;
     this.config = validate_clock_config(config);
     this.event_transceiver = simulator;
-
-    this.addListeners();
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -58,13 +62,6 @@ class Clock implements IModule {
 
     // Send a clock cycle start event every 1/frequency seconds.
     this.interval_id = setInterval(this.sendCycleEvent, 1000 / this.config.frequency);
-  }
-
-  addListeners(): void {
-    this.event_transceiver.on("signal:reset", this.onResetSignal);
-    this.event_transceiver.on("ui:clock:start", this.onStartRequested);
-    this.event_transceiver.on("ui:clock:pause", this.onPauseRequested);
-    this.event_transceiver.on("ui:clock:step_cycle", this.onStepCycleRequested);
   }
 
   onResetSignal = (): void => {

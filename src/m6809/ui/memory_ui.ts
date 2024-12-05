@@ -11,8 +11,12 @@ class MemoryUI implements IModule {
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["memory:read", "memory:write"],
-      required: ["gui:panel_created", "memory:read:result", "memory:write:result"],
-      optional: [],
+      required: {
+        "gui:panel_created": this.onGuiPanelCreated,
+        "memory:read:result": this.onMemoryReadResult,
+        "memory:write:result": this.onMemoryWriteResult,
+      },
+      optional: {},
     };
   }
 
@@ -22,14 +26,6 @@ class MemoryUI implements IModule {
     this.id = id;
 
     console.log(`[${this.id}] Memory Initializing module.`);
-
-    this.addListeners();
-  }
-
-  addListeners(): void {
-    this.event_transceiver.on("gui:panel_created", this.onGuiPanelCreated);
-    this.event_transceiver.on("memory:read:result", this.onMemoryReadResult);
-    this.event_transceiver.on("memory:write:result", this.onMemoryWriteResult);
   }
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {

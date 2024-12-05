@@ -43,6 +43,6 @@ export interface TypedEventTransceiver {
 
 export type EventDeclaration = {
   provided: EventNames[];
-  required: EventNames[];
-  optional: EventNames[];
+  required: { [E in EventNames]?: EventCallback<E> };
+  optional: { [E in EventNames]?: EventCallback<E> };
 };

@@ -38,11 +38,13 @@ class Gui implements IModule {
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["gui:panel_created"],
-      required: ["system:load_finish"],
-      optional: [],
+      required: { "system:load_finish": this.onSystemLoadFinish },
+      optional: {},
     };
   }
 
+  // TODO: Change ISimulator to TypedEventTransceiver.
+  // TODO: Change the cases of the variables to camelCase.
   constructor(id: string, config: Record<string, unknown> | undefined, simulator: ISimulator) {
     // We use the simulator to emit/receive events.
     this.event_transceiver = simulator;
@@ -61,12 +63,7 @@ class Gui implements IModule {
     root_element.classList.add("gui-root");
     this.root_element = root_element;
 
-    this.addListeners();
     console.log(`[${this.id}] Module initialized.`);
-  }
-
-  addListeners(): void {
-    this.event_transceiver.on("system:load_finish", this.onSystemLoadFinish);
   }
 
   onSystemLoadFinish = (): void => {

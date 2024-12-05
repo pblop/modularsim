@@ -39,8 +39,11 @@ class Memory implements IModule {
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["memory:read:result", "memory:write:result"],
-      required: [],
-      optional: ["memory:read", "memory:write"],
+      required: {},
+      optional: {
+        "memory:read": this.on_memory_read,
+        "memory:write": this.on_memory_write,
+      },
     };
   }
 
@@ -63,14 +66,9 @@ class Memory implements IModule {
     this.read_delay = parsed_config.read_delay ?? 95;
     this.write_delay = parsed_config.write_delay ?? 95;
 
-    this.addListeners();
     console.log(`[${this.id}] Initialized ${type} memory at ${start} with size ${size}`);
   }
 
-  addListeners(): void {
-    this.event_transceiver.on("memory:read", this.on_memory_read);
-    this.event_transceiver.on("memory:write", this.on_memory_write);
-  }
   on_memory_read = (address: number): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;

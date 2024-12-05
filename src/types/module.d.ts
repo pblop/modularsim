@@ -1,10 +1,13 @@
-import type { EventDeclaration } from "./event";
-import type { ISimulator } from "../types/simulator";
+import type { EventDeclaration, TypedEventTransceiver } from "./event";
 
 export interface IModule {
   getEventDeclaration(): EventDeclaration;
 }
 
 export type ModuleConstructor = {
-  new (id: string, config: Record<string, unknown> | undefined, simulator: ISimulator): IModule;
+  new (
+    id: string,
+    config: Record<string, unknown> | undefined,
+    eventTransceiver: TypedEventTransceiver,
+  ): IModule;
 };
