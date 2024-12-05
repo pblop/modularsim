@@ -5,10 +5,8 @@ import { setStyle } from "../../utils.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
-  width: number;
-  height: number;
-  x: number;
-  y: number;
+  column: string | number;
+  row: string | number;
 };
 
 type GuiConfig = {
@@ -17,10 +15,10 @@ type GuiConfig = {
 
 function validate_gui_panel_config(config: Record<string, unknown>): GuiPanelConfig {
   if (typeof config.id !== "string") throw new Error("[GUI] panel id must be a string");
-  if (typeof config.width !== "number") throw new Error("[GUI] panel width must be a number");
-  if (typeof config.height !== "number") throw new Error("[GUI] panel height must be a number");
-  if (typeof config.x !== "number") throw new Error("[GUI] panel x must be a number");
-  if (typeof config.y !== "number") throw new Error("[GUI] panel y must be a number");
+  if (typeof config.column !== "string" && typeof config.column !== "number")
+    throw new Error("[GUI] panel column must be a string or number");
+  if (typeof config.row !== "string" && typeof config.row !== "number")
+    throw new Error("[GUI] panel row must be a string or number");
   return config as GuiPanelConfig;
 }
 function validate_gui_config(config: Record<string, unknown>): GuiConfig {
@@ -60,6 +58,7 @@ class Gui implements IModule {
     // Get the root element where the GUI will be rendered.
     const root_element = document.getElementById("root");
     if (root_element == null) throw new Error(`[${this.id}] Root element found`);
+    root_element.classList.add("gui-root");
     this.root_element = root_element;
 
     this.addListeners();
@@ -80,11 +79,13 @@ class Gui implements IModule {
       const panel_element = document.createElement("div");
       panel_element.id = `panel_${panel.id}`;
       setStyle(panel_element, {
-        width: `${panel.width}px`,
-        height: `${panel.height}px`,
-        position: "absolute",
-        left: `${panel.x}px`,
-        top: `${panel.y}px`,
+        "grid-column": `${panel.column}`,
+        "grid-row": `${panel.row}`,
+        // width: `${panel.width}px`,
+        // height: `${panel.height}px`,
+        // position: "absolute",
+        // left: `${panel.x}px`,
+        // top: `${panel.y}px`,
       });
       panel_element.classList.add("gui-panel");
       this.root_element.appendChild(panel_element);
