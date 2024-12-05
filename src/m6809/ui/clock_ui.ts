@@ -1,11 +1,19 @@
 import type { IModule } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
+import { element } from "../../utils.js";
+
+type ClockUIState = {
+  machineState: "running" | "paused" | "stopped";
+  lastCycleTime: number;
+};
 
 class ClockUI implements IModule {
   id: string;
   event_transceiver: TypedEventTransceiver;
   panel?: HTMLElement;
+
+  state: ClockUIState;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -21,6 +29,11 @@ class ClockUI implements IModule {
 
     this.addListeners();
 
+    this.state = {
+      machineState: "stopped",
+      lastCycleTime: 0,
+    };
+
     console.log(`[${this.id}] Module initialized.`);
   }
 
@@ -31,7 +44,82 @@ class ClockUI implements IModule {
 
   onCycleStart = (): void => {
     console.log(`[${this.id}] Clock cycle started`);
+    this.setState({ lastCycleTime: performance.now() });
   };
+
+  setState(state: Partial<ClockUIState>): void {
+    this.state = { ...this.state, ...state };
+    this.draw(state);
+  }
+
+  draw(changes?: Partial<ClockUIState>): void {
+    if (this.panel == null) return;
+
+    if (!changes || "machineState" in changes) {
+      const main = this.panel.querySelector(".clock-main");
+      if (main == null) return; // This should never happen.
+      main.innerHTML = "";
+
+      if (this.state.machineState === "running") {
+        main.appendChild(
+          element("button", {
+            properties: {
+              textContent: "Pause",
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:pause");
+                this.setState({ machineState: "paused" });
+              },
+            },
+          }),
+        );
+      }
+
+      if (this.state.machineState === "paused") {
+        main.appendChild(
+          element("button", {
+            properties: {
+              textContent: "Continue",
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:start");
+                this.setState({ machineState: "running" });
+              },
+            },
+          }),
+        );
+        main.appendChild(
+          element("button", {
+            properties: {
+              textContent: "Step (cycle)",
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:step_cycle");
+              },
+            },
+          }),
+        );
+      }
+
+      main.appendChild(
+        element("button", {
+          properties: {
+            textContent: "Reset",
+            onclick: () => {
+              this.event_transceiver.emit("signal:reset");
+              this.setState({ machineState: "running" });
+            },
+          },
+        }),
+      );
+    }
+
+    if (!changes || "lastCycleTime" in changes) {
+      const marker = this.panel.querySelector(".clock-marker") as HTMLElement;
+      if (marker == null) return; // This should never happen.
+
+      marker.style.animation = "none";
+      marker.offsetHeight; // Trigger reflow
+      marker.style.animation = "";
+    }
+  }
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
     if (panel_id !== this.id) return;
@@ -39,26 +127,10 @@ class ClockUI implements IModule {
 
     this.panel.classList.add("clock-ui");
 
-    const pause_button = document.createElement("button");
-    pause_button.textContent = "Pause";
-    pause_button.onclick = () => {
-      this.event_transceiver.emit("ui:clock:pause");
-    };
-    this.panel.appendChild(pause_button);
+    this.panel.appendChild(element("div", { properties: { className: "clock-main" } }));
+    this.panel.appendChild(element("div", { properties: { className: "clock-marker" } }));
 
-    const start_button = document.createElement("button");
-    start_button.textContent = "Start";
-    start_button.onclick = () => {
-      this.event_transceiver.emit("ui:clock:start");
-    };
-    this.panel.appendChild(start_button);
-
-    const step_cycle = document.createElement("button");
-    step_cycle.textContent = "Step (cycle)";
-    step_cycle.onclick = () => {
-      this.event_transceiver.emit("ui:clock:step_cycle");
-    };
-    this.panel.appendChild(step_cycle);
+    this.draw();
   };
 }
 

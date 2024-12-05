@@ -20,3 +20,26 @@ export function setStyle(element: HTMLElement, style: Record<string, string>): v
     element.style.setProperty(key, value);
   }
 }
+
+export function element(
+  tag: string,
+  options: {
+    properties?: Record<string, unknown>;
+    attributes?: Record<string, string>;
+    children?: HTMLElement[];
+  },
+): HTMLElement {
+  const { properties = {}, attributes = {}, children = [] } = options;
+
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(properties)) {
+    (el as unknown as Record<string, unknown>)[key] = value;
+  }
+  for (const [key, value] of Object.entries(attributes)) {
+    el.setAttribute(key, value);
+  }
+  for (const child of children) {
+    el.appendChild(child);
+  }
+  return el;
+}

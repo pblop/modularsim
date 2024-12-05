@@ -4,12 +4,19 @@ export interface EventMap {
   "memory:read:result": [address: number, data: number];
   "memory:write:result": [address: number, data: number];
 
+  // GUI events.
   "gui:panel_created": [id: string, panel: HTMLElement];
 
+  // System syncronisation events. These act as a barrier.
   "system:load_finish": [];
 
+  // The hardware reset signal.
+  "signal:reset": [];
+
+  // Clock events.
   "clock:cycle_start": [];
 
+  // UI events.
   "ui:clock:pause": [];
   "ui:clock:start": [];
   "ui:clock:step_cycle": [];

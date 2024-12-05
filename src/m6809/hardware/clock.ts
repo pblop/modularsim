@@ -34,9 +34,6 @@ class Clock implements IModule {
 
     this.addListeners();
 
-    // NOTE: Debería de crear el intervalo sólo cuando se haya recibido la señal de
-    // reset. Y esta señal no sé quién la debería enviar.
-    this.createInterval();
     console.log(`[${this.id}] Module initialized.`);
   }
 
@@ -64,6 +61,7 @@ class Clock implements IModule {
   }
 
   addListeners(): void {
+    this.event_transceiver.on("signal:reset", this.onStartRequested);
     this.event_transceiver.on("ui:clock:start", this.onStartRequested);
     this.event_transceiver.on("ui:clock:pause", this.onPauseRequested);
     this.event_transceiver.on("ui:clock:step_cycle", this.onStepCycleRequested);
