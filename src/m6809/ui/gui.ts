@@ -1,7 +1,7 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import { setStyle } from "../../utils.js";
+import { element } from "../../utils.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
@@ -76,18 +76,16 @@ class Gui implements IModule {
     for (const panel of this.config.panels) {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
 
-      const panel_element = document.createElement("div");
-      panel_element.id = `panel_${panel.id}`;
-      setStyle(panel_element, {
-        "grid-column": `${panel.column}`,
-        "grid-row": `${panel.row}`,
-        // width: `${panel.width}px`,
-        // height: `${panel.height}px`,
-        // position: "absolute",
-        // left: `${panel.x}px`,
-        // top: `${panel.y}px`,
+      const panel_element = element("div", {
+        properties: {
+          id: `panel_${panel.id}`,
+          className: "gui-panel",
+        },
+        style: {
+          gridColumn: `${panel.column}`,
+          gridRow: `${panel.row}`,
+        },
       });
-      panel_element.classList.add("gui-panel");
       this.root_element.appendChild(panel_element);
 
       // Notify other modules that the panel has been created

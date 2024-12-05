@@ -17,7 +17,8 @@ export function checkProperties(obj: { [key: string]: unknown }, properties: str
 export function setStyle(element: HTMLElement, style: Record<string, string>): void {
   element.style.cssText = "";
   for (const [key, value] of Object.entries(style)) {
-    element.style.setProperty(key, value);
+    const kebabKey = key.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, "$1-$2").toLowerCase();
+    element.style.setProperty(kebabKey, value);
   }
 }
 
@@ -26,15 +27,19 @@ export function element(
   options: {
     properties?: Record<string, unknown>;
     attributes?: Record<string, string>;
+    style?: Record<string, string>;
     children?: HTMLElement[];
   },
 ): HTMLElement {
-  const { properties = {}, attributes = {}, children = [] } = options;
+  const { properties = {}, style = {}, attributes = {}, children = [] } = options;
 
   const el = document.createElement(tag);
   for (const [key, value] of Object.entries(properties)) {
     (el as unknown as Record<string, unknown>)[key] = value;
   }
+
+  if (Object.keys(style).length > 0) setStyle(el, style);
+
   for (const [key, value] of Object.entries(attributes)) {
     el.setAttribute(key, value);
   }
