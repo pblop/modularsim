@@ -111,9 +111,10 @@ class ClockUI implements IModule {
       );
     }
 
-    if (!changes || "lastCycleTime" in changes) {
+    if (changes && "lastCycleTime" in changes) {
       const marker = this.panel.querySelector(".clock-marker") as HTMLElement;
       if (marker == null) return; // This should never happen.
+      if (!marker.classList.contains(".clock-animation")) marker.classList.add("clock-animation");
 
       marker.style.animation = "none";
       marker.offsetHeight; // Trigger reflow

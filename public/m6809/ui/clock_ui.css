@@ -1,7 +1,7 @@
 .clock-ui {
   background-color: lightgreen;
 
-  .clock-marker {
+  .clock-marker.clock-animation{
     background-color: red;
     height: 10px;
     width: 10px;
@@ -9,6 +9,7 @@
     visibility: visible;
     opacity: 1;
     animation-name: fadeOut;
+    /* TODO: add some way of editing the duration */
     animation-duration: 1s;
     animation-fill-mode: forwards;
   }
