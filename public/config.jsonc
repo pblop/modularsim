@@ -65,6 +65,15 @@
         "type": "ui",
         "url": "./m6809/ui/clock_ui.js",
         "css": ["./m6809/ui/clock_ui.css"]
+      },
+      {
+        "id": "cpu",
+        "type": "cpu",
+        "url": "./m6809/hardware/cpu.js",
+        "config": {
+          "memory": "main_memory",
+          "clock": "clock"
+        }
       }
     ]
   }

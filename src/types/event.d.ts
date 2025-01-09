@@ -16,6 +16,9 @@ export interface EventMap {
   // Clock events.
   "clock:cycle_start": [];
 
+  // CPU events
+  "cpu:instruction_finish": [];
+
   // UI events.
   "ui:clock:pause": [];
   "ui:clock:start": [];
@@ -33,12 +36,22 @@ export interface EventMap {
 //export type EventParams<E extends EventNames> = E extends keyof EventMap ? EventMap[E] : any[];
 export type EventNames = keyof EventMap;
 export type EventParams<E extends EventNames> = EventMap[E];
-
 type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
+
 // Typed event emitter interface.
 export interface TypedEventTransceiver {
   on<E extends EventNames>(event: E, listener: EventCallback<E>): void;
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void;
+
+  // TODO: add once, implement it wrapping on
+  //       reimplement wait, wrapping once
+  // once<E extends EventNames>(event: E, listener: EventCallback<E>): void;
+  // Emits an event, and waits for another
+  emitAndWait<E extends EventNames>(
+    emittedEvent: E,
+    event: E,
+    ...args: EventParams<E>
+  ): Promise<EventParams<E>>;
 }
 
 export type EventDeclaration = {

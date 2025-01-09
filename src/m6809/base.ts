@@ -60,6 +60,7 @@ class M6809Simulator implements ISimulator {
       const module = new Module(moduleId, module_config.config, {
         emit: (event, ...args) => this.namedEmit(moduleId, event, ...args),
         on: (event, callback) => this.namedOn(moduleId, event, callback),
+        wait: (event) => this.namedWait(moduleId, event),
       });
 
       const eventDeclaration = module.getEventDeclaration();
@@ -106,6 +107,61 @@ class M6809Simulator implements ISimulator {
     if (!this.events[event]) this.events[event] = [];
     this.events[event].push(callback);
   }
+
+  emitAndWait<E extends EventNames>(
+    emittedEvent: E,
+    event: E,
+    ...args: EventParams<E>
+  ): Promise<NonNullable<EventParams<E>>> {
+    return new Promise((resolve, reject) => {
+      if (!this.events[event]) this.events[event] = [];
+
+      let fired = false;
+      const callback = (...args: EventParams<E>) => {
+        // TODO: Probably unneeded, because execution _will not_ be taken away
+        // from JavaScript synchronous code.
+        if (!fired) {
+          fired = true;
+
+          // This quickly raised alarm bells in my head, because it looks like there could
+          // be a read-write race condition here.
+          // - I get the event list
+          // - somebody appends
+          // - I filter from my event list
+          // ... and now the other append is nowhere to be seen.
+          // But after looking around, and making some tests, it seems like the JavaScript event
+          // loop being single-threaded prevents this specific kind of race condition! Go JS!
+          this.events[event] = this.events[event].filter((x) => x === callback);
+          resolve(args);
+        }
+      };
+      this.events[event].push(callback);
+
+      this.emit(emittedEvent, ...args);
+    });
+  }
+
+  /**
+   * Add a new once event listener, and emits an event, but checks that the event
+   * is declared in the module before.
+   */
+  namedEmitAndWait<E extends EventNames>(
+    caller: string,
+    emittedEvent: E,
+    event: E,
+    ...args: EventParams<E>
+  ): Promise<NonNullable<EventParams<E>>> {
+    if (!this.event_declarations[caller])
+      throw new Error(`[${caller}] Module has no event declaration`);
+    const eventDeclaration = this.event_declarations[caller];
+    if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
+      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
+    if (!eventDeclaration.provided.includes(event))
+      throw new Error(`[${caller}] Cannot emit event ${event}.`);
+
+    return this.emitAndWait(emittedEvent, event, ...args);
+  }
+
   /**
    * Add a new event listener, but check that the event is declared in the module.
    * **NOTE: Don't forget to correctly bind the function to the class instance
