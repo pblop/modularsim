@@ -70,7 +70,6 @@ class Clock implements IModule {
 
   onResetSignal = (): void => {
     this.stopInterval();
-    this.createInterval();
   };
 
   onStartRequested = (): void => {

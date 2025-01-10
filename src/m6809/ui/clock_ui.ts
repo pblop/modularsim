@@ -104,7 +104,7 @@ class ClockUI implements IModule {
             textContent: "Reset",
             onclick: () => {
               this.event_transceiver.emit("signal:reset");
-              this.setState({ machineState: "running" });
+              this.setState({ machineState: "paused" });
             },
           },
         }),
