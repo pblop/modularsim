@@ -1,2 +1,7 @@
 dist
 node_modules
+
+# ignore binary programs (very big files)
+*.bin
+# ignore programs (could be big, and not needed)
+*.s19
