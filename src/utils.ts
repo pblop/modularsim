@@ -25,8 +25,10 @@ export function setStyle(element: HTMLElement, style: Record<string, string>): v
 export function element(
   tag: string,
   options: {
-    properties?: Record<string, unknown>;
+    properties?: Partial<HTMLElement>;
     attributes?: Record<string, string>;
+    // NOTE: This could be style?: Partial<CSSStyleDeclaration>, but then I would
+    // have to convert camelCase names to kebab-case.
     style?: Record<string, string>;
     children?: HTMLElement[];
   },
