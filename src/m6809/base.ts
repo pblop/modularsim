@@ -157,8 +157,8 @@ class M6809Simulator implements ISimulator {
     const eventDeclaration = this.event_declarations[caller];
     if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
       throw new Error(`[${caller}] Cannot listen to event ${event}.`);
-    if (!eventDeclaration.provided.includes(event))
-      throw new Error(`[${caller}] Cannot emit event ${event}.`);
+    if (!eventDeclaration.provided.includes(emittedEvent))
+      throw new Error(`[${caller}] Cannot emit event ${emittedEvent}.`);
 
     return this.emitAndWait(emittedEvent, event, ...args);
   }
