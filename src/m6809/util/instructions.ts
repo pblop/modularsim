@@ -1,37 +1,30 @@
-export enum AddressingModes {
-  IMMEDIATE = "immediate",
-  DIRECT = "direct",
-  INDEXED = "indexed",
-  EXTENDED = "extended",
-  INHERENT = "inherent",
-}
-export type Instruction = {
-  name: string;
-  opcode: number;
-  addrmode: AddressingModes;
-  args?: number[];
+import type Cpu from "../hardware/cpu";
+
+// A function that takes a CPU, performs some operation, and returns the number
+// of cycles the processor should wait.
+type InstructionLogic = (cpu: Cpu) => Promise<number>;
+
+const INSTRUCTIONS: Record<number, InstructionLogic> = {
+  // ldx (immediate)
+  0x8e00: async (cpu: Cpu) => {
+    const val = await cpu.readByte(cpu.registers.pc++);
+    cpu.registers.X = val;
+    return 2;
+  },
+  // ldx (direct)
+  0x9e00: async (cpu: Cpu) => 1,
+  // ldx (indexed)
+  0xae00: async (cpu: Cpu) => 1,
+  // ldx (extended)
+  0xbe00: async (cpu: Cpu) => 1,
 };
 
-/**
- *
- * @param byteArr An array
- * @returns A parsed instruction if the instruction given is valid, a string
- * containing "partial" if the instruction requires more bytes, or null if
- * the instruction is not valid.
- */
-export function parseInstruction(bytes: number[]): string | Instruction | null {
-  const instruction: Partial<Instruction> = {};
-
-  if (bytes[0] === 0x10 || bytes[0] === 0x11) {
-    throw new Error("multi-byte opcodes not supported yet");
+export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
+  const instruction = INSTRUCTIONS[number];
+  if (instruction == null) {
+    console.error(`Unknown instruction: ${number.toString(16)}`);
+    return 1;
   }
 
-  const am = bytes[0] & (0b00110000 >> 4);
-
-  if (am === 0x00) instruction.addrmode = AddressingModes.IMMEDIATE;
-  else if (am === 0x01) instruction.addrmode = AddressingModes.DIRECT;
-  else if (am === 0x10) instruction.addrmode = AddressingModes.INDEXED;
-  else if (am === 0x11) instruction.addrmode = AddressingModes.EXTENDED;
-
-  return null;
+  return instruction(cpu);
 }

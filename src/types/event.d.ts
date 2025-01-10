@@ -46,7 +46,9 @@ export interface TypedEventTransceiver {
   // TODO: add once, implement it wrapping on
   //       reimplement wait, wrapping once
   // once<E extends EventNames>(event: E, listener: EventCallback<E>): void;
+  // wait<E extends EventNames>(event: E): Promise<EventParams<E>>;
   // Emits an event, and waits for another
+  // Maybe also change the argument order??
   emitAndWait<E extends EventNames>(
     emittedEvent: E,
     event: E,
