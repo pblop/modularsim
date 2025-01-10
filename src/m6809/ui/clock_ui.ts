@@ -17,7 +17,13 @@ class ClockUI implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["signal:reset"],
+      provided: [
+        "signal:reset",
+        "ui:clock:step_cycle",
+        "ui:clock:pause",
+        "ui:clock:start",
+        "ui:clock:step_instruction",
+      ],
       required: {
         "clock:cycle_start": this.onCycleStart,
         "gui:panel_created": this.onGuiPanelCreated,
