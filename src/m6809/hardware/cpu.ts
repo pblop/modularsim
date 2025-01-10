@@ -1,7 +1,7 @@
-import type { IModule } from "../../types/module";
-import type { ISimulator } from "../../types/simulator";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event";
-import { type Instruction, parseInstruction } from "../util/instructions";
+import type { IModule } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import { type Instruction, parseInstruction } from "../util/instructions.js";
 
 // biome-ignore lint/complexity/noBannedTypes: <explanation>
 type CpuConfig = {};

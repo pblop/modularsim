@@ -60,7 +60,8 @@ class M6809Simulator implements ISimulator {
       const module = new Module(moduleId, module_config.config, {
         emit: (event, ...args) => this.namedEmit(moduleId, event, ...args),
         on: (event, callback) => this.namedOn(moduleId, event, callback),
-        wait: (event) => this.namedWait(moduleId, event),
+        emitAndWait: (emittedEvent, event, ...args) =>
+          this.namedEmitAndWait(moduleId, emittedEvent, event, ...args),
       });
 
       const eventDeclaration = module.getEventDeclaration();

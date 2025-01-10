@@ -1,6 +1,7 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import { element } from "../../utils.js";
 
 class MemoryUI implements IModule {
   event_transceiver: TypedEventTransceiver;
@@ -92,6 +93,24 @@ class MemoryUI implements IModule {
     };
 
     this.panel.appendChild(read_button);
+
+    this.panel.appendChild(
+      element("button", {
+        properties: {
+          onclick: () => {
+            fetch("/m6809/programs/hola.bin")
+              .then((r) => r.arrayBuffer())
+              .then((buffer) => new Uint8Array(buffer))
+              .then((bytes) => {
+                for (let i = 0; i < bytes.length; i++) {
+                  this.event_transceiver.emit("memory:write", i, bytes[i]);
+                }
+              });
+          },
+          textContent: "Put program into memory",
+        },
+      }),
+    );
 
     const output = document.createElement("div");
     output.classList.add("memory-output");
