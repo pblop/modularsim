@@ -3,34 +3,42 @@ import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { doInstruction } from "../util/instructions.js";
 
-type CpuConfig = {
+class Registers {
+  dp: number;
+  cc: number;
+  D: number;
+  X: number;
+  Y: number;
+  U: number;
+  S: number;
   pc: number;
-};
 
-enum CpuState {
-  UNINITIALISED = 0, // Pre-reset
-  NO_INSTRUCTION = 1, //
-  WAIT_FETCH_READ = 2, //
+  constructor() {
+    this.dp = -1;
+    this.cc = -1;
+    this.D = -1;
+    this.X = -1;
+    this.Y = -1;
+    this.U = -1;
+    this.S = -1;
+    this.pc = -1;
+  }
+
+  get A() {
+    return this.D >> 8;
+  }
+  set A(val: number) {
+    this.D = (val << 8) | (this.D & 0xff);
+  }
+  get B() {
+    return this.D & 0xff;
+  }
+  set B(val: number) {
+    this.D = (this.D & 0xff00) | val;
+  }
 }
 
-function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
-  if (typeof config.pc !== "number") throw new Error("[Clock] frequency must be a number");
-
-  return config as CpuConfig;
-}
-
-type M6809Registers = {
-  dp: number; // 8 bit
-  cc: number; // 8 bit
-  D: number; // 16 bit
-  X: number; // 16 bit
-  Y: number; // 16 bit
-  U: number; // 16 bit
-  S: number; // 16 bit
-  pc: number; // 16 bit
-};
-
-enum ConditionCodes {
+export enum ConditionCodes {
   CARRY = 1 << 0, // Carry
   OVERFLOW = 1 << 1, // Overflow
   ZERO = 1 << 2, // Zero
@@ -41,6 +49,16 @@ enum ConditionCodes {
   ENTIRE_FLAG = 1 << 7, // Entire Flag
 }
 
+type CpuConfig = {
+  pc: number;
+};
+
+function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
+  if (typeof config.pc !== "number") throw new Error("[Clock] frequency must be a number");
+
+  return config as CpuConfig;
+}
+
 class Cpu implements IModule {
   id: string;
   config: CpuConfig;
@@ -48,10 +66,7 @@ class Cpu implements IModule {
 
   interval_id?: number;
 
-  state: CpuState;
-  waitCycles: number;
-
-  registers: M6809Registers;
+  registers: Registers;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -75,36 +90,20 @@ class Cpu implements IModule {
     this.config = validate_cpu_config(config);
     this.et = eventTransceiver;
 
-    this.state = CpuState.UNINITIALISED;
-    this.waitCycles = 0;
-    this.registers = {
-      dp: 0,
-      cc: 0,
-      D: 0,
-      X: 0,
-      Y: 0,
-      U: 0,
-      S: 0,
-      pc: 0,
-    };
+    this.registers = new Registers();
 
     console.log(`[${this.id}] Module initialized.`);
   }
 
   reset = () => {
-    this.state = CpuState.NO_INSTRUCTION;
-    this.waitCycles = -1;
-
-    this.registers = {
-      dp: 0,
-      cc: 0,
-      D: 0,
-      X: 0,
-      Y: 0,
-      U: 0,
-      S: 0,
-      pc: this.config.pc,
-    };
+    this.registers.dp = 0;
+    this.registers.cc = 0;
+    this.registers.D = 0;
+    this.registers.X = 0;
+    this.registers.Y = 0;
+    this.registers.U = 0;
+    this.registers.S = 0;
+    this.registers.pc = this.config.pc;
 
     this.printRegisters();
 
@@ -155,34 +154,42 @@ class Cpu implements IModule {
   };
 
   /**
-   * Wrapper around the event emitter to read a single byte from memory.
+   * Wrapper around the event emitter to read bytes from memory.
    */
-  readByte = async (address: number) => {
-    // TODO: Maybe do some comparison that the read address is the correct one?
-    const [_, data] = await this.et.emitAndWait("memory:read", "memory:read:result", address);
-    if (data == null) throw new Error(`[${this.id}] CPU read an undefined byte!1!!`);
-    return data;
+  read = async (address: number, bytes = 1) => {
+    let val = 0;
+
+    for (let i = 0; i < bytes; i++) {
+      // TODO: Maybe do some comparison that the read address is the correct one?
+      const [_, data] = await this.et.emitAndWait("memory:read", "memory:read:result", address + i);
+      if (data == null) throw new Error(`[${this.id}] CPU read an undefined byte!1!!`);
+
+      val = (val << 8) | data;
+    }
+
+    return val;
   };
 
   loop = async () => {
-    if (this.state === CpuState.UNINITIALISED)
-      throw new Error(`[${this.id}] Tried to execute, but didn't receive reset`);
-    // We must be running
-
-    /* Fetch & Decode */
+    // Get the instruction (this increments the PC)
     const opcodeBytes = await this.fetchOpCode();
+    console.log(`[${this.id}] read opcode bytes ${opcodeBytes} at ${this.registers.pc}`);
     // Convert one or two bytes to single u16 containing the whole opcode.
-    const opcode = opcodeBytes[0] << (8 + opcodeBytes.length) > 1 ? opcodeBytes[1] : 0;
-    console.log("[cpu] read opcode", opcode);
+    const opcode = (opcodeBytes[0] << 8) + (opcodeBytes.length > 1 ? opcodeBytes[1] : 0);
+    console.log(
+      `[${this.id}] opcode ${opcode.toString(16)} at ${this.registers.pc - opcodeBytes.length}`,
+    );
     this.printRegisters();
 
+    // Execute the instruction
     const waitCycles = await doInstruction(this, opcode);
 
     for (let i = 0; i < waitCycles; i++) {
       // TODO: Implement the wait cycle
     }
 
-    /* Execute */
+    this.et.emit("cpu:instruction_finish");
+    this.printRegisters();
   };
 }
 
