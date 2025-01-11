@@ -132,7 +132,7 @@ class M6809Simulator implements ISimulator {
           // ... and now the other append is nowhere to be seen.
           // But after looking around, and making some tests, it seems like the JavaScript event
           // loop being single-threaded prevents this specific kind of race condition! Go JS!
-          this.events[event] = this.events[event].filter((x) => x === callback);
+          this.events[event] = this.events[event].filter((x) => x !== callback);
           resolve(args);
         }
       };
