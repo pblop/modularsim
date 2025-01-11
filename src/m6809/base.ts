@@ -181,7 +181,8 @@ class M6809Simulator implements ISimulator {
    * Emit an event.
    */
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void {
-    console.debug(`[${this.constructor.name}] Emitting event ${event}`);
+    console.debug(`[${this.constructor.name}] Emitting event ${event}(${args.join(", ")})`);
+
     // If there are no listeners for this event, do nothing.
     if (!this.events[event]) return;
 
