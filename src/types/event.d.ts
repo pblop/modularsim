@@ -43,6 +43,9 @@ export interface TypedEventTransceiver {
   on<E extends EventNames>(event: E, listener: EventCallback<E>): void;
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void;
 
+  once<E extends EventNames>(event: E, listener: EventCallback<E>): void;
+  wait<E extends EventNames>(event: E): Promise<EventParams<E>>;
+  // TODO: add waitAny, waitAll?
   // TODO: add once, implement it wrapping on
   //       reimplement wait, wrapping once
   // once<E extends EventNames>(event: E, listener: EventCallback<E>): void;
