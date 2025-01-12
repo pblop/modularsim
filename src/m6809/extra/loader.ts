@@ -17,7 +17,7 @@ class Loader implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["memory:write"],
+      provided: ["ui:memory:write"],
       required: {
         "system:load_finish": this.onLoadFinish,
       },
@@ -48,7 +48,7 @@ class Loader implements IModule {
       .then((buffer) => new Uint8Array(buffer))
       .then((bytes) => {
         for (let i = 0; i < bytes.length; i++) {
-          this.evt.emit("memory:write", i, bytes[i]);
+          this.evt.emit("ui:memory:write", i, bytes[i]);
         }
       });
   };

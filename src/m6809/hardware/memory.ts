@@ -38,11 +38,13 @@ class Memory implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["memory:read:result", "memory:write:result"],
-      required: {},
+      provided: ["memory:read:result", "memory:write:result", "ui:memory:read:result", "ui:memory:write:result"],
+      required: {"clock:cycle_start": () => {}},
       optional: {
-        "memory:read": this.on_memory_read,
-        "memory:write": this.on_memory_write,
+        "memory:read": this.onMemoryRead,
+        "memory:write": this.onMemoryWrite,
+        "ui:memory:read": this.onUiMemoryRead,
+        "ui:memory:write": this.onUiMemoryWrite,
       },
     };
   }
@@ -73,21 +75,35 @@ class Memory implements IModule {
     console.log(`[${this.id}] Initialized ${type} memory at ${start} with size ${size}`);
   }
 
-  on_memory_read = (address: number): void => {
+  onUiMemoryRead = (address: number): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    // TODO: Add delays here.
+    this.event_transceiver.emit("ui:memory:read:result", address, data);
+  }
+  onUiMemoryWrite = (address: number, data: number): void => {
+    // If the address is out of bounds, do nothing.
+    if (address < this.start || address >= this.start + this.memory.length) return;
+
+    this.memory[address - this.start] = data;
+    this.event_transceiver.emit("ui:memory:write:result", address, data);
+  }
+  onMemoryRead = async (address: number): Promise<void> => {
+    // If the address is out of bounds, do nothing.
+    if (address < this.start || address >= this.start + this.memory.length) return;
+
+    const data = this.memory[address - this.start];
+    await this.event_transceiver.wait("clock:cycle_start");
     this.event_transceiver.emit("memory:read:result", address, data);
   };
-  on_memory_write = (address: number, data: number): void => {
+  onMemoryWrite = async (address: number, data: number): Promise<void> => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     this.memory[address - this.start] = data;
 
-    // TODO: Add delays here.
+    await this.event_transceiver.wait("clock:cycle_start");
     this.event_transceiver.emit("memory:write:result", address, data);
   };
 }
