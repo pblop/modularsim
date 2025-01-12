@@ -171,25 +171,28 @@ class Cpu implements IModule {
   };
 
   loop = async () => {
-    // Get the instruction (this increments the PC)
-    const opcodeBytes = await this.fetchOpCode();
-    console.log(`[${this.id}] read opcode bytes ${opcodeBytes} at ${this.registers.pc}`);
-    // Convert one or two bytes to single u16 containing the whole opcode.
-    const opcode = (opcodeBytes[0] << 8) + (opcodeBytes.length > 1 ? opcodeBytes[1] : 0);
-    console.log(
-      `[${this.id}] opcode ${opcode.toString(16)} at ${this.registers.pc - opcodeBytes.length}`,
-    );
-    this.printRegisters();
+    while (true) {
+      await this.et.wait("clock:cycle_start");
+      // Get the instruction (this increments the PC)
+      const opcodeBytes = await this.fetchOpCode();
+      console.log(`[${this.id}] read opcode bytes ${opcodeBytes} at ${this.registers.pc}`);
+      // Convert one or two bytes to single u16 containing the whole opcode.
+      const opcode = (opcodeBytes[0] << 8) + (opcodeBytes.length > 1 ? opcodeBytes[1] : 0);
+      console.log(
+        `[${this.id}] opcode ${opcode.toString(16)} at ${this.registers.pc - opcodeBytes.length}`,
+      );
+      this.printRegisters();
 
-    // Execute the instruction
-    const waitCycles = await doInstruction(this, opcode);
+      // Execute the instruction
+      const waitCycles = await doInstruction(this, opcode);
 
-    for (let i = 0; i < waitCycles; i++) {
-      // TODO: Implement the wait cycle
+      for (let i = 0; i < waitCycles; i++) {
+        // TODO: Implement the wait cycle
+      }
+
+      this.et.emit("cpu:instruction_finish");
+      this.printRegisters();
     }
-
-    this.et.emit("cpu:instruction_finish");
-    this.printRegisters();
   };
 }
 
