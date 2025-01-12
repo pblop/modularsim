@@ -26,36 +26,6 @@ function signExtend(val: number, valBits: number, outBits: number): number {
   return val & signBit ? val | mask : val;
 }
 
-async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<number> {
-  console.debug(`[cpu] instruction ld16 ${reg} ${mode}`);
-
-  let val: number;
-  switch (mode) {
-    case "immediate":
-      val = await cpu.read(cpu.registers.pc, 2);
-      cpu.registers.pc += 2;
-      break;
-    case "direct": {
-      const address = await cpu.read(cpu.registers.pc, 2);
-      cpu.registers.pc += 2;
-      val = await cpu.read(address, 2);
-      break;
-    }
-    case "indexed":
-      throw new Error("Indexed addressing mode not implemented");
-    case "extended":
-      throw new Error("Extended addressing mode not implemented");
-  }
-
-  cpu.registers[reg] = val;
-
-  // Clear V flag, set N if negative, Z if zero
-  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  cpu.registers.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
-
-  return 3;
-}
 
 async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   const fivebit = !((postbyte & 0x80) >> 7);
@@ -165,20 +135,17 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   return address;
 }
 
-
-async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<number> {
-  console.debug(`[cpu] instruction ld8 ${reg} ${mode}`);
-
+async function address(cpu: Cpu, mode: AddressingMode, size: number): Promise<number> {
   let val: number;
+
   switch (mode) {
     case "immediate":
-      val = await cpu.read(cpu.registers.pc, 1);
-      cpu.registers.pc += 1;
+      val = await cpu.read(cpu.registers.pc, size);
+      cpu.registers.pc += size;
       break;
     case "direct": {
-      const address = await cpu.read(cpu.registers.pc, 2);
-      cpu.registers.pc += 2;
-      val = await cpu.read(address, 1);
+      console.error("Direct addressing not implemented");
+      val = 0;
       break;
     }
     case "indexed": {
@@ -186,12 +153,22 @@ async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<n
       cpu.registers.pc += 1;
 
       const address = await indexedAddressing(cpu, postbyte);
-      val = await cpu.read(address, 1);
+      val = await cpu.read(address, size);
       break;
     }
     case "extended":
-      throw new Error("Extended addressing mode not implemented");
+      const address = await cpu.read(cpu.registers.pc, 2);
+      cpu.registers.pc += 2;
+      val = await cpu.read(address, size);
   }
+
+  return val;
+}
+
+async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<number> {
+  console.debug(`[cpu] instruction ld8 ${reg} ${mode}`);
+
+  const val = await address(cpu, mode, 1);
 
   cpu.registers[reg] = val;
 
@@ -201,6 +178,21 @@ async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<n
   cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
 
   return 2;
+}
+
+async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<number> {
+  console.debug(`[cpu] instruction ld16 ${reg} ${mode}`);
+
+  const val = await address(cpu, mode, 2);
+
+  cpu.registers[reg] = val;
+
+  // Clear V flag, set N if negative, Z if zero
+  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
+  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
+  cpu.registers.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
+
+  return 3;
 }
 
 const INSTRUCTIONS: Record<number, InstructionLogic> = {
