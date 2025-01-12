@@ -58,10 +58,11 @@ async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<num
 }
 
 async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
-  const fivebit = (postbyte & 0x80) >> 7;
+  const fivebit = !((postbyte & 0x80) >> 7);
   const indirect = (postbyte & 0x10) >> 4;
-  const RR = (postbyte & 0xc0) >> 6; // 00 = X, 01 = Y, 10 = U, 11 = S
+  const RR = (postbyte & 0x60) >> 5; // 00 = X, 01 = Y, 10 = U, 11 = S
 
+  console.debug(`[cpu] indexed addressing: ${postbyte.toString(16)} ${fivebit} ${indirect} ${RR}`);
   const rest = postbyte & 0xf;
 
   // Get the register to use (given by RR in all but 4 cases).
@@ -71,10 +72,13 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   else
     register = ["X", "Y", "U", "S"][RR] as Registers;
 
+  console.debug(`[cpu] indexed addressing: register ${register}`);
+    
   let address: number = cpu.registers[register];
   if (fivebit) {
     // Non-Indirect, 5 bit offset
-    console.debug("TODO: Implement 5 bit offset");
+    const offset = signExtend(rest, 5, 16);
+    address += offset;
   } else {
     switch (rest) {
       case 0b0100: {
@@ -111,25 +115,26 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
         break;
       }
       case 0b0000: {
-        // Increment by 1
-        address += 1;
+        // Post-increment by 1
+        cpu.registers[register] += 1;
         break;
       }
       case 0b0001: {
-        // Increment by 2
-        address += 2;
+        // Post-increment by 2
+        cpu.registers[register] += 2;
         break;
       }
       case 0b0010: {
-        // Decrement by 1
+        // Pre-Decrement by 1 
+        // TODO: Actually PRE-decrement, not POST-decrement.
         // TODO: This subtraction is wrong (if address == 0, it breaks wonderfully).
-        address -= 1;
+        cpu.registers[register] -= 1;
         break;
       }
       case 0b0011: {
-        // Decrement by 2
+        // Pre-Decrement by 2
         // TODO: This subtraction is wrong.
-        address -= 2;
+        cpu.registers[register] -= 2;
         break;
       }
       case 0b1100: {
@@ -152,11 +157,11 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   
   // Overflow!
   address = wrap(address, 16);
-
+  
   if (indirect) {
     address = await cpu.read(address, 2);
   }
-  
+
   return address;
 }
 
@@ -180,7 +185,8 @@ async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<n
       const postbyte = await cpu.read(cpu.registers.pc, 1);
       cpu.registers.pc += 1;
 
-      val = await indexedAddressing(cpu, postbyte);
+      const address = await indexedAddressing(cpu, postbyte);
+      val = await cpu.read(address, 1);
       break;
     }
     case "extended":
