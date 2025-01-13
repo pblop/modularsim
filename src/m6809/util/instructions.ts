@@ -230,17 +230,50 @@ async function beq(cpu: Cpu): Promise<number> {
   return 3;
 }
 
+async function bra(cpu: Cpu): Promise<number> {
+  console.debug("[cpu] instruction bra");
+
+  const address = await addressing(cpu, "relative");
+
+  cpu.registers.pc = address;
+  return 3;
+}
+
 async function st8(cpu: Cpu, reg: Accumulators, mode: Exclude<AddressingMode, "immediate">): Promise<number> {
   console.debug(`[cpu] instruction st8 ${reg} ${mode}`);
 
   const address = await addressing(cpu, mode);
+  const val = cpu.registers[reg];
 
-  await cpu.write(address, cpu.registers[reg], 1);
+  await cpu.write(address, val, 1);
+
+  // Clear V flag, set N if negative, Z if zero
+  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
+  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
+  cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
+
+  return 2;
+}
+
+async function clracc(cpu: Cpu, reg: "A" | "B"): Promise<number> {
+  console.debug(`[cpu] instruction clr${reg}`);
+
+  cpu.registers[reg] = 0;
+
+  // Clear N,V,C, set Z
+  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
+  cpu.registers.cc |= ConditionCodes.ZERO;
 
   return 2;
 }
 
 const INSTRUCTIONS: Record<number, InstructionLogic> = {
+  // branching
+  0x2700: beq,
+  0x2000: bra,
+  // clr(accumulator)
+  0x4f00: (cpu: Cpu) => clracc(cpu, "A"),
+  0x5f00: (cpu: Cpu) => clracc(cpu, "B"),
   // ldx
   0x8e00: (cpu: Cpu) => ld16(cpu, "X", "immediate"),
   0x9e00: (cpu: Cpu) => ld16(cpu, "X", "direct"),
@@ -251,8 +284,6 @@ const INSTRUCTIONS: Record<number, InstructionLogic> = {
   0x9600: (cpu: Cpu) => ld8(cpu, "A", "direct"),
   0xa600: (cpu: Cpu) => ld8(cpu, "A", "indexed"),
   0xb600: (cpu: Cpu) => ld8(cpu, "A", "extended"),
-  // beq
-  0x2700: (cpu: Cpu) => beq(cpu),
   // sta
   0x9700: (cpu: Cpu) => st8(cpu, "A", "direct"),
   0xa700: (cpu: Cpu) => st8(cpu, "A", "indexed"),
