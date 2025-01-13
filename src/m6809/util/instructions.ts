@@ -5,7 +5,7 @@ import { ConditionCodes } from "../hardware/cpu.js";
 // of cycles the processor should wait.
 type InstructionLogic = (cpu: Cpu) => Promise<number>;
 
-type AddressingMode = "immediate" | "direct" | "indexed" | "extended";
+type AddressingMode = "immediate" | "direct" | "indexed" | "extended" | "relative";
 type Registers = "X" | "Y" | "U" | "S";
 type Accumulators = "A" | "B" | "D";
 
@@ -25,7 +25,6 @@ function signExtend(val: number, valBits: number, outBits: number): number {
   // If the number is negative, set the bits on top to 1s, otherwise set them to 0s.
   return val & signBit ? val | mask : val;
 }
-
 
 async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   const fivebit = !((postbyte & 0x80) >> 7);
@@ -135,40 +134,61 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   return address;
 }
 
-async function address(cpu: Cpu, mode: AddressingMode, size: number): Promise<number> {
-  let val: number;
-
+type FetchableAddress = number | "pc";
+/**
+ * Returns the address given by the addressing mode (immediate, direct, indexed, extended, relative),
+ * fetching any necessary data to calculate it from memory. (immediate <=> "pc")
+ * @returns The address to read from (or "pc" if the address is the next byte to read).
+ */
+async function addressing<T extends AddressingMode>(cpu: Cpu, mode: T): Promise<T extends "immediate" ? "pc" : number> {
+  type ReturnType = T extends "immediate" ? "pc" : number;
+  
   switch (mode) {
     case "immediate":
-      val = await cpu.read(cpu.registers.pc, size);
-      cpu.registers.pc += size;
-      break;
+      return "pc" as ReturnType;
     case "direct": {
+      // TODO: Implement direct addressing (hand-in-hand with paging)
       console.error("Direct addressing not implemented");
-      val = 0;
-      break;
+      return 0 as ReturnType;
     }
     case "indexed": {
       const postbyte = await cpu.read(cpu.registers.pc, 1);
       cpu.registers.pc += 1;
 
-      const address = await indexedAddressing(cpu, postbyte);
-      val = await cpu.read(address, size);
-      break;
+      return await indexedAddressing(cpu, postbyte) as ReturnType;
     }
     case "extended":
       const address = await cpu.read(cpu.registers.pc, 2);
       cpu.registers.pc += 2;
-      val = await cpu.read(address, size);
+      return address as ReturnType;
+    case "relative": // Only used for branches
+      const offset = await cpu.read(cpu.registers.pc, 1);
+      cpu.registers.pc += 1;
+      return (cpu.registers.pc + signExtend(offset, 8, 16)) as ReturnType;
   }
-
+}
+/**
+ * Returns the value at the given address, incrementing the program counter if the address is "pc"
+ * (in the case of immediate addressing).
+ * @param size The size of the value to read (in bytes).
+ * @returns The value at the address.
+ */
+async function fetch(cpu: Cpu, address: FetchableAddress, size: number): Promise<number> {
+  let val: number;
+  if (address === "pc") {
+    val = await cpu.read(cpu.registers.pc, size);
+    cpu.registers.pc += size;
+  } else {
+    val = await cpu.read(address, size);
+  }
   return val;
 }
 
 async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<number> {
   console.debug(`[cpu] instruction ld8 ${reg} ${mode}`);
 
-  const val = await address(cpu, mode, 1);
+  const address = await addressing(cpu, mode);
+  const val = await fetch(cpu, address, 1);
 
   cpu.registers[reg] = val;
 
@@ -183,7 +203,8 @@ async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<n
 async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<number> {
   console.debug(`[cpu] instruction ld16 ${reg} ${mode}`);
 
-  const val = await address(cpu, mode, 2);
+  const address = await addressing(cpu, mode);
+  const val = await fetch(cpu, address, 2);
 
   cpu.registers[reg] = val;
 
@@ -192,6 +213,18 @@ async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<num
   cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
   cpu.registers.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
 
+  return 3;
+}
+
+async function beq(cpu: Cpu): Promise<number> {
+  console.debug("[cpu] instruction beq");
+
+  const address = await addressing(cpu, "relative");
+
+  // Zero flag set -> branch
+  if (cpu.registers.cc & ConditionCodes.ZERO) {
+    cpu.registers.pc = address;
+  }
   return 3;
 }
 
@@ -206,6 +239,9 @@ const INSTRUCTIONS: Record<number, InstructionLogic> = {
   0x9600: (cpu: Cpu) => ld8(cpu, "A", "direct"),
   0xa600: (cpu: Cpu) => ld8(cpu, "A", "indexed"),
   0xb600: (cpu: Cpu) => ld8(cpu, "A", "extended"),
+  // beq
+  0x2700: (cpu: Cpu) => beq(cpu),
+
 };
 
 export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
