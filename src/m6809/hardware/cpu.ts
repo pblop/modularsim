@@ -70,7 +70,7 @@ class Cpu implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["cpu:instruction_finish", "memory:read"],
+      provided: ["cpu:instruction_finish", "memory:read", "memory:write"],
       required: {
         "clock:cycle_start": () => {},
         "signal:reset": this.reset,
@@ -154,7 +154,7 @@ class Cpu implements IModule {
   };
 
   /**
-   * Wrapper around the event emitter to read bytes from memory.
+   * Wrapper around the event emitter to read bytes from memory (big-endian).
    */
   read = async (address: number, bytes = 1) => {
     let val = 0;
@@ -169,6 +169,21 @@ class Cpu implements IModule {
 
     return val;
   };
+
+  /**
+   * Wrapper around the event emitter to write bytes to memory (big-endian).
+   */
+  write = async (address: number, data: number, bytes = 1) => {
+    const allPromises = [];
+    for (let i = 0; i < bytes; i++) {
+      // The Motorola 6809 is big-endian, so we write the most significant byte first, that is
+      // for index 0, we shift all the way to the right, for index 1, we shift 8 bits less, etc.
+      const val = (data >> (8 * (bytes-i-1))) & 0xff;
+      const promise = this.et.emitAndWait("memory:write", "memory:write:result", address + i, val);
+      allPromises.push(promise);
+    }
+    return Promise.all(allPromises);
+  }
 
   loop = async () => {
     while (true) {

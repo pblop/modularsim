@@ -166,6 +166,8 @@ async function addressing<T extends AddressingMode>(cpu: Cpu, mode: T): Promise<
       cpu.registers.pc += 1;
       return (cpu.registers.pc + signExtend(offset, 8, 16)) as ReturnType;
   }
+
+  throw new Error("[cpu] Unknown addressing mode passed to addressing function");
 }
 /**
  * Returns the value at the given address, incrementing the program counter if the address is "pc"
@@ -228,6 +230,16 @@ async function beq(cpu: Cpu): Promise<number> {
   return 3;
 }
 
+async function st8(cpu: Cpu, reg: Accumulators, mode: Exclude<AddressingMode, "immediate">): Promise<number> {
+  console.debug(`[cpu] instruction st8 ${reg} ${mode}`);
+
+  const address = await addressing(cpu, mode);
+
+  await cpu.write(address, cpu.registers[reg], 1);
+
+  return 2;
+}
+
 const INSTRUCTIONS: Record<number, InstructionLogic> = {
   // ldx
   0x8e00: (cpu: Cpu) => ld16(cpu, "X", "immediate"),
@@ -241,7 +253,14 @@ const INSTRUCTIONS: Record<number, InstructionLogic> = {
   0xb600: (cpu: Cpu) => ld8(cpu, "A", "extended"),
   // beq
   0x2700: (cpu: Cpu) => beq(cpu),
-
+  // sta
+  0x9700: (cpu: Cpu) => st8(cpu, "A", "direct"),
+  0xa700: (cpu: Cpu) => st8(cpu, "A", "indexed"),
+  0xb700: (cpu: Cpu) => st8(cpu, "A", "extended"),
+  // stb
+  0xd700: (cpu: Cpu) => st8(cpu, "B", "extended"),
+  0xe700: (cpu: Cpu) => st8(cpu, "B", "indexed"),
+  0xf700: (cpu: Cpu) => st8(cpu, "B", "direct"),
 };
 
 export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
