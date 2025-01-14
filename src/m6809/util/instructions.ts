@@ -20,7 +20,7 @@ function signExtend(val: number, valBits: number, outBits: number): number {
   // (1 << valBits) - 1 is a mask with the bottom valBits bits set to 1.
   // Subtracting the two gives a mask with the bottom valBits bits set to 0,
   // and the rest set to 1.
-  const mask = ((1 << outBits) - 1) - ((1 << valBits) - 1);
+  const mask = (1 << outBits) - 1 - ((1 << valBits) - 1);
 
   // If the number is negative, set the bits on top to 1s, otherwise set them to 0s.
   return val & signBit ? val | mask : val;
@@ -36,13 +36,13 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
 
   // Get the register to use (given by RR in all but 4 cases).
   let register: Registers | "pc";
-  if (rest === 0b1100 || rest === 0b1101) // 8 or 16 bit offset from PC
+  if (rest === 0b1100 || rest === 0b1101)
+    // 8 or 16 bit offset from PC
     register = "pc";
-  else
-    register = ["X", "Y", "U", "S"][RR] as Registers;
+  else register = ["X", "Y", "U", "S"][RR] as Registers;
 
   console.debug(`[cpu] indexed addressing: register ${register}`);
-    
+
   let address: number = cpu.registers[register];
   if (fivebit) {
     // Non-Indirect, 5 bit offset
@@ -94,7 +94,7 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
         break;
       }
       case 0b0010: {
-        // Pre-Decrement by 1 
+        // Pre-Decrement by 1
         // TODO: Actually PRE-decrement, not POST-decrement.
         // TODO: This subtraction is wrong (if address == 0, it breaks wonderfully).
         cpu.registers[register] -= 1;
@@ -123,10 +123,10 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
       }
     }
   }
-  
+
   // Overflow!
   address = wrap(address, 16);
-  
+
   if (indirect) {
     address = await cpu.read(address, 2);
   }
@@ -140,14 +140,17 @@ type FetchableAddress = number | "pc";
  * fetching any necessary data to calculate it from memory. (immediate <=> "pc")
  * @returns The address to read from (or "pc" if the address is the next byte to read).
  */
-async function addressing<T extends AddressingMode>(cpu: Cpu, mode: T): Promise<T extends "immediate" ? "pc" : number> {
+async function addressing<T extends AddressingMode>(
+  cpu: Cpu,
+  mode: T,
+): Promise<T extends "immediate" ? "pc" : number> {
   type ReturnType = T extends "immediate" ? "pc" : number;
-  
+
   switch (mode) {
     case "immediate":
       return "pc" as ReturnType;
     case "direct": {
-      // TODO: Implement direct addressing (hand-in-hand with paging)
+      // TODO: Implement direct addressing (which goes hand-in-hand with paging)
       console.error("Direct addressing not implemented");
       return 0 as ReturnType;
     }
@@ -155,16 +158,19 @@ async function addressing<T extends AddressingMode>(cpu: Cpu, mode: T): Promise<
       const postbyte = await cpu.read(cpu.registers.pc, 1);
       cpu.registers.pc += 1;
 
-      return await indexedAddressing(cpu, postbyte) as ReturnType;
+      return (await indexedAddressing(cpu, postbyte)) as ReturnType;
     }
-    case "extended":
+    case "extended": {
       const address = await cpu.read(cpu.registers.pc, 2);
       cpu.registers.pc += 2;
       return address as ReturnType;
-    case "relative": // Only used for branches
+    }
+    case "relative": {
+      // Only used for branches
       const offset = await cpu.read(cpu.registers.pc, 1);
-      cpu.registers.pc += 1;
+      cpu.registers.pc += 2;
       return (cpu.registers.pc + signExtend(offset, 8, 16)) as ReturnType;
+    }
   }
 
   throw new Error("[cpu] Unknown addressing mode passed to addressing function");
@@ -239,7 +245,11 @@ async function bra(cpu: Cpu): Promise<number> {
   return 3;
 }
 
-async function st8(cpu: Cpu, reg: Accumulators, mode: Exclude<AddressingMode, "immediate">): Promise<number> {
+async function st8(
+  cpu: Cpu,
+  reg: Accumulators,
+  mode: Exclude<AddressingMode, "immediate">,
+): Promise<number> {
   console.debug(`[cpu] instruction st8 ${reg} ${mode}`);
 
   const address = await addressing(cpu, mode);

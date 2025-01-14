@@ -66,6 +66,8 @@ class Cpu implements IModule {
 
   interval_id?: number;
 
+  // The actual registers, and the proxy to emit events when they are read/written.
+  _registers: Registers;
   registers: Registers;
 
   getEventDeclaration(): EventDeclaration {
@@ -90,7 +92,18 @@ class Cpu implements IModule {
     this.config = validate_cpu_config(config);
     this.et = eventTransceiver;
 
-    this.registers = new Registers();
+    this._registers = new Registers();
+    this.registers = new Proxy(this._registers, {
+      get: (target: Registers, property: keyof Registers) => {
+        this.et.emit("cpu:register_read", property, target[property]);
+        return target[property];
+      },
+      set: (target: Registers, property: keyof Registers, value: number) => {
+        target[property] = value;
+        this.et.emit("cpu:register_write", property, value);
+        return true;
+      },
+    });
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -178,12 +191,12 @@ class Cpu implements IModule {
     for (let i = 0; i < bytes; i++) {
       // The Motorola 6809 is big-endian, so we write the most significant byte first, that is
       // for index 0, we shift all the way to the right, for index 1, we shift 8 bits less, etc.
-      const val = (data >> (8 * (bytes-i-1))) & 0xff;
+      const val = (data >> (8 * (bytes - i - 1))) & 0xff;
       const promise = this.et.emitAndWait("memory:write", "memory:write:result", address + i, val);
       allPromises.push(promise);
     }
     return Promise.all(allPromises);
-  }
+  };
 
   loop = async () => {
     while (true) {
