@@ -22,17 +22,17 @@ export function setStyle(element: HTMLElement, style: Record<string, string>): v
   }
 }
 
-export function element(
-  tag: string,
+export function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
   options: {
-    properties?: Partial<HTMLElement>;
+    properties?: Partial<HTMLElementTagNameMap[K]>;
     attributes?: Record<string, string>;
     // NOTE: This could be style?: Partial<CSSStyleDeclaration>, but then I would
     // have to convert camelCase names to kebab-case.
     style?: Record<string, string>;
     children?: HTMLElement[];
   },
-): HTMLElement {
+): HTMLElementTagNameMap[K] {
   const { properties = {}, style = {}, attributes = {}, children = [] } = options;
 
   const el = document.createElement(tag);

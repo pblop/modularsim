@@ -1,3 +1,22 @@
 .memory-ui {
   background-color: lightcoral;
+
+  .memory-table {
+    width: 100%;
+
+    .read-highlight {
+      background-color: lightblue;
+    }
+    .write-highlight {
+      background-color: lightgreen;
+    }
+  }
+  .memory-grid {
+    /* display: table */
+    /* display: grid; */
+    /* The first column is the base address number column */
+    /* grid-template-columns: repeat(17, 1fr); */
+    /* grid-gap: 1px; */
+    /* padding: 1px; */
+  }
 }
