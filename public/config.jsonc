@@ -48,14 +48,24 @@
               "row": 1
             },
             {
-              "id": "ui2",
-              "column": 1,
+              "id": "screen",
+              "column": "1 / span 2",
               "row": 2
             },
+            // {
+            //   "id": "ui2",
+            //   "column": 1,
+            //   "row": 2
+            // },
             {
               "id": "clock_ui",
               "column": "-2 / -1",
               "row": 1
+            },
+            {
+              "id": "instruction_ui",
+              "column": "3",
+              "row": "1 / span 2"
             }
           ]
         }
@@ -65,7 +75,7 @@
         "type": "clock",
         "url": "./m6809/hardware/clock.js",
         "config": {
-          "frequency": 1 // Hz
+          "frequency": 2 // Hz
         }
       },
       {
@@ -90,6 +100,21 @@
         "url": "./m6809/extra/loader.js",
         "config": {
           "file": "./m6809/programs/hola.bin"
+        }
+      },
+      {
+        "id": "instruction_ui",
+        "type": "ui",
+        "url": "./m6809/ui/instruction_ui.js",
+        "css": ["./m6809/ui/instruction_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "screen",
+        "type": "ui",
+        "url": "./m6809/ui/screen.js",
+        "config": {
+          "address": 65280
         }
       }
     ]
