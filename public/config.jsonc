@@ -119,6 +119,14 @@
         "config": {
           "address": 65280
         }
+      },
+      {
+        "id": "stopper",
+        "type": "extra",
+        "url": "./m6809/extra/stop.js",
+        "config": {
+          "address": 65281
+        }
       }
     ]
   }
