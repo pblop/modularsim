@@ -9,12 +9,12 @@
     visibility: visible;
     opacity: 1;
     animation-name: fadeOut;
-    /* TODO: add some way of editing the duration */
-    animation-duration: 1s;
+    animation-duration: calc(1s / var(--clock-frequency, 1));
     animation-fill-mode: forwards;
   }
   
 }
+
 @keyframes fadeOut {
   0% { opacity: 1; }
   20% { opacity: 1; }

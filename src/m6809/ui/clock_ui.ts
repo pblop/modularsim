@@ -3,6 +3,15 @@ import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
 import { element } from "../../utils.js";
 
+type ClockUIConfig = {
+  frequency: number;
+};
+
+function verifyClockUIConfig(config: Record<string, unknown>): ClockUIConfig {
+  if (typeof config.frequency !== "number") throw new Error("[ClockUI] frequency must be a number");
+  return config as ClockUIConfig;
+}
+
 type ClockUIState = {
   machineState: "running" | "paused" | "stopped";
   lastCycleTime: number;
@@ -11,8 +20,10 @@ type ClockUIState = {
 class ClockUI implements IModule {
   id: string;
   event_transceiver: TypedEventTransceiver;
-  panel?: HTMLElement;
 
+  config: ClockUIConfig;
+
+  panel?: HTMLElement;
   state: ClockUIState;
 
   getEventDeclaration(): EventDeclaration {
@@ -39,6 +50,8 @@ class ClockUI implements IModule {
   ) {
     this.id = id;
     this.event_transceiver = eventTransceiver;
+
+    this.config = verifyClockUIConfig(config);
 
     this.state = {
       machineState: "stopped",
@@ -133,6 +146,7 @@ class ClockUI implements IModule {
     this.panel = panel;
 
     this.panel.classList.add("clock-ui");
+    this.panel.style.setProperty("--clock-frequency", `${this.config.frequency}`);
 
     this.panel.appendChild(element("div", { properties: { className: "clock-main" } }));
     this.panel.appendChild(element("div", { properties: { className: "clock-marker" } }));

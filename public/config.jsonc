@@ -82,7 +82,10 @@
         "id": "clock_ui",
         "type": "ui",
         "url": "./m6809/ui/clock_ui.js",
-        "css": ["./m6809/ui/clock_ui.css"]
+        "css": ["./m6809/ui/clock_ui.css"],
+        "config": {
+          "frequency": 2
+        }
       },
       {
         "id": "cpu",
