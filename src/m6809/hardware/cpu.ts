@@ -72,7 +72,13 @@ class Cpu implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["cpu:instruction_finish", "memory:read", "memory:write"],
+      provided: [
+        "cpu:instruction_finish",
+        "memory:read",
+        "memory:write",
+        "cpu:register_write",
+        "cpu:register_read",
+      ],
       required: {
         "clock:cycle_start": () => {},
         "signal:reset": this.reset,
