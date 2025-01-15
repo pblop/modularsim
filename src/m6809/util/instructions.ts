@@ -168,7 +168,7 @@ async function addressing<T extends AddressingMode>(
     case "relative": {
       // Only used for branches
       const offset = await cpu.read(cpu.registers.pc, 1);
-      cpu.registers.pc += 2;
+      cpu.registers.pc += 1;
       return (cpu.registers.pc + signExtend(offset, 8, 16)) as ReturnType;
     }
   }
