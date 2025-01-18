@@ -1,0 +1,19 @@
+.register-ui {
+  background-color: plum;
+
+  .register-table {
+    width: 100%;
+    text-align: center;
+
+    .pointer-register {
+      text-decoration: underline;
+      color: #0000ff;
+      cursor: help;
+    }
+    .pointer-register-value {
+      text-decoration: underline;
+      color: #0000ff;
+      cursor: help;
+    }
+  }
+}

@@ -50,7 +50,7 @@
             {
               "id": "screen",
               "column": "1 / span 2",
-              "row": 2
+              "row": 3
             },
             // {
             //   "id": "ui2",
@@ -66,6 +66,11 @@
               "id": "instruction_ui",
               "column": "3",
               "row": "1 / span 2"
+            },
+            {
+              "id": "register_ui",
+              "column": "1 / span 2",
+              "row": "2"
             }
           ]
         }
@@ -126,6 +131,42 @@
         "url": "./m6809/extra/stop.js",
         "config": {
           "address": 65281
+        }
+      },
+      {
+        "id": "register_ui",
+        "type": "ui",
+        "url": "./m6809/ui/register_ui.js",
+        "css": ["./m6809/ui/register_ui.css"],
+        "config": {
+          "registers": {
+            "D": {
+              "size": 16
+            },
+            "X": {
+              "size": 16,
+              "pointer": true
+            },
+            "Y": {
+              "size": 16,
+              "pointer": true
+            },
+            "U": {
+              "size": 16,
+              "pointer": true
+            },
+            "S": {
+              "size": 16,
+              "pointer": true
+            },
+            "pc": {
+              "size": 16,
+              "pointer": true
+            },
+            "cc": {
+              "size": 8
+            }
+          }
         }
       }
     ]
