@@ -102,6 +102,43 @@ class RegisterUI implements IModule {
     this.createRegisterUI();
   };
 
+  generateTooltipFunction(register: string): (ev: MouseEvent) => Promise<void> {
+    return async (ev: MouseEvent) => {
+      if (!ev.target) return;
+
+      const address = this.registerValues[register];
+      if (address === undefined) return;
+
+      const data = [];
+
+      // TODO: This breaks if the address is the last one in memory (or close to it),
+      // and we don't know the memory size.
+      for (let offset = -4; offset < 5; offset++) {
+        const readAddress = address + offset;
+        if (readAddress < 0) continue;
+
+        const [_, val] = await this.et.emitAndWait(
+          "ui:memory:read",
+          "ui:memory:read:result",
+          readAddress,
+        );
+        data.push({ offset, val });
+      }
+
+      const row = [];
+      for (const { offset, val } of data) {
+        let str = val.toString(16).padStart(2, "0");
+        if (offset === 0) {
+          if (data[0].offset < 0) str = `<|${str}`;
+          if (data[data.length - 1].offset > 0) str = `${str}|>`;
+        }
+        row.push(str);
+      }
+
+      (ev.target as HTMLTableCellElement).title = `${row.join(" ")}`;
+    };
+  }
+
   createRegisterUI(): void {
     if (!this.panel) return;
 
@@ -127,40 +164,9 @@ class RegisterUI implements IModule {
               properties: {
                 className: `register-${name} ${this.config.registers[name].pointer ? "pointer-register-value" : ""}`,
                 textContent: "unk.",
-                onmouseenter: async (ev: MouseEvent) => {
-                  if (!ev.target) return;
-
-                  const address = this.registerValues[name];
-                  if (address === undefined) return;
-
-                  const data = [];
-
-                  // TODO: This breaks if the address is the last one in memory (or close to it),
-                  // and we don't know the memory size.
-                  for (let offset = -4; offset < 5; offset++) {
-                    const readAddress = address + offset;
-                    if (readAddress < 0) continue;
-
-                    const [_, val] = await this.et.emitAndWait(
-                      "ui:memory:read",
-                      "ui:memory:read:result",
-                      readAddress,
-                    );
-                    data.push({ offset, val });
-                  }
-
-                  const row = [];
-                  for (const { offset, val } of data) {
-                    let str = val.toString(16).padStart(2, "0");
-                    if (offset === 0) {
-                      if (data[0].offset < 0) str = `<|${str}`;
-                      if (data[data.length - 1].offset > 0) str = `${str}|>`;
-                    }
-                    row.push(str);
-                  }
-
-                  (ev.target as HTMLTableCellElement).title = `${row.join(" ")}`;
-                },
+                onmouseenter: this.config.registers[name].pointer
+                  ? this.generateTooltipFunction(name)
+                  : undefined,
               },
             }),
           ),
