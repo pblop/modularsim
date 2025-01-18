@@ -18,8 +18,8 @@ export interface EventMap {
 
   // CPU events
   "cpu:instruction_finish": [];
-  "cpu:register_write": [register: string, value: number];
-  "cpu:register_read": [register: string, value: number];
+  "cpu:registers_update": [registers: { [key: string]: number }];
+  "cpu:register_update": [register: string, value: number];
 
   // UI events.
   "ui:clock:pause": [];

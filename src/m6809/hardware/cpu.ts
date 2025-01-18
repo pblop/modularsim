@@ -66,8 +66,6 @@ class Cpu implements IModule {
 
   interval_id?: number;
 
-  // The actual registers, and the proxy to emit events when they are read/written.
-  _registers: Registers;
   registers: Registers;
 
   getEventDeclaration(): EventDeclaration {
@@ -76,8 +74,8 @@ class Cpu implements IModule {
         "cpu:instruction_finish",
         "memory:read",
         "memory:write",
-        "cpu:register_write",
-        "cpu:register_read",
+        "cpu:register_update",
+        "cpu:registers_update",
       ],
       required: {
         "clock:cycle_start": () => {},
@@ -98,21 +96,18 @@ class Cpu implements IModule {
     this.config = validate_cpu_config(config);
     this.et = eventTransceiver;
 
-    this._registers = new Registers();
-    this.registers = new Proxy(this._registers, {
-      get: (target: Registers, property: keyof Registers) => {
-        this.et.emit("cpu:register_read", property, target[property]);
-        return target[property];
-      },
-      set: (target: Registers, property: keyof Registers, value: number) => {
-        target[property] = value;
-        this.et.emit("cpu:register_write", property, value);
-        return true;
-      },
-    });
+    this.registers = new Registers();
 
     console.log(`[${this.id}] Module initialized.`);
   }
+
+  commitRegisters = () => {
+    const registers = Object.entries(this.registers);
+    for (const [key, value] of registers) {
+      this.et.emit("cpu:register_update", key, value);
+    }
+    this.et.emit("cpu:registers_update", Object.fromEntries(registers));
+  };
 
   reset = () => {
     this.registers.dp = 0;
@@ -123,6 +118,8 @@ class Cpu implements IModule {
     this.registers.U = 0;
     this.registers.S = 0;
     this.registers.pc = this.config.pc;
+
+    this.commitRegisters();
 
     this.printRegisters();
 
@@ -224,8 +221,9 @@ class Cpu implements IModule {
         // TODO: Implement the wait cycle
       }
 
-      this.et.emit("cpu:instruction_finish");
       this.printRegisters();
+      this.commitRegisters();
+      this.et.emit("cpu:instruction_finish");
     }
   };
 }
