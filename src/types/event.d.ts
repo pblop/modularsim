@@ -58,11 +58,11 @@ export interface TypedEventTransceiver {
   // wait<E extends EventNames>(event: E): Promise<EventParams<E>>;
   // Emits an event, and waits for another
   // Maybe also change the argument order??
-  emitAndWait<E extends EventNames>(
+  emitAndWait<E extends EventNames, F extends EventNames>(
     emittedEvent: E,
-    event: E,
+    event: F,
     ...args: EventParams<E>
-  ): Promise<EventParams<E>>;
+  ): Promise<EventParams<F>>;
 }
 
 export type EventDeclaration = {

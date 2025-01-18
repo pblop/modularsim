@@ -161,13 +161,13 @@ class M6809Simulator implements ISimulator {
     });
   }
   /**
-   * 
+   *
    */
-  emitAndWait<E extends EventNames>(
+  emitAndWait<E extends EventNames, F extends EventNames>(
     emittedEvent: E,
-    event: E,
+    event: F,
     ...args: EventParams<E>
-  ): Promise<EventParams<E>> {
+  ): Promise<EventParams<F>> {
     const promise = this.wait(event);
     this.emit(emittedEvent, ...args);
     return promise;
@@ -231,12 +231,12 @@ class M6809Simulator implements ISimulator {
    * Add a new once event listener, and emits an event, but checks that the event
    * is declared in the module before.
    */
-  namedEmitAndWait<E extends EventNames>(
+  namedEmitAndWait<E extends EventNames, F extends EventNames>(
     caller: string,
     emittedEvent: E,
-    event: E,
+    event: F,
     ...args: EventParams<E>
-  ): Promise<NonNullable<EventParams<E>>> {
+  ): Promise<NonNullable<EventParams<F>>> {
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
     const eventDeclaration = this.event_declarations[caller];
@@ -246,7 +246,7 @@ class M6809Simulator implements ISimulator {
       throw new Error(`[${caller}] Cannot emit event ${emittedEvent}.`);
 
     return this.emitAndWait(emittedEvent, event, ...args);
-  }  
+  }
 }
 
 export default M6809Simulator;
