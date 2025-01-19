@@ -24,7 +24,9 @@ function validateRegisterInfo(registerInfo: Record<string, unknown>): RegisterIn
 
   if (registerInfo.pointer && typeof registerInfo.pointer !== "boolean")
     throw new Error("[RegisterUI] Register pointer must be a boolean");
-  if (registerInfo.mirror && typeof registerInfo.mirror === "object") {
+  if (registerInfo.mirror) {
+    if (typeof registerInfo.mirror !== "object")
+      throw new Error("[RegisterUI] Mirror must be an object");
     if (!("register" in registerInfo.mirror) || typeof registerInfo.mirror.register !== "string")
       throw new Error("[RegisterUI] Mirror register must be a string");
 
