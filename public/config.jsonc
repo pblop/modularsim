@@ -141,44 +141,47 @@
         "config": {
           "registers": {
             "A": {
-              "size": 8,
+              "bits": 1,
               "mirror": {
                 "register": "D",
                 "mask": "0xFF00"
               }
             },
             "B": {
-              "size": 8,
+              "bits": 8,
               "mirror": {
                 "register": "D",
                 "mask": "0x00FF"
               }
             },
             "D": {
-              "size": 16
+              "bits": 16
             },
             "X": {
-              "size": 16,
+              "bits": 16,
               "pointer": true
             },
             "Y": {
-              "size": 16,
+              "bits": 16,
               "pointer": true
             },
             "U": {
-              "size": 16,
+              "bits": 16,
               "pointer": true
             },
             "S": {
-              "size": 16,
+              "bits": 16,
               "pointer": true
             },
             "pc": {
-              "size": 16,
+              "bits": 16,
               "pointer": true
             },
             "cc": {
-              "size": 8
+              "bits": 8
+            },
+            "dp": {
+              "bits": 8
             }
           }
         }

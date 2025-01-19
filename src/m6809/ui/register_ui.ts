@@ -4,7 +4,7 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.
 import { element, isNumber, parseNumber } from "../../utils.js";
 
 type RegisterInfoConfig = {
-  size: number;
+  bits: number;
   pointer?: boolean;
   mirror?: {
     register: string;
@@ -16,15 +16,22 @@ type RegisterUIConfig = {
 };
 
 function validateRegisterInfo(registerInfo: Record<string, unknown>): RegisterInfoConfig {
-  if (typeof registerInfo.size !== "number")
-    throw new Error("[RegisterUI] Register size must be a number");
+  if (!isNumber(registerInfo.bits))
+    throw new Error(
+      "[RegisterUI] Register bits must be a number (or a string representation thereof)",
+    );
+  if (typeof registerInfo.bits === "string") registerInfo.bits = parseNumber(registerInfo.bits);
+
   if (registerInfo.pointer && typeof registerInfo.pointer !== "boolean")
     throw new Error("[RegisterUI] Register pointer must be a boolean");
   if (registerInfo.mirror && typeof registerInfo.mirror === "object") {
     if (!("register" in registerInfo.mirror) || typeof registerInfo.mirror.register !== "string")
       throw new Error("[RegisterUI] Mirror register must be a string");
+
     if (!("mask" in registerInfo.mirror) || !isNumber(registerInfo.mirror.mask))
-      throw new Error("[RegisterUI] Mirror mask must be a number (or a hex representation)");
+      throw new Error(
+        "[RegisterUI] Mirror mask must be a number (or a string representation thereof)",
+      );
     if (typeof registerInfo.mirror.mask === "string")
       registerInfo.mirror.mask = parseNumber(registerInfo.mirror.mask);
   }
@@ -129,7 +136,7 @@ class RegisterUI implements IModule {
   };
 
   formatRegister(register: string, data: number): string {
-    const numBytes = Math.ceil(this.config.registers[register].size / 8);
+    const numBytes = Math.ceil(this.config.registers[register].bits / 8);
     return data.toString(16).padStart(numBytes * 2, "0");
   }
 
