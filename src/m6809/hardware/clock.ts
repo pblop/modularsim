@@ -19,6 +19,8 @@ class Clock implements IModule {
 
   interval_id?: number;
 
+  stepInstruction: boolean;
+
   getEventDeclaration(): EventDeclaration {
     return {
       provided: ["clock:cycle_start"],
@@ -29,6 +31,8 @@ class Clock implements IModule {
         "ui:clock:start": this.onStartRequested,
         "ui:clock:pause": this.onPauseRequested,
         "ui:clock:step_cycle": this.onStepCycleRequested,
+        "ui:clock:step_instruction": this.onStepInstructionRequested,
+        "cpu:instruction_finish": this.onInstructionFinished,
       },
     };
   }
@@ -41,6 +45,8 @@ class Clock implements IModule {
     this.id = id;
     this.config = validate_clock_config(config);
     this.event_transceiver = eventTransceiver;
+
+    this.stepInstruction = false;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -80,9 +86,20 @@ class Clock implements IModule {
   };
   onPauseRequested = (): void => {
     this.stopInterval();
+    this.stepInstruction = false;
   };
   onStepCycleRequested = (): void => {
     this.event_transceiver.emit("clock:cycle_start");
+  };
+  onStepInstructionRequested = (): void => {
+    this.stepInstruction = true;
+    this.onStartRequested();
+  };
+  onInstructionFinished = (): void => {
+    if (this.stepInstruction) {
+      this.stopInterval();
+      this.stepInstruction = false;
+    }
   };
 }
 

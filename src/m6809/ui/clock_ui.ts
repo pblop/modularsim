@@ -13,7 +13,7 @@ function verifyClockUIConfig(config: Record<string, unknown>): ClockUIConfig {
 }
 
 type ClockUIState = {
-  machineState: "running" | "paused" | "stopped";
+  machineState: "running" | "instruction_run" | "paused" | "stopped";
   lastCycleTime: number;
 };
 
@@ -38,6 +38,7 @@ class ClockUI implements IModule {
       required: {
         "clock:cycle_start": this.onCycleStart,
         "gui:panel_created": this.onGuiPanelCreated,
+        "cpu:instruction_finish": this.onInstructionFinish,
       },
       optional: {},
     };
@@ -79,7 +80,7 @@ class ClockUI implements IModule {
       if (main == null) return; // This should never happen.
       main.innerHTML = "";
 
-      if (this.state.machineState === "running") {
+      if (this.state.machineState === "running" || this.state.machineState === "instruction_run") {
         main.appendChild(
           element("button", {
             properties: {
@@ -111,6 +112,17 @@ class ClockUI implements IModule {
               textContent: "Step (cycle)",
               onclick: () => {
                 this.event_transceiver.emit("ui:clock:step_cycle");
+              },
+            },
+          }),
+        );
+        main.appendChild(
+          element("button", {
+            properties: {
+              textContent: "Step (instruction)",
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:step_instruction");
+                this.setState({ machineState: "instruction_run" });
               },
             },
           }),
@@ -152,6 +164,11 @@ class ClockUI implements IModule {
     this.panel.appendChild(element("div", { properties: { className: "clock-marker" } }));
 
     this.draw();
+  };
+
+  onInstructionFinish = (): void => {
+    if (this.state.machineState !== "instruction_run") return;
+    this.setState({ machineState: "paused" });
   };
 }
 
