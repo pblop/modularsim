@@ -43,14 +43,24 @@
         "config": {
           "panels": [
             {
+              "id": "register_ui",
+              "column": "1 / span 3",
+              "row": "1"
+            },
+            {
+              "id": "instruction_ui",
+              "column": "1 / span 3",
+              "row": "2 / span 6"
+            },
+            {
               "id": "main_memory_ui",
-              "column": "1 / span 2",
-              "row": 1
+              "column": "4 / span 3",
+              "row": "2 / span 6"
             },
             {
               "id": "screen",
-              "column": "1 / span 2",
-              "row": 3
+              "column": "1 / span 3",
+              "row": "8 / span 2"
             },
             // {
             //   "id": "ui2",
@@ -59,18 +69,8 @@
             // },
             {
               "id": "clock_ui",
-              "column": "-2 / -1",
+              "column": "-3 / -1",
               "row": 1
-            },
-            {
-              "id": "instruction_ui",
-              "column": "3",
-              "row": "1 / span 2"
-            },
-            {
-              "id": "register_ui",
-              "column": "1 / span 2",
-              "row": "2"
             }
           ]
         }

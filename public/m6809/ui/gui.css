@@ -7,16 +7,18 @@ html, body {
   display: grid;
   height: 100vh;
   width: 100vw;
+  padding: 1rem;
 
-  grid-gap: 10rem;
+  grid-gap: 1rem;
   grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
-  grid-template-rows: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  grid-template-rows: repeat(auto-fill, minmax(min(50px, 100%), 1fr));
   grid-auto-flow: column;
 }
 
 .gui-panel {
   overflow: auto;
   border: 1px solid #000;
+  border-radius: 5px;
 }
 
 /* TODO: check the max-width is correct. Maybe there's another better unit */
