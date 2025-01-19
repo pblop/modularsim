@@ -140,6 +140,20 @@
         "css": ["./m6809/ui/register_ui.css"],
         "config": {
           "registers": {
+            "A": {
+              "size": 8,
+              "mirror": {
+                "register": "D",
+                "mask": "0xFF00"
+              }
+            },
+            "B": {
+              "size": 8,
+              "mirror": {
+                "register": "D",
+                "mask": "0x00FF"
+              }
+            },
             "D": {
               "size": 16
             },
