@@ -178,7 +178,8 @@
               "pointer": true
             },
             "cc": {
-              "bits": 8
+              "bits": 8,
+              "flags": ["E", "F", "H", "I", "N", "Z", "V", "C"]
             },
             "dp": {
               "bits": 8

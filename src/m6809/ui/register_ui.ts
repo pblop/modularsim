@@ -10,6 +10,10 @@ type RegisterInfoConfig = {
     register: string;
     mask: number;
   };
+  // A breakdown of the register into smaller flags, e.g. for the status register.
+  // It should be an array with the name of the flags, in order of significance
+  // (most significant first).
+  flags?: string[];
 };
 type RegisterUIConfig = {
   registers: Record<string, RegisterInfoConfig>;
@@ -38,6 +42,16 @@ function validateRegisterInfo(registerInfo: Record<string, unknown>): RegisterIn
       registerInfo.mirror.mask = parseNumber(registerInfo.mirror.mask);
   }
 
+  if (registerInfo.breakdown) {
+    if (!Array.isArray(registerInfo.breakdown))
+      throw new Error("[RegisterUI] Register breakdown must be an array");
+    if (registerInfo.breakdown.length !== registerInfo.bits)
+      throw new Error(
+        "[RegisterUI] Register breakdown length must match the number of bits in the register",
+      );
+    if (registerInfo.breakdown.some((part) => typeof part !== "string"))
+      throw new Error("[RegisterUI] Register flag names must be strings");
+  }
   return registerInfo as RegisterInfoConfig;
 }
 
@@ -113,7 +127,17 @@ class RegisterUI implements IModule {
     if (!cell) return;
 
     this.registerValues[register] = value;
-    cell.textContent = this.formatRegister(register, value);
+
+    // Display flags if they exist, otherwise just display the value.
+    const flags = this.config.registers[register].flags;
+    if (flags) {
+      const flagValues = flags
+        .filter((_, i) => (value & (1 << (flags.length - i - 1))) !== 0)
+        .join(", ");
+      cell.textContent = flagValues || "none";
+    } else {
+      cell.textContent = this.formatRegister(register, value);
+    }
 
     // NOTE: this could be optimized by keeping a list of mirrors for each register,
     // and the number of bits to shift, instead of iterating over all registers every time,
