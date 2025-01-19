@@ -150,9 +150,10 @@ async function addressing<T extends AddressingMode>(
     case "immediate":
       return "pc" as ReturnType;
     case "direct": {
-      // TODO: Implement direct addressing (which goes hand-in-hand with paging)
-      console.error("Direct addressing not implemented");
-      return 0 as ReturnType;
+      const low = await cpu.read(cpu.registers.pc, 1);
+      cpu.registers.pc += 1;
+
+      return ((cpu.registers.dp << 8) | low) as ReturnType;
     }
     case "indexed": {
       const postbyte = await cpu.read(cpu.registers.pc, 1);
