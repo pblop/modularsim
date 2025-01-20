@@ -313,14 +313,33 @@ addInstructions(
 addInstructions(
   "ld{register}",
   [
+    [0xcc, "D", "immediate", "3"],
+    [0x10ce, "S", "immediate", "4"],
+    [0xce, "U", "immediate", "3"],
     [0x8e, "X", "immediate", "3"],
+    [0x108e, "Y", "immediate", "4"],
+
+    [0xdc, "D", "direct", "5/4"],
+    [0x10de, "S", "direct", "6/5"],
+    [0xde, "U", "direct", "5/4"],
     [0x9e, "X", "direct", "5/4"],
+    [0x109e, "Y", "direct", "6/5"],
+
+    [0xec, "D", "indexed", "5+"],
+    [0x10ee, "S", "indexed", "6+"],
+    [0xee, "U", "indexed", "5+"],
     [0xae, "X", "indexed", "5+"],
+    [0x10ae, "Y", "indexed", "6+"],
+
+    [0xfc, "D", "extended", "6/5"],
+    [0x10fe, "S", "extended", "7/6"],
+    [0xfe, "U", "extended", "6/5"],
     [0xbe, "X", "extended", "6/5"],
+    [0x10be, "Y", "extended", "7/6"],
   ],
   (reg, mode, cycles) => (cpu, address) => ld16(cpu, reg, address),
 );
-// ld8 (lda, ...)
+// ld8 (lda, ldb)
 addInstructions(
   "ld{register}",
   [
@@ -328,10 +347,14 @@ addInstructions(
     [0x96, "A", "direct", "4/3"],
     [0xa6, "A", "indexed", "4+"],
     [0xb6, "A", "extended", "5/4"],
+    [0xc6, "B", "immediate", "2"],
+    [0xd6, "B", "direct", "4/3"],
+    [0xe6, "B", "indexed", "4+"],
+    [0xf6, "B", "extended", "5/4"],
   ],
   (reg, mode, cycles) => (cpu, address) => ld8(cpu, reg, address),
 );
-// st8 (sta, stb, ...)
+// st8 (sta, stb)
 addInstructions(
   "st{register}",
   [
