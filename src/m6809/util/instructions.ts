@@ -15,7 +15,7 @@ type AddressableAddressingMode = "immediate" | "direct" | "indexed" | "extended"
 type Register = "D" | "X" | "Y" | "U" | "S";
 type Accumulator = "A" | "B";
 
-function wrap(val: number, bits: number): number {
+function truncate(val: number, bits: number): number {
   const mask = (1 << bits) - 1;
   return val & mask;
 }
@@ -131,7 +131,7 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   }
 
   // Overflow!
-  address = wrap(address, 16);
+  address = truncate(address, 16);
 
   if (indirect) {
     address = await cpu.read(address, 2);
@@ -176,7 +176,7 @@ async function addressing<T extends AddressableAddressingMode>(
       // Only used for branches
       const offset = await cpu.read(cpu.registers.pc, 1);
       cpu.registers.pc += 1;
-      return wrap(cpu.registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
+      return truncate(cpu.registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
     }
   }
 
