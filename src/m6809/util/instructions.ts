@@ -296,21 +296,19 @@ const INSTRUCTIONS: Record<number, InstructionData> = {
 
 /**
  * Helper function to add instructions to the INSTRUCTIONS object in a more readable way.
- * @param name The name of the instruction.
- * @param register The register the instruction operates on.
- * @param modes An array of [opcode, addressing mode, cycles] tuples.
+ * @param name The name of the instruction (a '{register}' will be replaced with the register name).
+ * @param modes An array of [opcode, register, addressing mode, cycles] tuples.
  * @param logic A function that, given the register, mode, and cycles, returns the instruction logic (useful
  * for instructions that have the same logic but different modes).
  */
 function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
   name: string,
-  register: R,
-  modes: [number, M, string][], // [opcode, addressing mode, cycles]
+  modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
   logic: (register: R, mode: M, cycles: string) => InstructionLogic,
 ) {
-  for (const [opcode, mode, cycles] of modes) {
+  for (const [opcode, register, mode, cycles] of modes) {
     INSTRUCTIONS[opcode] = {
-      name,
+      name: name.replace("{register}", register.toLowerCase()),
       register,
       mode,
       cycles,
@@ -321,61 +319,46 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
 
 // clr(accumulator)
 addInstructions(
-  "clra",
-  "A",
-  [[0x4f, "inherent", "3/1"]],
-  (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
-);
-addInstructions(
-  "clrb",
-  "B",
-  [[0x5f, "inherent", "2/1"]],
+  "clr{register}",
+  [
+    [0x4f, "A", "inherent", "3/1"],
+    [0x5f, "B", "inherent", "3/1"],
+  ],
   (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
 );
 
-// ldx
+// ld16 (ldx, ...)
 addInstructions(
-  "ldx",
-  "X",
+  "ld{register}",
   [
-    [0x8e, "immediate", "3"],
-    [0x9e, "direct", "5/4"],
-    [0xae, "indexed", "5+"],
-    [0xbe, "extended", "6/5"],
+    [0x8e, "X", "immediate", "3"],
+    [0x9e, "X", "direct", "5/4"],
+    [0xae, "X", "indexed", "5+"],
+    [0xbe, "X", "extended", "6/5"],
   ],
   (reg, mode, cycles) => (cpu) => ld16(cpu, reg, mode),
 );
-// lda
+// ld8 (lda, ...)
 addInstructions(
-  "lda",
-  "A",
+  "ld{register}",
   [
-    [0x86, "immediate", "2"],
-    [0x96, "direct", "4/3"],
-    [0xa6, "indexed", "4+"],
-    [0xb6, "extended", "5/4"],
+    [0x86, "A", "immediate", "2"],
+    [0x96, "A", "direct", "4/3"],
+    [0xa6, "A", "indexed", "4+"],
+    [0xb6, "A", "extended", "5/4"],
   ],
   (reg, mode, cycles) => (cpu) => ld8(cpu, reg, mode),
 );
-// sta
+// st8 (sta, stb, ...)
 addInstructions(
-  "sta",
-  "A",
+  "st{register}",
   [
-    [0x97, "direct", "4/3"],
-    [0xa7, "indexed", "4+"],
-    [0xb7, "extended", "5/4"],
-  ],
-  (reg, mode, cycles) => (cpu) => st8(cpu, reg, mode),
-);
-// stb
-addInstructions(
-  "stb",
-  "B",
-  [
-    [0xd7, "direct", "4/3"],
-    [0xe7, "indexed", "4+"],
-    [0xf7, "extended", "5/4"],
+    [0x97, "A", "direct", "4/3"],
+    [0xa7, "A", "indexed", "4+"],
+    [0xb7, "A", "extended", "5/4"],
+    [0xd7, "B", "direct", "4/3"],
+    [0xe7, "B", "indexed", "4+"],
+    [0xf7, "B", "extended", "5/4"],
   ],
   (reg, mode, cycles) => (cpu) => st8(cpu, reg, mode),
 );
