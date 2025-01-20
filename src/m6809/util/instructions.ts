@@ -12,8 +12,8 @@ type InstructionLogic<M extends AddressingMode = AddressingMode> = (
 
 type AddressingMode = AddressableAddressingMode | "inherent";
 type AddressableAddressingMode = "immediate" | "direct" | "indexed" | "extended" | "relative";
-type Register = "X" | "Y" | "U" | "S";
-type Accumulator = "A" | "B" | "D";
+type Register = "D" | "X" | "Y" | "U" | "S";
+type Accumulator = "A" | "B";
 
 function wrap(val: number, bits: number): number {
   const mask = (1 << bits) - 1;
@@ -251,7 +251,7 @@ async function st8(cpu: Cpu, reg: Accumulator, address: number): Promise<number>
   return 2;
 }
 
-async function clracc(cpu: Cpu, reg: "A" | "B"): Promise<number> {
+async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
   console.debug(`[cpu] instruction clr${reg}`);
 
   cpu.registers[reg] = 0;
