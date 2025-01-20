@@ -207,8 +207,12 @@ class Cpu implements IModule {
       // Get the instruction (this increments the PC)
       const opcodeBytes = await this.fetchOpCode();
       console.log(`[${this.id}] read opcode bytes ${opcodeBytes} at ${this.registers.pc}`);
+
       // Convert one or two bytes to single u16 containing the whole opcode.
-      const opcode = (opcodeBytes[0] << 8) + (opcodeBytes.length > 1 ? opcodeBytes[1] : 0);
+      // The low byte is the last byte read.
+      // e.g. 0x10 0xAB -> 0x10AB
+      // e.g. 0xAB -> 0xAB
+      const opcode = opcodeBytes.reduce((acc, val) => (acc << 8) | val, 0);
       console.log(
         `[${this.id}] opcode ${opcode.toString(16)} at ${this.registers.pc - opcodeBytes.length}`,
       );

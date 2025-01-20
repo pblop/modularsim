@@ -5,9 +5,10 @@ import { ConditionCodes } from "../hardware/cpu.js";
 // of cycles the processor should wait.
 type InstructionLogic = (cpu: Cpu) => Promise<number>;
 
-type AddressingMode = "immediate" | "direct" | "indexed" | "extended" | "relative";
-type Registers = "X" | "Y" | "U" | "S";
-type Accumulators = "A" | "B" | "D";
+type AddressingMode = AddressableAddressingMode | "inherent";
+type AddressableAddressingMode = "immediate" | "direct" | "indexed" | "extended" | "relative";
+type Register = "X" | "Y" | "U" | "S";
+type Accumulator = "A" | "B" | "D";
 
 function wrap(val: number, bits: number): number {
   const mask = (1 << bits) - 1;
@@ -35,11 +36,11 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   const rest = postbyte & 0xf;
 
   // Get the register to use (given by RR in all but 4 cases).
-  let register: Registers | "pc";
+  let register: Register | "pc";
   if (rest === 0b1100 || rest === 0b1101)
     // 8 or 16 bit offset from PC
     register = "pc";
-  else register = ["X", "Y", "U", "S"][RR] as Registers;
+  else register = ["X", "Y", "U", "S"][RR] as Register;
 
   console.debug(`[cpu] indexed addressing: register ${register}`);
 
@@ -140,7 +141,7 @@ type FetchableAddress = number | "pc";
  * fetching any necessary data to calculate it from memory. (immediate <=> "pc")
  * @returns The address to read from (or "pc" if the address is the next byte to read).
  */
-async function addressing<T extends AddressingMode>(
+async function addressing<T extends AddressableAddressingMode>(
   cpu: Cpu,
   mode: T,
 ): Promise<T extends "immediate" ? "pc" : number> {
@@ -193,9 +194,7 @@ async function fetch(cpu: Cpu, address: FetchableAddress, size: number): Promise
   return val;
 }
 
-async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<number> {
-  console.debug(`[cpu] instruction ld8 ${reg} ${mode}`);
-
+async function ld8(cpu: Cpu, reg: Accumulator, mode: AddressableAddressingMode): Promise<number> {
   const address = await addressing(cpu, mode);
   const val = await fetch(cpu, address, 1);
 
@@ -209,9 +208,7 @@ async function ld8(cpu: Cpu, reg: Accumulators, mode: AddressingMode): Promise<n
   return 2;
 }
 
-async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<number> {
-  console.debug(`[cpu] instruction ld16 ${reg} ${mode}`);
-
+async function ld16(cpu: Cpu, reg: Register, mode: AddressableAddressingMode): Promise<number> {
   const address = await addressing(cpu, mode);
   const val = await fetch(cpu, address, 2);
 
@@ -226,8 +223,6 @@ async function ld16(cpu: Cpu, reg: Registers, mode: AddressingMode): Promise<num
 }
 
 async function beq(cpu: Cpu): Promise<number> {
-  console.debug("[cpu] instruction beq");
-
   const address = await addressing(cpu, "relative");
 
   // Zero flag set -> branch
@@ -238,8 +233,6 @@ async function beq(cpu: Cpu): Promise<number> {
 }
 
 async function bra(cpu: Cpu): Promise<number> {
-  console.debug("[cpu] instruction bra");
-
   const address = await addressing(cpu, "relative");
 
   cpu.registers.pc = address;
@@ -248,11 +241,9 @@ async function bra(cpu: Cpu): Promise<number> {
 
 async function st8(
   cpu: Cpu,
-  reg: Accumulators,
-  mode: Exclude<AddressingMode, "immediate">,
+  reg: Accumulator,
+  mode: Exclude<AddressableAddressingMode, "immediate">,
 ): Promise<number> {
-  console.debug(`[cpu] instruction st8 ${reg} ${mode}`);
-
   const address = await addressing(cpu, mode);
   const val = cpu.registers[reg];
 
@@ -278,32 +269,116 @@ async function clracc(cpu: Cpu, reg: "A" | "B"): Promise<number> {
   return 2;
 }
 
-const INSTRUCTIONS: Record<number, InstructionLogic> = {
-  // branching
-  0x2700: beq,
-  0x2000: bra,
-  // clr(accumulator)
-  0x4f00: (cpu: Cpu) => clracc(cpu, "A"),
-  0x5f00: (cpu: Cpu) => clracc(cpu, "B"),
-  // ldx
-  0x8e00: (cpu: Cpu) => ld16(cpu, "X", "immediate"),
-  0x9e00: (cpu: Cpu) => ld16(cpu, "X", "direct"),
-  0xae00: (cpu: Cpu) => ld16(cpu, "X", "indexed"),
-  0xbe00: (cpu: Cpu) => ld16(cpu, "X", "extended"),
-  // lda
-  0x8600: (cpu: Cpu) => ld8(cpu, "A", "immediate"),
-  0x9600: (cpu: Cpu) => ld8(cpu, "A", "direct"),
-  0xa600: (cpu: Cpu) => ld8(cpu, "A", "indexed"),
-  0xb600: (cpu: Cpu) => ld8(cpu, "A", "extended"),
-  // sta
-  0x9700: (cpu: Cpu) => st8(cpu, "A", "direct"),
-  0xa700: (cpu: Cpu) => st8(cpu, "A", "indexed"),
-  0xb700: (cpu: Cpu) => st8(cpu, "A", "extended"),
-  // stb
-  0xd700: (cpu: Cpu) => st8(cpu, "B", "extended"),
-  0xe700: (cpu: Cpu) => st8(cpu, "B", "indexed"),
-  0xf700: (cpu: Cpu) => st8(cpu, "B", "direct"),
+type InstructionData = {
+  name: string;
+  cycles: string;
+  register: Accumulator | Register | "pc";
+  mode: AddressingMode;
+  function: InstructionLogic;
 };
+const INSTRUCTIONS: Record<number, InstructionData> = {
+  // branching
+  0x27: {
+    name: "beq",
+    cycles: "3",
+    register: "pc",
+    mode: "relative",
+    function: beq,
+  },
+  0x20: {
+    name: "bra",
+    cycles: "3",
+    register: "pc",
+    mode: "relative",
+    function: bra,
+  },
+};
+
+/**
+ * Helper function to add instructions to the INSTRUCTIONS object in a more readable way.
+ * @param name The name of the instruction.
+ * @param register The register the instruction operates on.
+ * @param modes An array of [opcode, addressing mode, cycles] tuples.
+ * @param logic A function that, given the register, mode, and cycles, returns the instruction logic (useful
+ * for instructions that have the same logic but different modes).
+ */
+function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
+  name: string,
+  register: R,
+  modes: [number, M, string][], // [opcode, addressing mode, cycles]
+  logic: (register: R, mode: M, cycles: string) => InstructionLogic,
+) {
+  for (const [opcode, mode, cycles] of modes) {
+    INSTRUCTIONS[opcode] = {
+      name,
+      register,
+      mode,
+      cycles,
+      function: logic(register, mode, cycles),
+    };
+  }
+}
+
+// clr(accumulator)
+addInstructions(
+  "clra",
+  "A",
+  [[0x4f, "inherent", "3/1"]],
+  (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
+);
+addInstructions(
+  "clrb",
+  "B",
+  [[0x5f, "inherent", "2/1"]],
+  (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
+);
+
+// ldx
+addInstructions(
+  "ldx",
+  "X",
+  [
+    [0x8e, "immediate", "3"],
+    [0x9e, "direct", "5/4"],
+    [0xae, "indexed", "5+"],
+    [0xbe, "extended", "6/5"],
+  ],
+  (reg, mode, cycles) => (cpu) => ld16(cpu, reg, mode),
+);
+// lda
+addInstructions(
+  "lda",
+  "A",
+  [
+    [0x86, "immediate", "2"],
+    [0x96, "direct", "4/3"],
+    [0xa6, "indexed", "4+"],
+    [0xb6, "extended", "5/4"],
+  ],
+  (reg, mode, cycles) => (cpu) => ld8(cpu, reg, mode),
+);
+// sta
+addInstructions(
+  "sta",
+  "A",
+  [
+    [0x97, "direct", "4/3"],
+    [0xa7, "indexed", "4+"],
+    [0xb7, "extended", "5/4"],
+  ],
+  (reg, mode, cycles) => (cpu) => st8(cpu, reg, mode),
+);
+// stb
+addInstructions(
+  "stb",
+  "B",
+  [
+    [0xd7, "direct", "4/3"],
+    [0xe7, "indexed", "4+"],
+    [0xf7, "extended", "5/4"],
+  ],
+  (reg, mode, cycles) => (cpu) => st8(cpu, reg, mode),
+);
 
 export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
   const instruction = INSTRUCTIONS[number];
@@ -311,6 +386,9 @@ export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
     console.error(`Unknown instruction: ${number.toString(16)}`);
     return 1;
   }
+  console.debug(
+    `[cpu] instruction ${instruction.name}: reg=${instruction.register} mode=${instruction.mode}`,
+  );
 
-  return await instruction(cpu);
+  return await instruction.function(cpu);
 }
