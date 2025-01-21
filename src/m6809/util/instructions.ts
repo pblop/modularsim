@@ -1,5 +1,6 @@
 import type Cpu from "../hardware/cpu.js";
 import { ConditionCodes } from "../hardware/cpu.js";
+import { signExtend, truncate } from "./numbers.js";
 
 // A function that takes a CPU and an address, performs some operation, and
 // returns the number of cycles the processor should wait.
@@ -10,27 +11,15 @@ type InstructionLogic<M extends AddressingMode = AddressingMode> = (
   address: M extends "immediate" ? "pc" : M extends "inherent" ? null : number,
 ) => Promise<number>;
 
-type AddressingMode = AddressableAddressingMode | "inherent";
-type AddressableAddressingMode = "immediate" | "direct" | "indexed" | "extended" | "relative";
-type Register = "D" | "X" | "Y" | "U" | "S";
-type Accumulator = "A" | "B";
-
-function truncate(val: number, bits: number): number {
-  const mask = (1 << bits) - 1;
-  return val & mask;
-}
-
-function signExtend(val: number, valBits: number, outBits: number): number {
-  const signBit = 1 << (valBits - 1);
-  // (1 << outBits) - 1 is a mask with the bottom outBits bits set to 1.
-  // (1 << valBits) - 1 is a mask with the bottom valBits bits set to 1.
-  // Subtracting the two gives a mask with the bottom valBits bits set to 0,
-  // and the rest set to 1.
-  const mask = (1 << outBits) - 1 - ((1 << valBits) - 1);
-
-  // If the number is negative, set the bits on top to 1s, otherwise set them to 0s.
-  return val & signBit ? val | mask : val;
-}
+export type AddressingMode = AddressableAddressingMode | "inherent";
+export type AddressableAddressingMode =
+  | "immediate"
+  | "direct"
+  | "indexed"
+  | "extended"
+  | "relative";
+export type Register = "D" | "X" | "Y" | "U" | "S";
+export type Accumulator = "A" | "B";
 
 async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
   const fivebit = !((postbyte & 0x80) >> 7);
@@ -263,30 +252,31 @@ async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
   return 2;
 }
 
-type InstructionData = {
-  name: string;
+export type InstructionData = {
+  mnemonic: string;
   cycles: string;
   register: Accumulator | Register | "pc";
   mode: AddressingMode;
   function: InstructionLogic;
 };
-const INSTRUCTIONS: Record<number, InstructionData> = {};
+export const INSTRUCTIONS: Record<number, InstructionData> = {};
 /**
  * Helper function to add instructions to the INSTRUCTIONS object in a more readable way.
- * @param name The name of the instruction (a '{register}' will be replaced with the register name).
+ * @param mnemonic The mnemonic of the instruction (a '{register}' will be replaced with the register name).
  * @param modes An array of [opcode, register, addressing mode, cycles] tuples.
  * @param logic A function that, given the register, mode, and cycles, returns the instruction logic (useful
  * for instructions that have the same logic but different modes).
  */
 function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
-  name: string,
+  mnemonic: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
   logic: (register: R, mode: M, cycles: string) => InstructionLogic<M>,
 ) {
   for (const [opcode, register, mode, cycles] of modes) {
     const replaced = mnemonic.replace("{register}", register.toLowerCase());
+
     INSTRUCTIONS[opcode] = {
-      name: replaced,
+      mnemonic: replaced,
       register,
       mode,
       cycles,
@@ -374,7 +364,7 @@ export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
     return 1;
   }
   console.debug(
-    `[cpu] instruction ${instruction.name}: reg=${instruction.register} mode=${instruction.mode}`,
+    `[cpu] instruction ${instruction.mnemonic}: reg=${instruction.register} mode=${instruction.mode}`,
   );
 
   // Perform addressing.
