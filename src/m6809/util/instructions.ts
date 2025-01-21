@@ -1,5 +1,5 @@
 import type Cpu from "../hardware/cpu.js";
-import { ConditionCodes } from "../hardware/cpu.js";
+import { ConditionCodes } from "../util/cpu_parts.js";
 import { signExtend, truncate } from "./numbers.js";
 
 // A function that takes a CPU and an address, performs some operation, and
@@ -21,12 +21,34 @@ export type AddressableAddressingMode =
 export type Register = "D" | "X" | "Y" | "U" | "S";
 export type Accumulator = "A" | "B";
 
-async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
+// The enum values are _not_ important here.
+// biome-ignore lint/style/useEnumInitializers: <above>
+enum IndexedAction {
+  Offset0,
+  Offset5,
+  Offset8,
+  Offset16,
+  OffsetA,
+  OffsetB,
+  OffsetD,
+  PostInc1,
+  PostInc2,
+  PreDec1,
+  PreDec2,
+  OffsetPC8,
+  OffsetPC16,
+}
+type ParsedIndexedPostbyte = {
+  action: IndexedAction;
+  register: Register | "pc";
+  indirect: boolean;
+  rest: number; // 4-bit integer
+};
+function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | null {
   const fivebit = !((postbyte & 0x80) >> 7);
   const indirect = (postbyte & 0x10) >> 4;
   const RR = (postbyte & 0x60) >> 5; // 00 = X, 01 = Y, 10 = U, 11 = S
 
-  console.debug(`[cpu] indexed addressing: ${postbyte.toString(16)} ${fivebit} ${indirect} ${RR}`);
   const rest = postbyte & 0xf;
 
   // Get the register to use (given by RR in all but 4 cases).
@@ -36,86 +58,118 @@ async function indexedAddressing(cpu: Cpu, postbyte: number): Promise<number> {
     register = "pc";
   else register = ["X", "Y", "U", "S"][RR] as Register;
 
-  console.debug(`[cpu] indexed addressing: register ${register}`);
+  let action: IndexedAction | undefined;
+  if (fivebit) {
+    action = IndexedAction.Offset5;
+  } else {
+    action = {
+      0b0100: IndexedAction.Offset0,
+      0b1000: IndexedAction.Offset8,
+      0b1001: IndexedAction.Offset16,
+      0b0110: IndexedAction.OffsetA,
+      0b0101: IndexedAction.OffsetB,
+      0b1011: IndexedAction.OffsetD,
+      0b0000: IndexedAction.PostInc1,
+      0b0001: IndexedAction.PostInc2,
+      0b0010: IndexedAction.PreDec1,
+      0b0011: IndexedAction.PreDec2,
+      0b1100: IndexedAction.OffsetPC8,
+      0b1101: IndexedAction.OffsetPC16,
+    }[rest];
+  }
+
+  // Fail if we haven't found an action.
+  if (action === undefined) return null;
+
+  return {
+    action,
+    register,
+    indirect: !!indirect, // coerce to boolean
+    rest,
+  };
+}
+
+async function indexedAddressing(cpu: Cpu, parsedPostbyte: ParsedIndexedPostbyte): Promise<number> {
+  const { action, register, indirect, rest } = parsedPostbyte;
 
   let address: number = cpu.registers[register];
-  if (fivebit) {
-    // Non-Indirect, 5 bit offset
-    const offset = signExtend(rest, 5, 16);
-    address += offset;
-  } else {
-    switch (rest) {
-      case 0b0100: {
-        // No offset
-        break;
-      }
-      case 0b1000: {
-        // 8 bit offset
-        const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
-        cpu.registers.pc += 1;
-        address += offset;
-        break;
-      }
-      case 0b1001: {
-        // 16 bit offset
-        const offset = await cpu.read(cpu.registers.pc, 2);
-        cpu.registers.pc += 2;
-        address += offset;
-        break;
-      }
-      case 0b0110: {
-        // A accumulator offset
-        address += signExtend(cpu.registers.A, 8, 16);
-        break;
-      }
-      case 0b0101: {
-        // B accumulator offset
-        address += signExtend(cpu.registers.B, 8, 16);
-        break;
-      }
-      case 0b1011: {
-        // D register offset
-        address += cpu.registers.D;
-        break;
-      }
-      case 0b0000: {
-        // Post-increment by 1
-        cpu.registers[register] += 1;
-        break;
-      }
-      case 0b0001: {
-        // Post-increment by 2
-        cpu.registers[register] += 2;
-        break;
-      }
-      case 0b0010: {
-        // Pre-Decrement by 1
-        // TODO: Actually PRE-decrement, not POST-decrement.
-        // TODO: This subtraction is wrong (if address == 0, it breaks wonderfully).
-        cpu.registers[register] -= 1;
-        break;
-      }
-      case 0b0011: {
-        // Pre-Decrement by 2
-        // TODO: This subtraction is wrong.
-        cpu.registers[register] -= 2;
-        break;
-      }
-      case 0b1100: {
-        // 8 bit offset from PC (ignores register)
-        const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
-        cpu.registers.pc += 1; // TODO: Check if this is correct (which PC value to use?
-        // probably the one after the offset byte is read? That's not the case here).
-        address += offset;
-        break;
-      }
-      case 0b1101: {
-        // 16 bit offset from PC(ignores register)
-        const offset = await cpu.read(cpu.registers.pc, 2);
-        cpu.registers.pc += 2; // TODO: Check if this is correct (which PC value to use?...)
-        address += offset;
-        break;
-      }
+  switch (action) {
+    case IndexedAction.Offset5: {
+      // Non-Indirect, 5 bit offset
+      const offset = signExtend(rest, 5, 16);
+      address += offset;
+      break;
+    }
+    case IndexedAction.Offset0: {
+      // No offset
+      break;
+    }
+    case IndexedAction.Offset8: {
+      // 8 bit offset
+      const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
+      cpu.registers.pc += 1;
+      address += offset;
+      break;
+    }
+    case IndexedAction.Offset16: {
+      // 16 bit offset
+      const offset = await cpu.read(cpu.registers.pc, 2);
+      cpu.registers.pc += 2;
+      address += offset;
+      break;
+    }
+    case IndexedAction.OffsetA: {
+      // A accumulator offset
+      address += signExtend(cpu.registers.A, 8, 16);
+      break;
+    }
+    case IndexedAction.OffsetB: {
+      // B accumulator offset
+      address += signExtend(cpu.registers.B, 8, 16);
+      break;
+    }
+    case IndexedAction.OffsetD: {
+      // D register offset
+      address += cpu.registers.D;
+      break;
+    }
+    case IndexedAction.PostInc1: {
+      // Post-increment by 1
+      cpu.registers[register] += 1;
+      break;
+    }
+    case IndexedAction.PostInc2: {
+      // Post-increment by 2
+      cpu.registers[register] += 2;
+      break;
+    }
+    case IndexedAction.PreDec1: {
+      // Pre-Decrement by 1
+      // TODO: Actually PRE-decrement, not POST-decrement.
+      // TODO: This subtraction is wrong (if address == 0, it breaks wonderfully).
+      cpu.registers[register] -= 1;
+      break;
+    }
+    case IndexedAction.PreDec2: {
+      // Pre-Decrement by 2
+      // TODO: This subtraction is wrong.
+      cpu.registers[register] -= 2;
+      break;
+    }
+    case IndexedAction.OffsetPC8: {
+      // 8 bit offset from PC (ignores register)
+      const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
+      cpu.registers.pc += 1; // TODO: Check if this is correct (which PC value to use?
+      // probably the one after the offset byte is read? That's not the case here).
+      address += offset;
+      break;
+    }
+    case IndexedAction.OffsetPC16: {
+      // 16 bit offset from PC(ignores register)
+      const offset = await cpu.read(cpu.registers.pc, 2);
+      cpu.registers.pc += 2; // TODO: Check if this is correct (which PC value to use?...)
+      address += offset;
+      break;
     }
   }
 
@@ -152,9 +206,11 @@ async function addressing<T extends AddressableAddressingMode>(
     }
     case "indexed": {
       const postbyte = await cpu.read(cpu.registers.pc, 1);
+      const parsedPostbyte = parseIndexedPostbyte(postbyte);
       cpu.registers.pc += 1;
+      if (parsedPostbyte == null) throw new Error("[cpu] Invalid indexed postbyte");
 
-      return (await indexedAddressing(cpu, postbyte)) as ReturnType;
+      return (await indexedAddressing(cpu, parsedPostbyte)) as ReturnType;
     }
     case "extended": {
       const address = await cpu.read(cpu.registers.pc, 2);
