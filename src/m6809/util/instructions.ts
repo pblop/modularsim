@@ -283,9 +283,8 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
   logic: (register: R, mode: M, cycles: string) => InstructionLogic<M>,
 ) {
-  const replaced = name.replace("{register}", "A");
-
   for (const [opcode, register, mode, cycles] of modes) {
+    const replaced = mnemonic.replace("{register}", register.toLowerCase());
     INSTRUCTIONS[opcode] = {
       name: replaced,
       register,
