@@ -7,11 +7,19 @@
   display: flex;
   flex-direction: column;
 
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y proximity;
+
+  .row:last-child {
+    scroll-snap-align: end;
+  }
+
   .row {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    
 
     .address {
       /* I've decided that the addresses are going to be formatted as equal
