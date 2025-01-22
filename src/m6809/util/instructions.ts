@@ -308,12 +308,12 @@ async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
   return 2;
 }
 
-export type InstructionData = {
+export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
   cycles: string;
   register: Accumulator | Register | "pc";
-  mode: AddressingMode;
-  function: InstructionLogic;
+  mode: T;
+  function: InstructionLogic<T>;
 };
 export const INSTRUCTIONS: Record<number, InstructionData> = {};
 /**
