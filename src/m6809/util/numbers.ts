@@ -14,3 +14,20 @@ export function signExtend(val: number, valBits: number, outBits: number): numbe
   // If the number is negative, set the bits on top to 1s, otherwise set them to 0s.
   return val & signBit ? val | mask : val;
 }
+
+export function twosComplement(val: number, bits: number): number {
+  return truncate(~val + 1, bits);
+}
+
+/**
+ * Convert a JS number to a signed integer of the given size.
+ * @param num The number to convert.
+ * @param size The size of the integer in bits.
+ * @returns The converted number.
+ */
+export function numberToIntN(num: number, size: number): number {
+  if (num < 0) {
+    return twosComplement(-num, size);
+  }
+  return truncate(num, size);
+}

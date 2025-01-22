@@ -57,11 +57,13 @@ class Cpu implements IModule {
   }
 
   commitRegisters = () => {
+    // Object.entries doesn't include the prototype properties (A, B, copy, ...),
+    // so we don't need to filter them out.
     const registers = Object.entries(this.registers);
     for (const [key, value] of registers) {
       this.et.emit("cpu:register_update", key, value);
     }
-    this.et.emit("cpu:registers_update", Object.fromEntries(registers));
+    this.et.emit("cpu:registers_update", this.registers.copy());
   };
 
   reset = () => {

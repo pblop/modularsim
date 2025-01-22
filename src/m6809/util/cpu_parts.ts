@@ -31,7 +31,33 @@ export class Registers {
   set B(val: number) {
     this.D = (this.D & 0xff00) | val;
   }
+
+  copy(): Registers {
+    const copy = new Registers();
+    copy.dp = this.dp;
+    copy.cc = this.cc;
+    copy.D = this.D;
+    copy.X = this.X;
+    copy.Y = this.Y;
+    copy.U = this.U;
+    copy.S = this.S;
+    copy.pc = this.pc;
+    return copy;
+  }
 }
+
+export const REGISTER_SIZE = {
+  A: 1,
+  B: 1,
+  D: 2,
+  X: 2,
+  Y: 2,
+  U: 2,
+  S: 2,
+  pc: 2,
+  cc: 1,
+  dp: 1,
+};
 
 export enum ConditionCodes {
   CARRY = 1 << 0, // Carry

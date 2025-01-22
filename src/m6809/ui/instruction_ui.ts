@@ -1,12 +1,22 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import { REGISTER_SIZE, type Registers } from "../util/cpu_parts.js";
 import {
-  AddressableAddressingMode,
+  type AddressableAddressingMode,
+  type FetchableAddress,
   type InstructionData,
+  type ParsedIndexedPostbyte,
+  IndexedAction,
+  parseIndexedPostbyte,
   INSTRUCTIONS,
+  type Register,
 } from "../util/instructions.js";
 import { element } from "../../utils.js";
+import { truncate, signExtend, numberToIntN, twosComplement } from "../util/numbers.js";
+
+// we assume this _read_ function reads big-endian, and reads 1 byte by default.
+type ReadFunction = (address: number, bytes?: number) => Promise<number>;
 
 // biome-ignore lint/complexity/noBannedTypes: <explanation>
 type InstructionUIConfig = {};
@@ -15,10 +25,93 @@ function validateMemoryUIConfig(config: Record<string, unknown>): InstructionUIC
   return config as InstructionUIConfig;
 }
 
-// async function addressing<T extends AddressableAddressingMode>(
-//   ui: InstructionUI,
+type DisassIdxAddressingResult = {
+  // The number of bytes read from the PC
+  bytesReadOffPC: number;
+  baseAddress: number;
+  offset: number;
+  effectiveAddress: number;
+  address: number;
+};
+async function disassIdxAdressing(
+  read: ReadFunction,
+  parsedPostbyte: ParsedIndexedPostbyte,
+  pc: number,
+  registers: Registers,
+): Promise<DisassIdxAddressingResult> {
+  const { action, register, indirect, rest } = parsedPostbyte;
+  let bytesReadOffPC = 0;
+
+  const baseAddress: number = registers[register];
+  let offset: number; // A signed 16-bit offset
+  switch (action) {
+    case IndexedAction.Offset0:
+      offset = 0;
+      break;
+    case IndexedAction.Offset5:
+      offset = signExtend(rest, 5, 16);
+      break;
+    case IndexedAction.Offset8:
+    case IndexedAction.OffsetPC8:
+      offset = signExtend(await read(pc, 1), 8, 16);
+      bytesReadOffPC++;
+      break;
+    case IndexedAction.Offset16:
+    case IndexedAction.OffsetPC16:
+      offset = await read(pc, 2);
+      bytesReadOffPC++;
+      break;
+    case IndexedAction.OffsetA:
+      offset = registers.A;
+      break;
+    case IndexedAction.OffsetB:
+      offset = registers.B;
+      break;
+    case IndexedAction.OffsetD:
+      offset = registers.D;
+      break;
+    case IndexedAction.PostInc1:
+      offset = 0;
+      break;
+    case IndexedAction.PostInc2:
+      offset = 0;
+      break;
+    case IndexedAction.PreDec1:
+      offset = numberToIntN(-1, 16);
+      break;
+    case IndexedAction.PreDec2:
+      offset = numberToIntN(-2, 16);
+      break;
+  }
+
+  // Overflow!
+  const effectiveAddress = truncate(baseAddress + offset, 16);
+  let address = effectiveAddress;
+
+  if (indirect) {
+    address = await read(effectiveAddress, 2);
+  }
+
+  return {
+    bytesReadOffPC,
+    baseAddress,
+    offset,
+    effectiveAddress,
+    address,
+  };
+}
+
+// type DisassAddressingResult =
+//   | { mode: "immediate"; address: "pc"; value: number; size: number }
+//   | { mode: "direct"; address: number; size: number }
+//   | { mode: "indexed"; address: number; size: number }
+//   | { mode: "extended"; address: number; size: number }
+//   | { mode: "relative"; targetAddress: number; size: number };
+
+// async function disassAdressing<T extends AddressableAddressingMode>(
+//   read: ReadFunction,
 //   address: number,
-//   dp: number,
+//   registers: Registers,
 //   mode: T,
 // ): Promise<T extends "immediate" ? "pc" : number> {
 //   type ReturnType = T extends "immediate" ? "pc" : number;
@@ -27,24 +120,25 @@ function validateMemoryUIConfig(config: Record<string, unknown>): InstructionUIC
 //     case "immediate":
 //       return "pc" as ReturnType;
 //     case "direct": {
-//       const low = await ui.read(address, 1);
+//       const low = await read(address, 1);
 
-//       return ((dp << 8) | low) as ReturnType;
+//       return ((registers.dp << 8) | low) as ReturnType;
 //     }
 //     case "indexed": {
-//       const postbyte = await ui.read(address, 1);
+//       const postbyte = await read(address, 1);
+//       const parsedPostbyte = parseIndexedPostbyte(postbyte);
+//       if (!parsedPostbyte) return null;
 
 //       return (await indexedAddressing(cpu, postbyte)) as ReturnType;
 //     }
 //     case "extended": {
-//       const address = await ui.read(address, 2);
-//       return address as ReturnType;
+//       return (await read(address, 2)) as ReturnType;
 //     }
 //     case "relative": {
 //       // Only used for branches
-//       const offset = await cpu.read(cpu.registers.pc, 1);
-//       cpu.registers.pc += 1;
-//       return truncate(cpu.registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
+//       const offset = await read(registers.pc, 1);
+//       registers.pc += 1;
+//       return truncate(registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
 //     }
 //   }
 //   throw new Error("[instruction-ui] Unknown addressing mode passed to addressing function");
@@ -55,21 +149,23 @@ type DecompiledInstruction = {
   instruction: InstructionData;
   arguments: number[];
   size: number;
+  registerSize: number;
+  indexedAddressing?: DisassIdxAddressingResult;
 };
 async function decompileInstruction(
-  // we assume this _read_ function reads big-endian, and reads 1 byte by default.
-  read: (address: number, bytes?: number) => Promise<number>,
-  address: number,
+  read: ReadFunction,
+  registers: Registers,
+  startAddress: number,
 ): Promise<DecompiledInstruction | null> {
   const opcodeBytes = [];
   const args = [];
-  let size = 1;
+  let size = 0;
+  let indexedAddressing: DisassIdxAddressingResult | undefined;
 
   // Fetch the opcode
-  opcodeBytes.push(await read(address));
+  opcodeBytes.push(await read(startAddress + size++));
   if (opcodeBytes[0] === 0x10 || opcodeBytes[0] === 0x11) {
-    opcodeBytes.push(await read(address + 1));
-    size++;
+    opcodeBytes.push(await read(startAddress + size++));
   }
   const opcode = opcodeBytes.reduce((acc, byte) => (acc << 8) | byte, 0);
 
@@ -77,16 +173,93 @@ async function decompileInstruction(
   if (!INSTRUCTIONS[opcode]) return null;
   const instruction = INSTRUCTIONS[opcode];
 
+  const registerSize = REGISTER_SIZE[instruction.register];
+
   // Perform addressing.
-  // TODO: Implement addressing
+  let address: number | "pc";
+  switch (instruction.mode) {
+    case "immediate": {
+      address = "pc";
+      args.push(await read(startAddress + size, registerSize));
+      size += registerSize;
+      break;
+    }
+    case "direct": {
+      const low = await read(startAddress + size++, 1);
+      address = (registers.dp << 8) | low;
+      args.push(address);
+      break;
+    }
+    case "indexed": {
+      const postbyte = await read(startAddress + size++, 1);
+      args.push(postbyte);
+
+      const parsedPostbyte = parseIndexedPostbyte(postbyte);
+      if (!parsedPostbyte) return null;
+
+      const idxResult = await disassIdxAdressing(
+        read,
+        parsedPostbyte,
+        startAddress + size,
+        registers,
+      );
+      size += idxResult.bytesReadOffPC;
+      address = idxResult.address;
+      indexedAddressing = idxResult;
+      break;
+    }
+    case "extended": {
+      address = await read(startAddress + size, 2);
+      size += 2;
+      args.push(address);
+      break;
+    }
+    case "relative": {
+      const offset = await read(startAddress + size++, 1);
+      address = truncate(startAddress + signExtend(offset, 8, 16), 16);
+      args.push(address);
+      break;
+    }
+    default:
+      throw new Error(`[InstructionUI] Unknown addressing mode ${instruction.mode}`);
+  }
 
   return {
-    startAddress: address,
+    startAddress,
     opcode,
     instruction,
-    arguments: [],
+    arguments: args,
+    registerSize,
     size,
+    indexedAddressing,
   };
+}
+
+function generateInstructionElement(
+  decompiled: DecompiledInstruction,
+  container: HTMLDivElement,
+): void {
+  let str = decompiled.instruction.mnemonic;
+  const registerHexSize = decompiled.registerSize * 2;
+
+  switch (decompiled.instruction.mode) {
+    case "immediate":
+      str += ` #${decompiled.arguments[0].toString(16).padStart(registerHexSize, "0")} (imm)`;
+      break;
+    case "direct":
+      str += ` $${decompiled.arguments[0].toString(16).padStart(4, "0")} (dir)`;
+      break;
+    case "indexed":
+      str += " (idx, todo)";
+      break;
+    case "extended":
+      str += ` ${decompiled.arguments[0].toString(16).padStart(4, "0")} (ext)`;
+      break;
+    case "relative":
+      str += ` $${decompiled.arguments[0].toString(16).padStart(4, "0")} (rel)`;
+      break;
+  }
+  container.innerText = str;
 }
 
 class InstructionUI implements IModule {
@@ -95,7 +268,7 @@ class InstructionUI implements IModule {
 
   config: InstructionUIConfig;
 
-  pc: number;
+  registers?: Registers;
 
   panel?: HTMLElement;
   rows: HTMLDivElement[];
@@ -106,7 +279,7 @@ class InstructionUI implements IModule {
       required: {
         "ui:memory:read:result": () => {},
         "gui:panel_created": this.onGuiPanelCreated,
-        "cpu:register_update": this.onRegisterUpdate,
+        "cpu:registers_update": this.onRegistersUpdate,
       },
       optional: {},
     };
@@ -121,7 +294,6 @@ class InstructionUI implements IModule {
     this.et = eventTransceiver;
     this.id = id;
 
-    this.pc = 0;
     this.rows = [];
 
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
@@ -157,29 +329,18 @@ class InstructionUI implements IModule {
 
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
-
-    for (let i = 0; i < 16; i++) {
-      const row = element("div", {
-        properties: { className: "row" },
-        children: [
-          element("span", {
-            properties: { className: "address", innerText: "0000" },
-          }),
-          element("span", { properties: { className: "data", innerText: "..." } }),
-        ],
-      });
-
-      this.panel.appendChild(row);
-      this.rows.push(row);
-    }
   };
-  onRegisterUpdate = (register: string, value: number): void => {
+
+  onRegistersUpdate = (registers: Registers): void => {
     if (!this.panel) return;
 
-    if (register === "pc") {
-      this.pc = value;
-      this.populatePanel();
-    }
+    const oldRegs = this.registers;
+    this.registers = registers.copy();
+
+    // If the PC hasn't changed, we don't need to update the panel.
+    if (oldRegs !== undefined && oldRegs.pc === registers.pc) return;
+
+    this.populatePanel();
   };
 
   formatAddress(data: number): string {
@@ -187,35 +348,32 @@ class InstructionUI implements IModule {
   }
 
   async populatePanel(): Promise<void> {
-    if (!this.panel) return;
+    if (!this.panel || !this.registers) return;
 
-    const startAddress = this.pc;
+    const startAddress = this.registers.pc;
     let currentAddress = startAddress;
-    let failed = false;
-    for (let i = 0; i < this.rows.length; i++) {
-      const row = this.rows[i];
 
-      // If we failed to decompile the instruction, we just show "??", and we stop
-      // trying to decompile the rest of the instructions.
-      if (failed) {
-        (row.children[0] as HTMLDivElement).innerText = "....";
-        (row.children[1] as HTMLDivElement).innerText = "??";
-        continue;
-      }
+    const row = element("div", {
+      properties: { className: "row" },
+      children: [
+        element("span", {
+          properties: { className: "address", innerText: "0000" },
+        }),
+        element("span", { properties: { className: "data", innerText: "..." } }),
+      ],
+    });
 
-      const decompiled = await decompileInstruction(this.read, currentAddress);
-      if (!decompiled) {
-        failed = true;
-        (row.children[0] as HTMLDivElement).innerText = "....";
-        (row.children[1] as HTMLDivElement).innerText = "??";
-        continue;
-      }
-
-      (row.children[0] as HTMLDivElement).innerText = this.formatAddress(currentAddress);
-      (row.children[1] as HTMLDivElement).innerText = decompiled.instruction.mnemonic;
-
-      currentAddress += decompiled.size;
+    const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
+    (row.children[0] as HTMLDivElement).innerText = this.formatAddress(currentAddress);
+    if (!decompiled) {
+      (row.children[1] as HTMLDivElement).innerText = "??";
+      return;
     }
+
+    generateInstructionElement(decompiled, row.children[1] as HTMLDivElement);
+
+    currentAddress += decompiled.size;
+    this.panel.appendChild(row);
   }
 }
 

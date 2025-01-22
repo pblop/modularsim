@@ -23,7 +23,7 @@ export type Accumulator = "A" | "B";
 
 // The enum values are _not_ important here.
 // biome-ignore lint/style/useEnumInitializers: <above>
-enum IndexedAction {
+export enum IndexedAction {
   Offset0,
   Offset5,
   Offset8,
@@ -38,13 +38,13 @@ enum IndexedAction {
   OffsetPC8,
   OffsetPC16,
 }
-type ParsedIndexedPostbyte = {
+export type ParsedIndexedPostbyte = {
   action: IndexedAction;
   register: Register | "pc";
   indirect: boolean;
   rest: number; // 4-bit integer
 };
-function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | null {
+export function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | null {
   const fivebit = !((postbyte & 0x80) >> 7);
   const indirect = (postbyte & 0x10) >> 4;
   const RR = (postbyte & 0x60) >> 5; // 00 = X, 01 = Y, 10 = U, 11 = S
@@ -183,7 +183,7 @@ async function indexedAddressing(cpu: Cpu, parsedPostbyte: ParsedIndexedPostbyte
   return address;
 }
 
-type FetchableAddress = number | "pc";
+export type FetchableAddress = number | "pc";
 /**
  * Returns the address given by the addressing mode (immediate, direct, indexed, extended, relative),
  * fetching any necessary data to calculate it from memory. (immediate <=> "pc")
