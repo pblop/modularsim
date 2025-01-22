@@ -338,7 +338,6 @@ class InstructionUI implements IModule {
   registers?: Registers;
 
   panel?: HTMLElement;
-  rows: HTMLDivElement[];
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -360,8 +359,6 @@ class InstructionUI implements IModule {
     // We use the simulator to emit/receive events.
     this.et = eventTransceiver;
     this.id = id;
-
-    this.rows = [];
 
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
     this.config = validateMemoryUIConfig(config);
@@ -396,6 +393,9 @@ class InstructionUI implements IModule {
 
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
+
+    // this.anchor = element("div", { properties: { className: "scroll-anchor" } });
+    // this.panel.appendChild(this.anchor);
   };
 
   onRegistersUpdate = (registers: Registers): void => {
@@ -440,7 +440,12 @@ class InstructionUI implements IModule {
     generateInstructionElement(decompiled, row.children[1] as HTMLDivElement);
 
     currentAddress += decompiled.size;
+
+    // Auto scroll to bottom if already on bottom. I haven't been able to achieve
+    // this with CSS, so I'm doing it here.
+    const atBottom = this.panel.scrollHeight - this.panel.clientHeight <= this.panel.scrollTop + 1;
     this.panel.appendChild(row);
+    if (atBottom) this.panel.scrollTop = this.panel.scrollHeight - this.panel.clientHeight;
   }
 }
 
