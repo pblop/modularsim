@@ -357,6 +357,7 @@ class InstructionUI implements IModule {
         "ui:memory:read:result": () => {},
         "gui:panel_created": this.onGuiPanelCreated,
         "cpu:registers_update": this.onRegistersUpdate,
+        "signal:reset": this.clearPanel,
       },
       optional: {},
     };
@@ -419,6 +420,13 @@ class InstructionUI implements IModule {
     if (oldRegs !== undefined && oldRegs.pc === registers.pc) return;
 
     this.populatePanel();
+  };
+
+  clearPanel = (): void => {
+    if (!this.panel) return;
+
+    // Clear the panel.
+    this.panel.innerHTML = "";
   };
 
   formatAddress(data: number): string {
