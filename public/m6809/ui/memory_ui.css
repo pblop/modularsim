@@ -2,6 +2,7 @@
   background-color: lightcoral;
 
   .memory-table {
+    font-family: 'Courier New', Courier, monospace;
     width: 100%;
 
     .read-highlight {
