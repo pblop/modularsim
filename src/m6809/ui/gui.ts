@@ -85,7 +85,8 @@ class Gui implements IModule {
           },
         });
         this.root_element.appendChild(deployment_info_element);
-      });
+      })
+      .catch(() => {});
   }
 
   onSystemLoadFinish = (): void => {
