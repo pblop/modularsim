@@ -20,6 +20,10 @@ COPY . .
 #ENV NODE_ENV=production
 RUN bun run build
 
+# generate deployment info
+RUN apt-get update && apt-get install -y git 
+RUN /usr/src/app/scripts/generate-deployment-info.sh > /usr/src/app/dist/deployment-info.json
+
 # copy production dependencies and source code into final image
 FROM base AS release
 COPY --from=install /temp/dev/node_modules node_modules

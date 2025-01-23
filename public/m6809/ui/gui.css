@@ -13,6 +13,16 @@ html, body {
   grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
   grid-template-rows: repeat(auto-fill, minmax(min(50px, 100%), 1fr));
   grid-auto-flow: column;
+
+  .deployment-info {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+
+    color: gray;
+    font-weight: 500;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  }
 }
 
 .gui-panel {

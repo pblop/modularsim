@@ -2,6 +2,7 @@ import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../utils.js";
+import { timeAgo } from "../../general/dates.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
@@ -66,7 +67,24 @@ class Gui implements IModule {
     root_element.classList.add("gui-root");
     this.root_element = root_element;
 
+    this.createDeploymentInfoElement();
+
     console.log(`[${this.id}] Module initialized.`);
+  }
+
+  createDeploymentInfoElement() {
+    fetch("deployment-info.json")
+      .then((r) => r.json())
+      .then((info) => {
+        const date = new Date(info.date);
+        const deployment_info_element = element("div", {
+          properties: {
+            className: "deployment-info",
+            innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
+          },
+        });
+        this.root_element.appendChild(deployment_info_element);
+      });
   }
 
   onSystemLoadFinish = (): void => {
