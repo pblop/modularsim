@@ -20,6 +20,7 @@ class Clock implements IModule {
   interval_id?: number;
 
   stepInstruction: boolean;
+  prevCycle: number;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -47,12 +48,15 @@ class Clock implements IModule {
     this.event_transceiver = eventTransceiver;
 
     this.stepInstruction = false;
+    this.prevCycle = 0;
 
     console.log(`[${this.id}] Module initialized.`);
   }
 
   sendCycleEvent = (): void => {
-    console.log(`[${this.id}] Clock cycle started`);
+    const now = performance.now();
+    console.info(`[${this.id}] Clock cycle started ${now - this.prevCycle}ms after the last cycle`);
+    this.prevCycle = now;
 
     // The function that will be called every clock cycle.
     this.event_transceiver.emit("clock:cycle_start");
