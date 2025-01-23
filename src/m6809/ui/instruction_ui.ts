@@ -10,7 +10,7 @@ import {
   type AddressingMode,
 } from "../util/instructions.js";
 import { element } from "../../utils.js";
-import { truncate, signExtend, numberToIntN } from "../util/numbers.js";
+import { truncate, signExtend, numberToIntN, intNToNumber } from "../util/numbers.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.
 type ReadFunction = (address: number, bytes?: number) => Promise<number>;
@@ -144,10 +144,11 @@ async function disassIdxAdressing(
 // biome-ignore format: this is easier to read if not biome-formatted
 type DecompiledAddressingInfo<T extends AddressingMode> = 
   T extends "immediate" ? { mode: T } :
-  T extends "direct" ? { mode: T } :
-  T extends "indexed" ? { mode: "indexed"; postbyte: number; parsedPostbyte: ParsedIndexedPostbyte, result: DisassIdxAddressingResult } :
-  T extends "extended" ? { mode: T } :
-  T extends "relative" ? { mode: T } :
+  T extends "direct" ? { mode: T, address: number, low: number } :
+  T extends "indexed" ? { mode: "indexed"; address: number, postbyte: number; 
+                          parsedPostbyte: ParsedIndexedPostbyte, result: DisassIdxAddressingResult } :
+  T extends "extended" ? { mode: T, address: number } :
+  T extends "relative" ? { mode: T, address: number, offset: number } :
   T extends "inherent" ? { mode: T } :
   never;
 
@@ -199,7 +200,7 @@ async function decompileInstruction(
       address = (registers.dp << 8) | low;
       args.push(address);
 
-      addressing = { mode: "direct" };
+      addressing = { mode: "direct", address, low };
       break;
     }
     case "indexed": {
@@ -218,7 +219,7 @@ async function decompileInstruction(
       size += idxResult.bytesReadOffPC;
       address = idxResult.address;
 
-      addressing = { mode: "indexed", postbyte, parsedPostbyte, result: idxResult };
+      addressing = { mode: "indexed", postbyte, parsedPostbyte, result: idxResult, address };
       break;
     }
     case "extended": {
@@ -226,7 +227,7 @@ async function decompileInstruction(
       size += 2;
       args.push(address);
 
-      addressing = { mode: "extended" };
+      addressing = { mode: "extended", address };
       break;
     }
     case "relative": {
@@ -234,7 +235,7 @@ async function decompileInstruction(
       address = truncate(startAddress + signExtend(offset, 8, 16), 16);
       args.push(address);
 
-      addressing = { mode: "relative" };
+      addressing = { mode: "relative", offset, address };
       break;
     }
     case "inherent": {
@@ -259,27 +260,31 @@ async function decompileInstruction(
 
 function generateInstructionElement(
   decompiled: DecompiledInstruction,
-  container: HTMLDivElement,
+  formatAddress: (data: number) => string,
+  dataElement: HTMLDivElement,
+  extraElement: HTMLDivElement,
 ): void {
-  const { registerSize, args } = decompiled;
+  const { registerSize, args, addressing } = decompiled;
   const { mnemonic } = decompiled.instruction;
-  const { mode } = decompiled.addressing;
+  const { mode } = addressing;
 
   const registerHexSize = registerSize * 2;
 
-  let str = mnemonic;
+  let data = mnemonic;
+  let extra = `${mode.slice(0, 3)}`;
 
   switch (mode) {
     case "immediate":
-      str += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")} (imm)`;
+      data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
       break;
     case "direct":
-      str += ` $0x${args[0].toString(16).padStart(4, "0")} (dir)`;
+      data += ` 0x${addressing.low}`;
+      extra += ` <${formatAddress(addressing.address)}>`;
       break;
     case "indexed": {
       let idxStr = " ";
 
-      const { parsedPostbyte } = decompiled.addressing;
+      const { parsedPostbyte } = addressing;
       // The offset.
       switch (parsedPostbyte.action) {
         case IndexedAction.Offset0:
@@ -316,17 +321,23 @@ function generateInstructionElement(
       else if (parsedPostbyte.action === IndexedAction.PostInc2) idxStr += "++";
 
       if (parsedPostbyte.indirect) idxStr = `[${idxStr}]`;
-      str += idxStr;
+      data += idxStr;
       break;
     }
     case "extended":
-      str += ` 0x${args[0].toString(16).padStart(4, "0")} (ext)`;
+      data += ` <${formatAddress(addressing.address)}>`;
       break;
-    case "relative":
-      str += ` 0x${args[0].toString(16).padStart(4, "0")} (rel)`;
+    case "relative": {
+      // NOTE: Convert the relative address to a signed number for display.
+      const offset = intNToNumber(addressing.offset, 8);
+      data += ` pc${offset >= 0 ? "+" : ""}${offset}`;
+      extra += ` <${formatAddress(addressing.address)}>`;
       break;
+    }
   }
-  container.innerText = str;
+
+  dataElement.innerText = data;
+  extraElement.innerText = extra;
 }
 
 class InstructionUI implements IModule {
@@ -427,6 +438,7 @@ class InstructionUI implements IModule {
           properties: { className: "address", innerText: "0000" },
         }),
         element("span", { properties: { className: "data", innerText: "..." } }),
+        element("span", { properties: { className: "extra", innerText: "" } }),
       ],
     });
 
@@ -437,7 +449,12 @@ class InstructionUI implements IModule {
       return;
     }
 
-    generateInstructionElement(decompiled, row.children[1] as HTMLDivElement);
+    generateInstructionElement(
+      decompiled,
+      this.formatAddress,
+      row.children[1] as HTMLDivElement,
+      row.children[2] as HTMLDivElement,
+    );
 
     currentAddress += decompiled.size;
 

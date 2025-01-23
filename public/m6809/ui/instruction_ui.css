@@ -41,7 +41,13 @@
     }
 
     .data {
+      /* flex: 2; */
+      padding-right: 1em;
+    }
+
+    .extra {
       flex: 2;
+      color: #888;
     }
   }
 }

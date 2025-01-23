@@ -20,14 +20,32 @@ export function twosComplement(val: number, bits: number): number {
 }
 
 /**
- * Convert a JS number to a signed integer of the given size.
- * @param num The number to convert.
+ * Convert a JS Number to a signed integer of the given size.
+ * @param num The Number to convert.
  * @param size The size of the integer in bits.
- * @returns The converted number.
+ * @returns The converted signed integer.
  */
 export function numberToIntN(num: number, size: number): number {
   if (num < 0) {
     return twosComplement(-num, size);
   }
   return truncate(num, size);
+}
+
+/**
+ * Convert a signed integer of a given size to a JS Number.
+ * @param int The signed integer to convert.
+ * @param size The size of the integer in bits.
+ * @returns The converted Number.
+ */
+export function intNToNumber(int: number, size: number): number {
+  // If the MSB is set, the number is negative.
+  if (int & (1 << (size - 1))) {
+    // The opposite of twosComplement is twosComplement itself, so we inverse
+    // the negative number to get its positive counterpart, and then negate it.
+    return -twosComplement(int, size);
+  }
+  // If the MSB is not set, the number is positive, and positive numbers don't
+  // need any conversion.
+  return int;
 }
