@@ -3,13 +3,29 @@
 
   .memory-table {
     font-family: 'Courier New', Courier, monospace;
+    text-align: center;
     width: 100%;
 
     .read-highlight {
       background-color: lightblue;
     }
+    .pc-highlight {
+      background-color: lightyellow;
+    }
     .write-highlight {
+      background-color: red;
+    }
+    .read-highlight.pc-highlight {
       background-color: lightgreen;
+    }
+    .read-highlight.write-highlight {
+      background-color: purple;
+    }
+    .pc-highlight.write-highlight {
+      background-color: orange;
+    }
+    .read-highlight.pc-highlight.write-highlight {
+      background-color: whitesmoke;
     }
   }
   .memory-grid {

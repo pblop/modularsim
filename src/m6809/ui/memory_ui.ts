@@ -26,6 +26,7 @@ class MemoryUI implements IModule {
 
   lastMemoryRead?: number;
   lastMemoryWrite?: number;
+  pc?: number;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -37,7 +38,9 @@ class MemoryUI implements IModule {
         "memory:write:result": this.onMemoryWriteResult,
         "ui:memory:write:result": this.onMemoryWriteResult,
       },
-      optional: {},
+      optional: {
+        "cpu:register_update": this.onRegisterUpdate,
+      },
     };
   }
 
@@ -70,6 +73,22 @@ class MemoryUI implements IModule {
     return data.toString(16).padStart(2, "0");
   }
 
+  onRegisterUpdate = (register: string, pc: number): void => {
+    if (register !== "pc") return;
+    if (!this.panel || !this.memoryTable) return;
+
+    if (pc < this.config.start || pc >= this.config.start + this.config.size) return;
+    const cell = this.panel.querySelector(`.byte-${pc}`);
+    if (!cell) return;
+
+    if (this.pc !== undefined) {
+      const lastCell = this.panel.querySelector(`.byte-${this.pc}`);
+      if (lastCell) lastCell.classList.remove("pc-highlight");
+    }
+
+    cell.classList.add("pc-highlight");
+    this.pc = pc;
+  };
   updateLastMemoryRead = (address: number): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;
@@ -78,7 +97,7 @@ class MemoryUI implements IModule {
     const cell = this.panel.querySelector(`.byte-${address}`);
     if (!cell) return;
 
-    if (this.lastMemoryRead) {
+    if (this.lastMemoryRead !== undefined) {
       const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryRead}`);
       if (lastCell) lastCell.classList.remove("read-highlight");
     }
@@ -94,7 +113,7 @@ class MemoryUI implements IModule {
     const cell = this.panel.querySelector(`.byte-${address}`);
     if (!cell) return;
 
-    if (this.lastMemoryWrite) {
+    if (this.lastMemoryWrite !== undefined) {
       const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryWrite}`);
       if (lastCell) lastCell.classList.remove("write-highlight");
     }
