@@ -1,7 +1,7 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import { doInstruction } from "../util/instructions.js";
+import { doInstruction, INSTRUCTIONS } from "../util/instructions.js";
 import { Registers, ConditionCodes } from "../util/cpu_parts.js";
 
 type CpuConfig = {
@@ -14,6 +14,17 @@ function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
   return config as CpuConfig;
 }
 
+// biome-ignore lint/style/useEnumInitializers: The enum values are not important.
+enum CpuState {
+  UNRESET,
+  // Fetch the first byte of the opcode.
+  FETCH_OPCODE,
+  // Decode the opcode (and fetch the second byte if needed).
+  DECODE_OPCODE,
+
+  FAIL,
+}
+
 class Cpu implements IModule {
   id: string;
   config: CpuConfig;
@@ -22,6 +33,12 @@ class Cpu implements IModule {
   interval_id?: number;
 
   registers: Registers;
+
+  // Store the last read memory address, and the value read between states.
+  lastRead: { address: number; value: number | null } | null = null;
+  opcode: number | null = null;
+  // The current state of the CPU state machine.
+  state: CpuState;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -33,9 +50,9 @@ class Cpu implements IModule {
         "cpu:registers_update",
       ],
       required: {
-        "clock:cycle_start": () => {},
+        "clock:cycle_start": this.onCycleStart,
         "signal:reset": this.reset,
-        "memory:read:result": () => {},
+        "memory:read:result": this.onMemoryReadResult,
         "memory:write:result": () => {},
       },
       optional: {},
@@ -52,6 +69,8 @@ class Cpu implements IModule {
     this.et = eventTransceiver;
 
     this.registers = new Registers();
+    this.state = CpuState.UNRESET;
+    this.opcode = null;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -80,7 +99,7 @@ class Cpu implements IModule {
 
     this.printRegisters();
 
-    this.loop();
+    this.state = CpuState.FETCH_OPCODE;
   };
 
   printRegisters = () => {
@@ -95,7 +114,7 @@ class Cpu implements IModule {
    * Fetches one or two bytes from memory, the opcode.
    * @returns An array with the bytes of the opcode.
    */
-  fetchOpCode = async () => {
+  _fetchOpCode = async () => {
     const opcodeBytes: number[] = [];
 
     // TODO: Maybe do some comparison that the read address is the correct one?
@@ -158,33 +177,96 @@ class Cpu implements IModule {
     return Promise.all(allPromises);
   };
 
-  loop = async () => {
-    while (true) {
-      await this.et.wait("clock:cycle_start");
-      // Get the instruction (this increments the PC)
-      const opcodeBytes = await this.fetchOpCode();
-      console.log(`[${this.id}] read opcode bytes ${opcodeBytes} at ${this.registers.pc}`);
+  queryMemory = (address: number) => {
+    this.lastRead = { address, value: null };
+    this.et.emit("memory:read", address);
+  };
+  onMemoryReadResult = (address: number, data: number) => {
+    if (!this.lastRead) return;
+    // If the address is different, this is another module's read, or a stale
+    // read, or something else, but we don't want it either way.
+    if (this.lastRead.address !== address) return;
 
-      // Convert one or two bytes to single u16 containing the whole opcode.
-      // The low byte is the last byte read.
-      // e.g. 0x10 0xAB -> 0x10AB
-      // e.g. 0xAB -> 0xAB
-      const opcode = opcodeBytes.reduce((acc, val) => (acc << 8) | val, 0);
-      console.log(
-        `[${this.id}] opcode ${opcode.toString(16)} at ${this.registers.pc - opcodeBytes.length}`,
-      );
-      this.printRegisters();
+    this.lastRead.value = data;
+  };
 
-      // Execute the instruction
-      const waitCycles = await doInstruction(this, opcode);
+  fail = (message: string) => {
+    console.error(`[${this.id}] ${message}`);
+    this.state = CpuState.FAIL;
+  };
 
-      for (let i = 0; i < waitCycles; i++) {
-        // TODO: Implement the wait cycle
-      }
+  // Fetch the first byte of the opcode.
+  fetchOpcode = () => {
+    this.queryMemory(this.registers.pc);
+    // Transition to the next state.
+    this.state = CpuState.DECODE_OPCODE;
+  };
 
-      this.printRegisters();
-      this.commitRegisters();
-      this.et.emit("cpu:instruction_finish");
+  // Decode the opcode (and fetch the second byte if needed).
+  decodeOpcode = () => {
+    if (!this.lastRead) return this.fail("last read is null, but we're decoding a read");
+    // If the last read is not ready, we wait for the memory read result.
+    if (this.lastRead.value == null) return;
+
+    // Convert the opcode bytes (one or two) to a single u16 containing the
+    // whole opcode.
+    // The low byte is the last byte read.
+    // e.g. 0x10 0xAB -> 0x10AB
+    // e.g. 0xAB -> 0xAB
+    if (this.opcode === null) {
+      this.opcode = this.lastRead.value;
+    } else {
+      this.opcode = (this.opcode << 8) | this.lastRead.value;
+    }
+
+    // Transition to the next state.
+
+    // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
+    // it says that if the second byte is 0x10 or 0x11, we need to fetch another
+    // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
+    if (this.opcode === 0x10 || this.opcode === 0x11) {
+      this.queryMemory(this.registers.pc);
+      this.state = CpuState.DECODE_OPCODE;
+    } else {
+      this.addressingSelection(this.opcode);
+    }
+  };
+
+  addressingSelection = (opcode: number) => {
+    const instruction = INSTRUCTIONS[opcode];
+    if (!instruction) return this.fail(`Unknown opcode ${opcode.toString(16)}`);
+
+    switch (instruction.mode) {
+      case "direct":
+        return this.fail("Direct addressing not implemented");
+      case "indexed":
+        return this.fail("Indexed addressing not implemented");
+      case "inherent":
+        return this.fail("Inherent addressing not implemented");
+      case "relative":
+        return this.fail("Relative addressing not implemented");
+      case "immediate":
+        return this.fail("Immediate addressing not implemented");
+      case "extended":
+        return this.fail("Extended addressing not implemented");
+    }
+  };
+
+  /**
+   * The entry point of the CPU state machine.
+   */
+  onCycleStart = () => {
+    switch (this.state) {
+      case CpuState.UNRESET:
+        return this.fail("CPU not reset but cycle started");
+      case CpuState.FETCH_OPCODE:
+        this.fetchOpcode();
+        break;
+      case CpuState.DECODE_OPCODE:
+        this.decodeOpcode();
+        break;
+      case CpuState.FAIL:
+        break;
     }
   };
 }
