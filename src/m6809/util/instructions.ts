@@ -1,5 +1,6 @@
 import type Cpu from "../hardware/cpu.js";
-import { ConditionCodes } from "../util/cpu_parts.js";
+import type { CpuAddressingData, StateInfo } from "../hardware/cpu.js";
+import { ConditionCodes, type Registers } from "../util/cpu_parts.js";
 import { signExtend, truncate } from "./numbers.js";
 
 // A function that takes a CPU and an address, performs some operation, and
@@ -184,49 +185,49 @@ async function indexedAddressing(cpu: Cpu, parsedPostbyte: ParsedIndexedPostbyte
 }
 
 export type FetchableAddress = number | "pc";
-/**
- * Returns the address given by the addressing mode (immediate, direct, indexed, extended, relative),
- * fetching any necessary data to calculate it from memory. (immediate <=> "pc")
- * @returns The address to read from (or "pc" if the address is the next byte to read).
- */
-async function addressing<T extends AddressableAddressingMode>(
-  cpu: Cpu,
-  mode: T,
-): Promise<T extends "immediate" ? "pc" : number> {
-  type ReturnType = T extends "immediate" ? "pc" : number;
+// /**
+//  * Returns the address given by the addressing mode (immediate, direct, indexed, extended, relative),
+//  * fetching any necessary data to calculate it from memory. (immediate <=> "pc")
+//  * @returns The address to read from (or "pc" if the address is the next byte to read).
+//  */
+// async function addressing<T extends AddressableAddressingMode>(
+//   cpu: Cpu,
+//   mode: T,
+// ): Promise<T extends "immediate" ? "pc" : number> {
+//   type ReturnType = T extends "immediate" ? "pc" : number;
 
-  switch (mode) {
-    case "immediate":
-      return "pc" as ReturnType;
-    case "direct": {
-      const low = await cpu.read(cpu.registers.pc, 1);
-      cpu.registers.pc += 1;
+//   switch (mode) {
+//     case "immediate":
+//       return "pc" as ReturnType;
+//     case "direct": {
+//       const low = await cpu.read(cpu.registers.pc, 1);
+//       cpu.registers.pc += 1;
 
-      return ((cpu.registers.dp << 8) | low) as ReturnType;
-    }
-    case "indexed": {
-      const postbyte = await cpu.read(cpu.registers.pc, 1);
-      const parsedPostbyte = parseIndexedPostbyte(postbyte);
-      cpu.registers.pc += 1;
-      if (parsedPostbyte == null) throw new Error("[cpu] Invalid indexed postbyte");
+//       return ((cpu.registers.dp << 8) | low) as ReturnType;
+//     }
+//     case "indexed": {
+//       const postbyte = await cpu.read(cpu.registers.pc, 1);
+//       const parsedPostbyte = parseIndexedPostbyte(postbyte);
+//       cpu.registers.pc += 1;
+//       if (parsedPostbyte == null) throw new Error("[cpu] Invalid indexed postbyte");
 
-      return (await indexedAddressing(cpu, parsedPostbyte)) as ReturnType;
-    }
-    case "extended": {
-      const address = await cpu.read(cpu.registers.pc, 2);
-      cpu.registers.pc += 2;
-      return address as ReturnType;
-    }
-    case "relative": {
-      // Only used for branches
-      const offset = await cpu.read(cpu.registers.pc, 1);
-      cpu.registers.pc += 1;
-      return truncate(cpu.registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
-    }
-  }
+//       return (await indexedAddressing(cpu, parsedPostbyte)) as ReturnType;
+//     }
+//     case "extended": {
+//       const address = await cpu.read(cpu.registers.pc, 2);
+//       cpu.registers.pc += 2;
+//       return address as ReturnType;
+//     }
+//     case "relative": {
+//       // Only used for branches
+//       const offset = await cpu.read(cpu.registers.pc, 1);
+//       cpu.registers.pc += 1;
+//       return truncate(cpu.registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
+//     }
+//   }
 
-  throw new Error("[cpu] Unknown addressing mode passed to addressing function");
-}
+//   throw new Error("[cpu] Unknown addressing mode passed to addressing function");
+// }
 /**
  * Returns the value at the given address, incrementing the program counter if the address is "pc"
  * (in the case of immediate addressing).
@@ -286,7 +287,7 @@ async function bra(cpu: Cpu, address: number): Promise<number> {
 async function st8(cpu: Cpu, reg: Accumulator, address: number): Promise<number> {
   const val = cpu.registers[reg];
 
-  await cpu.write(address, val, 1);
+  // await cpu.write(address, val, 1);
 
   // Clear V flag, set N if negative, Z if zero
   cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
@@ -413,19 +414,13 @@ addInstructions(
   (reg, mode, cycles) => (cpu, address) => st8(cpu, reg, address),
 );
 
-export async function doInstruction(cpu: Cpu, number: number): Promise<number> {
-  const instruction = INSTRUCTIONS[number];
-  if (instruction == null) {
-    console.error(`Unknown instruction: ${number.toString(16)}`);
-    return 1;
-  }
-  console.debug(
-    `[cpu] instruction ${instruction.mnemonic}: reg=${instruction.register} mode=${instruction.mode}`,
-  );
-
-  // Perform addressing.
-  let address = null;
-  if (instruction.mode !== "inherent") address = await addressing(cpu, instruction.mode);
-
-  return await instruction.function(cpu, address);
+export function performInstructionLogic(
+  cpu: Cpu,
+  // This is being executed in the execute state (we can safely modify any context, it is ours!).
+  info: StateInfo<"execute">,
+  data: InstructionData,
+  addressing: CpuAddressingData,
+  registers: Registers,
+): boolean {
+  return false;
 }

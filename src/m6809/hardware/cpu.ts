@@ -1,7 +1,12 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import { doInstruction, INSTRUCTIONS } from "../util/instructions.js";
+import {
+  AddressingMode,
+  type InstructionData,
+  INSTRUCTIONS,
+  performInstructionLogic,
+} from "../util/instructions.js";
 import { Registers, ConditionCodes } from "../util/cpu_parts.js";
 
 type CpuConfig = {
@@ -14,16 +19,34 @@ function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
   return config as CpuConfig;
 }
 
-// biome-ignore lint/style/useEnumInitializers: The enum values are not important.
-enum CpuState {
-  UNRESET,
-  // Fetch the first byte of the opcode.
-  FETCH_OPCODE,
-  // Decode the opcode (and fetch the second byte if needed).
-  DECODE_OPCODE,
+type CpuState = "unreset" | "opcode" | "immediate" | "fail" | "execute";
 
-  FAIL,
-}
+type CpuImmediateAddressingData = {
+  mode: "immediate";
+  value: number | null;
+};
+export type CpuAddressingData = CpuImmediateAddressingData;
+
+export type StateInfo<S extends CpuState> = {
+  readPending: boolean;
+  writePending: boolean;
+  cyclesOnState: number;
+  ctx: StateContexts[S];
+};
+// Returns the next state, or null if self-transition.
+type CpuStateFunction<S extends CpuState> = (info: StateInfo<S>) => CpuState | null;
+
+type EmptyObject = Record<string, never>;
+type StateContexts = {
+  unreset: EmptyObject;
+  opcode: { opcode?: number };
+  immediate: EmptyObject;
+  // I could type this correctly, but it's not worth the effort. Every
+  // instruction can have a different context, so it's better to just use any.
+  // biome-ignore lint/suspicious/noExplicitAny: <above>
+  execute: any;
+  fail: EmptyObject;
+};
 
 class Cpu implements IModule {
   id: string;
@@ -35,10 +58,19 @@ class Cpu implements IModule {
   registers: Registers;
 
   // Store the last read memory address, and the value read between states.
-  lastRead: { address: number; value: number | null } | null = null;
-  opcode: number | null = null;
+  readInfo: { address: number; value: number | null } | null = null;
+  stateContext: StateContexts[CpuState] | EmptyObject = {};
+
+  // The current opcode being executed (if any)
+  opcode?: number;
+  // The current instruction being executed (if already decoded)
+  instruction?: InstructionData;
+  addressing?: CpuAddressingData;
+
   // The current state of the CPU state machine.
   state: CpuState;
+  // The number of cycles spent in the current state (for substates).
+  cyclesOnState: number;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -70,6 +102,7 @@ class Cpu implements IModule {
 
     this.registers = new Registers();
     this.state = CpuState.UNRESET;
+    this.cyclesOnState = 0;
     this.opcode = null;
 
     console.log(`[${this.id}] Module initialized.`);
@@ -99,7 +132,7 @@ class Cpu implements IModule {
 
     this.printRegisters();
 
-    this.state = CpuState.FETCH_OPCODE;
+    this.transitionToState(CpuState.OPCODE);
   };
 
   printRegisters = () => {
@@ -110,165 +143,159 @@ class Cpu implements IModule {
     ]);
   };
 
-  /**
-   * Fetches one or two bytes from memory, the opcode.
-   * @returns An array with the bytes of the opcode.
-   */
-  _fetchOpCode = async () => {
-    const opcodeBytes: number[] = [];
-
-    // TODO: Maybe do some comparison that the read address is the correct one?
-    // (I'm ignoring the first returned value of memory:read:result, which is the
-    // read address. Given no guarantees, it _probably_ _could happen_ that we
-    // ask for an address at the same time as somebody else, and we get a wrong
-    // memory read result!) (Check this again when I do fun memory mapping, with
-    // directed memory reads! :p)
-    // Maybe not needed, I am 85% sure it will never happen.
-    const [_, b1] = await this.et.emitAndWait(
-      "memory:read",
-      "memory:read:result",
-      this.registers.pc++,
-    );
-    if (b1 == null) throw new Error(`[${this.id}] CPU read an undefined byte!1!!`);
-    opcodeBytes.push(b1);
-
-    if (b1 === 0x10 || b1 === 0x11) {
-      const [_, b2] = await this.et.emitAndWait(
-        "memory:read",
-        "memory:read:result",
-        this.registers.pc++,
-      );
-      if (b2 == null) throw new Error(`[${this.id}] CPU read an undefined byte!1!!`);
-      opcodeBytes.push(b2);
-    }
-
-    return opcodeBytes;
-  };
-
-  /**
-   * Wrapper around the event emitter to read bytes from memory (big-endian).
-   */
-  read = async (address: number, bytes = 1) => {
-    let val = 0;
-
-    for (let i = 0; i < bytes; i++) {
-      // TODO: Maybe do some comparison that the read address is the correct one?
-      const [_, data] = await this.et.emitAndWait("memory:read", "memory:read:result", address + i);
-      if (data == null) throw new Error(`[${this.id}] CPU read an undefined byte!1!!`);
-
-      val = (val << 8) | data;
-    }
-
-    return val;
-  };
-
-  /**
-   * Wrapper around the event emitter to write bytes to memory (big-endian).
-   */
-  write = async (address: number, data: number, bytes = 1) => {
-    const allPromises = [];
-    for (let i = 0; i < bytes; i++) {
-      // The Motorola 6809 is big-endian, so we write the most significant byte first, that is
-      // for index 0, we shift all the way to the right, for index 1, we shift 8 bits less, etc.
-      const val = (data >> (8 * (bytes - i - 1))) & 0xff;
-      const promise = this.et.emitAndWait("memory:write", "memory:write:result", address + i, val);
-      allPromises.push(promise);
-    }
-    return Promise.all(allPromises);
-  };
-
   queryMemory = (address: number) => {
-    this.lastRead = { address, value: null };
+    this.readInfo = { address, value: null };
     this.et.emit("memory:read", address);
   };
   onMemoryReadResult = (address: number, data: number) => {
-    if (!this.lastRead) return;
+    if (!this.readInfo) return;
     // If the address is different, this is another module's read, or a stale
     // read, or something else, but we don't want it either way.
-    if (this.lastRead.address !== address) return;
+    if (this.readInfo.address !== address) return;
 
-    this.lastRead.value = data;
+    this.readInfo.value = data;
   };
 
   fail = (message: string) => {
     console.error(`[${this.id}] ${message}`);
-    this.state = CpuState.FAIL;
+    return CpuState.FAIL;
   };
 
-  // Fetch the first byte of the opcode.
-  fetchOpcode = () => {
-    this.queryMemory(this.registers.pc);
-    // Transition to the next state.
-    this.state = CpuState.DECODE_OPCODE;
-  };
+  // Fetch and decode opcode.
+  stateOpcode: CpuStateFunction<"opcode"> = ({ readPending, writePending, cyclesOnState, ctx }) => {
+    // If we have a read pending, we can't continue.
+    if (readPending) return null;
 
-  // Decode the opcode (and fetch the second byte if needed).
-  decodeOpcode = () => {
-    if (!this.lastRead) return this.fail("last read is null, but we're decoding a read");
-    // If the last read is not ready, we wait for the memory read result.
-    if (this.lastRead.value == null) return;
-
-    // Convert the opcode bytes (one or two) to a single u16 containing the
-    // whole opcode.
-    // The low byte is the last byte read.
-    // e.g. 0x10 0xAB -> 0x10AB
-    // e.g. 0xAB -> 0xAB
-    if (this.opcode === null) {
-      this.opcode = this.lastRead.value;
+    if (cyclesOnState === 0) {
+      // Fetch the opcode.
+      this.queryMemory(this.registers.pc++);
+      return null;
     } else {
-      this.opcode = (this.opcode << 8) | this.lastRead.value;
-    }
+      // Convert the opcode bytes (one or two) to a single u16 containing the
+      // whole opcode.
+      // The low byte is the last byte read.
+      // e.g. 0x10 0xAB -> 0x10AB
+      // e.g. 0xAB -> 0xAB
+      if (ctx.opcode === undefined) {
+        ctx.opcode = this.readInfo!.value!;
+      } else {
+        ctx.opcode = (ctx.opcode << 8) | this.readInfo!.value!;
+      }
 
-    // Transition to the next state.
+      // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
+      // it says that if the second byte is 0x10 or 0x11, we need to fetch another
+      // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
+      if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
+        this.queryMemory(this.registers.pc++);
+        return null;
+      } else {
+        // We now have the full opcode, so we can store it, and decode it.
+        this.opcode = ctx.opcode;
+        const instruction = INSTRUCTIONS[ctx.opcode];
 
-    // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
-    // it says that if the second byte is 0x10 or 0x11, we need to fetch another
-    // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
-    if (this.opcode === 0x10 || this.opcode === 0x11) {
-      this.queryMemory(this.registers.pc);
-      this.state = CpuState.DECODE_OPCODE;
-    } else {
-      this.addressingSelection(this.opcode);
+        if (!instruction) return this.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
+        this.instruction = instruction;
+
+        switch (instruction.mode) {
+          case "immediate":
+            return "immediate";
+          default:
+            return this.fail(`Addressing mode ${instruction.mode} not implemented`);
+        }
+      }
     }
   };
 
-  addressingSelection = (opcode: number) => {
-    const instruction = INSTRUCTIONS[opcode];
-    if (!instruction) return this.fail(`Unknown opcode ${opcode.toString(16)}`);
-
-    switch (instruction.mode) {
-      case "direct":
-        return this.fail("Direct addressing not implemented");
-      case "indexed":
-        return this.fail("Indexed addressing not implemented");
-      case "inherent":
-        return this.fail("Inherent addressing not implemented");
-      case "relative":
-        return this.fail("Relative addressing not implemented");
-      case "immediate":
-        return this.fail("Immediate addressing not implemented");
-      case "extended":
-        return this.fail("Extended addressing not implemented");
+  stateImmediate: CpuStateFunction<"immediate"> = ({
+    readPending,
+    writePending,
+    cyclesOnState,
+    ctx,
+  }) => {
+    // Fetch the immediate value.
+    if (cyclesOnState === 0) {
+      this.queryMemory(this.registers.pc++);
+      return null;
     }
+
+    if (readPending) return null;
+
+    // We have the immediate value, so we can store it in the addressing info.
+    const value = this.readInfo!.value!;
+    this.addressing = { mode: "immediate", value };
+
+    // Perform instruction execution.
+    return "execute";
+  };
+
+  stateExecute: CpuStateFunction<"execute"> = (info) => {
+    if (this.instruction === undefined) return this.fail("No instruction to execute");
+    if (this.addressing === undefined) return this.fail("No addressing mode to execute");
+
+    const done = performInstructionLogic(
+      this,
+      info,
+      this.instruction,
+      this.addressing,
+      this.registers,
+    );
+
+    if (done) {
+      this.onInstructionFinish();
+      return "opcode";
+    } else {
+      return null;
+    }
+  };
+
+  /**
+   * Notify other modules that the instruction has ended, and, as such, our
+   * registers have been updated.
+   * Also, reset the instruction-related fields, so we can start a new one.
+   */
+  onInstructionFinish = () => {
+    // NOTE: Could be a good idea to modify this to also emit the instruction
+    // that was executed, so other modules can react to it.
+    this.et.emit("cpu:instruction_finish");
+    this.commitRegisters();
+
+    this.opcode = undefined;
+    this.instruction = undefined;
+    this.addressing = undefined;
+  };
+
+  states: { [S in CpuState]: CpuStateFunction<S> } = {
+    unreset: () => this.fail("CPU is not reset"),
+    opcode: this.stateOpcode,
+    immediate: this.stateImmediate,
+    execute: this.stateExecute,
+    fail: () => "fail",
   };
 
   /**
    * The entry point of the CPU state machine.
    */
   onCycleStart = () => {
-    switch (this.state) {
-      case CpuState.UNRESET:
-        return this.fail("CPU not reset but cycle started");
-      case CpuState.FETCH_OPCODE:
-        this.fetchOpcode();
-        break;
-      case CpuState.DECODE_OPCODE:
-        this.decodeOpcode();
-        break;
-      case CpuState.FAIL:
-        break;
+    const readPending = this.readInfo != null && this.readInfo.value === null;
+    const writePending = false;
+
+    const nextState = this.states[this.state]({
+      readPending,
+      writePending,
+      cyclesOnState: this.cyclesOnState,
+      // biome-ignore lint/suspicious/noExplicitAny: This is a type coercion.
+      ctx: this.stateContext as any,
+    });
+
+    if (nextState !== this.state && nextState != null) {
+      this.transitionToState(nextState);
     }
   };
+  transitionToState(state: CpuState) {
+    this.state = state;
+    this.cyclesOnState = 0;
+    this.stateContext = {};
+  }
 }
 
 export default Cpu;
