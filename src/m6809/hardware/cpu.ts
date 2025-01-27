@@ -2,7 +2,7 @@ import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import {
-  AddressingMode,
+  type AddressingMode,
   type InstructionData,
   INSTRUCTIONS,
   performInstructionLogic,
@@ -23,9 +23,15 @@ type CpuState = "unreset" | "opcode" | "immediate" | "fail" | "execute";
 
 type CpuImmediateAddressingData = {
   mode: "immediate";
-  value: number | null;
+  value: number;
 };
-export type CpuAddressingData = CpuImmediateAddressingData;
+type CpuDirectAddressingData = {
+  mode: "direct";
+  address: number;
+};
+export type CpuAddressingData<M extends AddressingMode> = M extends "immediate"
+  ? CpuImmediateAddressingData
+  : CpuDirectAddressingData;
 
 export type StateInfo<S extends CpuState> = {
   readPending: boolean;
@@ -65,7 +71,7 @@ class Cpu implements IModule {
   opcode?: number;
   // The current instruction being executed (if already decoded)
   instruction?: InstructionData;
-  addressing?: CpuAddressingData;
+  addressing?: CpuAddressingData<AddressingMode>;
 
   // The current state of the CPU state machine.
   state: CpuState;
@@ -101,9 +107,8 @@ class Cpu implements IModule {
     this.et = eventTransceiver;
 
     this.registers = new Registers();
-    this.state = CpuState.UNRESET;
+    this.state = "unreset";
     this.cyclesOnState = 0;
-    this.opcode = null;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -132,7 +137,7 @@ class Cpu implements IModule {
 
     this.printRegisters();
 
-    this.transitionToState(CpuState.OPCODE);
+    this.transitionToState("opcode");
   };
 
   printRegisters = () => {
@@ -156,9 +161,9 @@ class Cpu implements IModule {
     this.readInfo.value = data;
   };
 
-  fail = (message: string) => {
+  fail = (message: string): CpuState => {
     console.error(`[${this.id}] ${message}`);
-    return CpuState.FAIL;
+    return "fail";
   };
 
   // Fetch and decode opcode.
@@ -278,6 +283,8 @@ class Cpu implements IModule {
   onCycleStart = () => {
     const readPending = this.readInfo != null && this.readInfo.value === null;
     const writePending = false;
+
+    console.debug(`[${this.id}] CPU state: ${this.state}`);
 
     const nextState = this.states[this.state]({
       readPending,

@@ -3,14 +3,18 @@ import type { CpuAddressingData, StateInfo } from "../hardware/cpu.js";
 import { ConditionCodes, type Registers } from "../util/cpu_parts.js";
 import { signExtend, truncate } from "./numbers.js";
 
+type ExecuteStateInfo = StateInfo<"execute">;
+
 // A function that takes a CPU and an address, performs some operation, and
 // returns the number of cycles the processor should wait.
 // This is also typed to specify what address will be passed to the function
 // given a certain addressing mode.
 type InstructionLogic<M extends AddressingMode = AddressingMode> = (
   cpu: Cpu,
-  address: M extends "immediate" ? "pc" : M extends "inherent" ? null : number,
-) => Promise<number>;
+  info: ExecuteStateInfo,
+  addressingData: CpuAddressingData<M>,
+  registers: Registers,
+) => boolean;
 
 export type AddressingMode = AddressableAddressingMode | "inherent";
 export type AddressableAddressingMode =
@@ -90,99 +94,99 @@ export function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | 
   };
 }
 
-async function indexedAddressing(cpu: Cpu, parsedPostbyte: ParsedIndexedPostbyte): Promise<number> {
-  const { action, register, indirect, rest } = parsedPostbyte;
+// async function indexedAddressing(cpu: Cpu, parsedPostbyte: ParsedIndexedPostbyte): Promise<number> {
+//   const { action, register, indirect, rest } = parsedPostbyte;
 
-  let address: number = cpu.registers[register];
-  switch (action) {
-    case IndexedAction.Offset5: {
-      // Non-Indirect, 5 bit offset
-      const offset = signExtend(rest, 5, 16);
-      address += offset;
-      break;
-    }
-    case IndexedAction.Offset0: {
-      // No offset
-      break;
-    }
-    case IndexedAction.Offset8: {
-      // 8 bit offset
-      const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
-      cpu.registers.pc += 1;
-      address += offset;
-      break;
-    }
-    case IndexedAction.Offset16: {
-      // 16 bit offset
-      const offset = await cpu.read(cpu.registers.pc, 2);
-      cpu.registers.pc += 2;
-      address += offset;
-      break;
-    }
-    case IndexedAction.OffsetA: {
-      // A accumulator offset
-      address += signExtend(cpu.registers.A, 8, 16);
-      break;
-    }
-    case IndexedAction.OffsetB: {
-      // B accumulator offset
-      address += signExtend(cpu.registers.B, 8, 16);
-      break;
-    }
-    case IndexedAction.OffsetD: {
-      // D register offset
-      address += cpu.registers.D;
-      break;
-    }
-    case IndexedAction.PostInc1: {
-      // Post-increment by 1
-      cpu.registers[register] += 1;
-      break;
-    }
-    case IndexedAction.PostInc2: {
-      // Post-increment by 2
-      cpu.registers[register] += 2;
-      break;
-    }
-    case IndexedAction.PreDec1: {
-      // Pre-Decrement by 1
-      // TODO: Actually PRE-decrement, not POST-decrement.
-      // TODO: This subtraction is wrong (if address == 0, it breaks wonderfully).
-      cpu.registers[register] -= 1;
-      break;
-    }
-    case IndexedAction.PreDec2: {
-      // Pre-Decrement by 2
-      // TODO: This subtraction is wrong.
-      cpu.registers[register] -= 2;
-      break;
-    }
-    case IndexedAction.OffsetPC8: {
-      // 8 bit offset from PC (ignores register)
-      const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
-      cpu.registers.pc += 1; // TODO: Check if this is correct (which PC value to use?
-      // probably the one after the offset byte is read? That's not the case here).
-      address += offset;
-      break;
-    }
-    case IndexedAction.OffsetPC16: {
-      // 16 bit offset from PC(ignores register)
-      const offset = await cpu.read(cpu.registers.pc, 2);
-      cpu.registers.pc += 2; // TODO: Check if this is correct (which PC value to use?...)
-      address += offset;
-      break;
-    }
-  }
+//   let address: number = cpu.registers[register];
+//   switch (action) {
+//     case IndexedAction.Offset5: {
+//       // Non-Indirect, 5 bit offset
+//       const offset = signExtend(rest, 5, 16);
+//       address += offset;
+//       break;
+//     }
+//     case IndexedAction.Offset0: {
+//       // No offset
+//       break;
+//     }
+//     case IndexedAction.Offset8: {
+//       // 8 bit offset
+//       const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
+//       cpu.registers.pc += 1;
+//       address += offset;
+//       break;
+//     }
+//     case IndexedAction.Offset16: {
+//       // 16 bit offset
+//       const offset = await cpu.read(cpu.registers.pc, 2);
+//       cpu.registers.pc += 2;
+//       address += offset;
+//       break;
+//     }
+//     case IndexedAction.OffsetA: {
+//       // A accumulator offset
+//       address += signExtend(cpu.registers.A, 8, 16);
+//       break;
+//     }
+//     case IndexedAction.OffsetB: {
+//       // B accumulator offset
+//       address += signExtend(cpu.registers.B, 8, 16);
+//       break;
+//     }
+//     case IndexedAction.OffsetD: {
+//       // D register offset
+//       address += cpu.registers.D;
+//       break;
+//     }
+//     case IndexedAction.PostInc1: {
+//       // Post-increment by 1
+//       cpu.registers[register] += 1;
+//       break;
+//     }
+//     case IndexedAction.PostInc2: {
+//       // Post-increment by 2
+//       cpu.registers[register] += 2;
+//       break;
+//     }
+//     case IndexedAction.PreDec1: {
+//       // Pre-Decrement by 1
+//       // TODO: Actually PRE-decrement, not POST-decrement.
+//       // TODO: This subtraction is wrong (if address == 0, it breaks wonderfully).
+//       cpu.registers[register] -= 1;
+//       break;
+//     }
+//     case IndexedAction.PreDec2: {
+//       // Pre-Decrement by 2
+//       // TODO: This subtraction is wrong.
+//       cpu.registers[register] -= 2;
+//       break;
+//     }
+//     case IndexedAction.OffsetPC8: {
+//       // 8 bit offset from PC (ignores register)
+//       const offset = signExtend(await cpu.read(cpu.registers.pc, 1), 8, 16);
+//       cpu.registers.pc += 1; // TODO: Check if this is correct (which PC value to use?
+//       // probably the one after the offset byte is read? That's not the case here).
+//       address += offset;
+//       break;
+//     }
+//     case IndexedAction.OffsetPC16: {
+//       // 16 bit offset from PC(ignores register)
+//       const offset = await cpu.read(cpu.registers.pc, 2);
+//       cpu.registers.pc += 2; // TODO: Check if this is correct (which PC value to use?...)
+//       address += offset;
+//       break;
+//     }
+//   }
 
-  // Overflow!
-  address = truncate(address, 16);
+//   // Overflow!
+//   address = truncate(address, 16);
 
-  if (indirect) {
-    address = await cpu.read(address, 2);
-  }
+//   if (indirect) {
+//     address = await cpu.read(address, 2);
+//   }
 
-  return address;
-}
+//   return address;
+// }
 
 export type FetchableAddress = number | "pc";
 // /**
@@ -234,19 +238,30 @@ export type FetchableAddress = number | "pc";
  * @param size The size of the value to read (in bytes).
  * @returns The value at the address.
  */
-async function fetch(cpu: Cpu, address: FetchableAddress, size: number): Promise<number> {
-  let val: number;
-  if (address === "pc") {
-    val = await cpu.read(cpu.registers.pc, size);
-    cpu.registers.pc += size;
-  } else {
-    val = await cpu.read(address, size);
-  }
-  return val;
-}
+// async function fetch(cpu: Cpu, address: FetchableAddress, size: number): Promise<number> {
+//   let val: number;
+//   if (address === "pc") {
+//     val = await cpu.read(cpu.registers.pc, size);
+//     cpu.registers.pc += size;
+//   } else {
+//     val = await cpu.read(address, size);
+//   }
+//   return val;
+// }
 
-async function ld8(cpu: Cpu, reg: Accumulator, address: FetchableAddress): Promise<number> {
-  const val = await fetch(cpu, address, 1);
+function ld8<M extends AddressingMode>(
+  reg: Accumulator,
+  mode: M,
+  cpu: Cpu,
+  info: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+) {
+  if (addr.mode !== "immediate") {
+    throw new Error("[cpu] ld8 immediate only wip");
+  }
+
+  const val = addr.value;
 
   cpu.registers[reg] = val;
 
@@ -255,11 +270,21 @@ async function ld8(cpu: Cpu, reg: Accumulator, address: FetchableAddress): Promi
   cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
   cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
 
-  return 2;
+  return true;
 }
 
-async function ld16(cpu: Cpu, reg: Register, address: FetchableAddress): Promise<number> {
-  const val = await fetch(cpu, address, 2);
+function ld16<M extends AddressingMode>(
+  reg: Register,
+  mode: M,
+  cpu: Cpu,
+  info: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+) {
+  if (addr.mode !== "immediate") {
+    throw new Error("[cpu] ld16 immediate only wip");
+  }
+  const val = addr.value;
 
   cpu.registers[reg] = val;
 
@@ -268,46 +293,46 @@ async function ld16(cpu: Cpu, reg: Register, address: FetchableAddress): Promise
   cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
   cpu.registers.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
 
-  return 3;
+  return true;
 }
 
-async function beq(cpu: Cpu, address: number): Promise<number> {
-  // Zero flag set -> branch
-  if (cpu.registers.cc & ConditionCodes.ZERO) {
-    cpu.registers.pc = address;
-  }
-  return 3;
-}
+// async function beq(cpu: Cpu, address: number): Promise<number> {
+//   // Zero flag set -> branch
+//   if (cpu.registers.cc & ConditionCodes.ZERO) {
+//     cpu.registers.pc = address;
+//   }
+//   return 3;
+// }
 
-async function bra(cpu: Cpu, address: number): Promise<number> {
-  cpu.registers.pc = address;
-  return 3;
-}
+// async function bra(cpu: Cpu, address: number): Promise<number> {
+//   cpu.registers.pc = address;
+//   return 3;
+// }
 
-async function st8(cpu: Cpu, reg: Accumulator, address: number): Promise<number> {
-  const val = cpu.registers[reg];
+// async function st8(cpu: Cpu, reg: Accumulator, address: number): Promise<number> {
+//   const val = cpu.registers[reg];
 
-  // await cpu.write(address, val, 1);
+//   // await cpu.write(address, val, 1);
 
-  // Clear V flag, set N if negative, Z if zero
-  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
+//   // Clear V flag, set N if negative, Z if zero
+//   cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
+//   cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
+//   cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
 
-  return 2;
-}
+//   return 2;
+// }
 
-async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
-  console.debug(`[cpu] instruction clr${reg}`);
+// async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
+//   console.debug(`[cpu] instruction clr${reg}`);
 
-  cpu.registers[reg] = 0;
+//   cpu.registers[reg] = 0;
 
-  // Clear N,V,C, set Z
-  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
-  cpu.registers.cc |= ConditionCodes.ZERO;
+//   // Clear N,V,C, set Z
+//   cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
+//   cpu.registers.cc |= ConditionCodes.ZERO;
 
-  return 2;
-}
+//   return 2;
+// }
 
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
@@ -342,20 +367,20 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
   }
 }
 
-addInstructions("beq", [[0x27, "pc", "relative", "3"]], () => beq);
-addInstructions("bra", [[0x20, "pc", "relative", "3"]], () => bra);
+// addInstructions("beq", [[0x27, "pc", "relative", "3"]], () => beq);
+// addInstructions("bra", [[0x20, "pc", "relative", "3"]], () => bra);
 
-// clr(accumulator)
-addInstructions(
-  "clr{register}",
-  [
-    [0x4f, "A", "inherent", "3/1"],
-    [0x5f, "B", "inherent", "3/1"],
-  ],
-  (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
-);
+// // clr(accumulator)
+// addInstructions(
+//   "clr{register}",
+//   [
+//     [0x4f, "A", "inherent", "3/1"],
+//     [0x5f, "B", "inherent", "3/1"],
+//   ],
+//   (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
+// );
 
-// ld16 (ldx, ...)
+// // ld16 (ldx, ...)
 addInstructions(
   "ld{register}",
   [
@@ -383,9 +408,9 @@ addInstructions(
     [0xbe, "X", "extended", "6/5"],
     [0x10be, "Y", "extended", "7/6"],
   ],
-  (reg, mode, cycles) => (cpu, address) => ld16(cpu, reg, address),
+  (reg, mode, cycles) => (cpu, info, addr, regs) => ld16(reg, mode, cpu, info, addr, regs),
 );
-// ld8 (lda, ldb)
+// // ld8 (lda, ldb)
 addInstructions(
   "ld{register}",
   [
@@ -398,29 +423,29 @@ addInstructions(
     [0xe6, "B", "indexed", "4+"],
     [0xf6, "B", "extended", "5/4"],
   ],
-  (reg, mode, cycles) => (cpu, address) => ld8(cpu, reg, address),
+  (reg, mode, cycles) => (cpu, info, addr, regs) => ld8(reg, mode, cpu, info, addr, regs),
 );
-// st8 (sta, stb)
-addInstructions(
-  "st{register}",
-  [
-    [0x97, "A", "direct", "4/3"],
-    [0xa7, "A", "indexed", "4+"],
-    [0xb7, "A", "extended", "5/4"],
-    [0xd7, "B", "direct", "4/3"],
-    [0xe7, "B", "indexed", "4+"],
-    [0xf7, "B", "extended", "5/4"],
-  ],
-  (reg, mode, cycles) => (cpu, address) => st8(cpu, reg, address),
-);
+// // st8 (sta, stb)
+// addInstructions(
+//   "st{register}",
+//   [
+//     [0x97, "A", "direct", "4/3"],
+//     [0xa7, "A", "indexed", "4+"],
+//     [0xb7, "A", "extended", "5/4"],
+//     [0xd7, "B", "direct", "4/3"],
+//     [0xe7, "B", "indexed", "4+"],
+//     [0xf7, "B", "extended", "5/4"],
+//   ],
+//   (reg, mode, cycles) => (cpu, address) => st8(cpu, reg, address),
+// );
 
-export function performInstructionLogic(
+export function performInstructionLogic<M extends AddressingMode>(
   cpu: Cpu,
   // This is being executed in the execute state (we can safely modify any context, it is ours!).
-  info: StateInfo<"execute">,
-  data: InstructionData,
-  addressing: CpuAddressingData,
+  info: ExecuteStateInfo,
+  data: InstructionData<M>,
+  addressing: CpuAddressingData<M>,
   registers: Registers,
 ): boolean {
-  return false;
+  return data.function(cpu, info, addressing, registers);
 }
