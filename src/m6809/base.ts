@@ -104,13 +104,21 @@ class M6809Simulator implements ISimulator {
   /**
    * Emit an event.
    */
-  emit<E extends EventNames>(event: E, ...args: EventParams<E>): void {
+  emit<E extends EventNames>(event: E, ...args: EventParams<E>) {
     console.debug(`[${this.constructor.name}] Emitting event ${event}(${args.join(", ")})`);
 
     // If there are no listeners for this event, do nothing.
     if (!this.events[event]) return;
 
-    for (const callback of this.events[event]) {
+    // We copy the array to prevent issues when the callback modifies the array
+    // - if the callback is ephemeral, it will be removed.
+    // - the callback can add new listeners, and we don't want to:
+    //   - call them in this iteration
+    //   - iterate wrong because of the new elements
+    const eventListeners = this.events[event].slice();
+
+    for (const callback of eventListeners) {
+      if (event === "clock:cycle_start") debugger;
       callback(...args);
     }
   }
