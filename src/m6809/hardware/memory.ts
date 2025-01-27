@@ -38,8 +38,13 @@ class Memory implements IModule {
 
   getEventDeclaration(): EventDeclaration {
     return {
-      provided: ["memory:read:result", "memory:write:result", "ui:memory:read:result", "ui:memory:write:result"],
-      required: {"clock:cycle_start": () => {}},
+      provided: [
+        "memory:read:result",
+        "memory:write:result",
+        "ui:memory:read:result",
+        "ui:memory:write:result",
+      ],
+      required: { "clock:cycle_start": () => {} },
       optional: {
         "memory:read": this.onMemoryRead,
         "memory:write": this.onMemoryWrite,
@@ -81,30 +86,32 @@ class Memory implements IModule {
 
     const data = this.memory[address - this.start];
     this.event_transceiver.emit("ui:memory:read:result", address, data);
-  }
+  };
   onUiMemoryWrite = (address: number, data: number): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     this.memory[address - this.start] = data;
     this.event_transceiver.emit("ui:memory:write:result", address, data);
-  }
-  onMemoryRead = async (address: number): Promise<void> => {
+  };
+  onMemoryRead = (address: number) => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    await this.event_transceiver.wait("clock:cycle_start");
-    this.event_transceiver.emit("memory:read:result", address, data);
+    this.event_transceiver.once("clock:cycle_start", () => {
+      this.event_transceiver.emit("memory:read:result", address, data);
+    });
   };
-  onMemoryWrite = async (address: number, data: number): Promise<void> => {
+  onMemoryWrite = (address: number, data: number) => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     this.memory[address - this.start] = data;
 
-    await this.event_transceiver.wait("clock:cycle_start");
-    this.event_transceiver.emit("memory:write:result", address, data);
+    this.event_transceiver.once("clock:cycle_start", () => {
+      this.event_transceiver.emit("memory:write:result", address, data);
+    });
   };
 }
 
