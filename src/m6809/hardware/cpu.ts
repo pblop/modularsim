@@ -1,6 +1,7 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { EmptyObject } from "../../types/common.js";
 import {
   type AddressingMode,
   type InstructionData,
@@ -8,6 +9,12 @@ import {
   performInstructionLogic,
 } from "../util/instructions.js";
 import { Registers, ConditionCodes, REGISTER_SIZE } from "../util/cpu_parts.js";
+import {
+  type CpuState,
+  type OnEnterFn,
+  type OnExitFn,
+  StateMachine,
+} from "../util/state_machine.js";
 
 type CpuConfig = {
   pc: number;
@@ -18,8 +25,6 @@ function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
 
   return config as CpuConfig;
 }
-
-type CpuState = "unreset" | "opcode" | "immediate" | "fail" | "execute";
 
 type CpuImmediateAddressingData = {
   mode: "immediate";
@@ -32,27 +37,6 @@ type CpuDirectAddressingData = {
 export type CpuAddressingData<M extends AddressingMode> = M extends "immediate"
   ? CpuImmediateAddressingData
   : CpuDirectAddressingData;
-
-export type StateInfo<S extends CpuState> = {
-  readPending: boolean;
-  writePending: boolean;
-  cyclesOnState: number;
-  ctx: StateContexts[S];
-};
-// Returns the next state, or null if self-transition.
-type CpuStateFunction<S extends CpuState> = (info: StateInfo<S>) => CpuState | null;
-
-type EmptyObject = Record<string, never>;
-type StateContexts = {
-  unreset: EmptyObject;
-  opcode: { opcode?: number };
-  immediate: EmptyObject;
-  // I could type this correctly, but it's not worth the effort. Every
-  // instruction can have a different context, so it's better to just use any.
-  // biome-ignore lint/suspicious/noExplicitAny: <above>
-  execute: any;
-  fail: EmptyObject;
-};
 
 class Cpu implements IModule {
   id: string;
@@ -71,19 +55,12 @@ class Cpu implements IModule {
     raw: number[];
     waiting: boolean;
   } | null = null;
-  stateContext: StateContexts[CpuState] | EmptyObject = {};
 
   // The current opcode being executed (if any)
   opcode?: number;
   // The current instruction being executed (if already decoded)
   instruction?: InstructionData;
   addressing?: CpuAddressingData<AddressingMode>;
-
-  // The current state of the CPU state machine.
-  state: CpuState;
-  // The number of cycles spent in the current state (for substates).
-  cyclesOnState: number;
-  instructionCycles: number;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -114,9 +91,6 @@ class Cpu implements IModule {
     this.et = eventTransceiver;
 
     this.registers = new Registers();
-    this.state = "unreset";
-    this.cyclesOnState = 0;
-    this.instructionCycles = 0;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -142,11 +116,8 @@ class Cpu implements IModule {
     this.registers.pc = this.config.pc;
     this.commitRegisters();
 
-    this.instructionCycles = 0;
-
     // this.printRegisters();
-
-    this.transitionToState("opcode");
+    this.stateMachine.forceTransition("fetch_opcode", { readPending: false, writePending: false });
   };
 
   printRegisters = () => {
@@ -190,92 +161,136 @@ class Cpu implements IModule {
     return "fail";
   };
 
-  // Fetch and decode opcode.
-  stateOpcode: CpuStateFunction<"opcode"> = ({ readPending, writePending, cyclesOnState, ctx }) => {
-    // If we have a read pending, we can't continue.
+  // // Fetch and decode opcode.
+  // stateOpcode: CpuStateFunction<"opcode"> = ({ readPending, writePending, cyclesOnState, ctx }) => {
+  //   // If we have a read pending, we can't continue.
+  //   if (readPending) return null;
+
+  //   if (cyclesOnState === 0) {
+  //     // Fetch the opcode.
+  //     this.queryMemory(this.registers.pc++, 1);
+  //     return null;
+  //   } else {
+  //     // Convert the opcode bytes (one or two) to a single u16 containing the
+  //     // whole opcode.
+  //     // The low byte is the last byte read.
+  //     // e.g. 0x10 0xAB -> 0x10AB
+  //     // e.g. 0xAB -> 0xAB
+  //     if (ctx.opcode === undefined) {
+  //       ctx.opcode = this.readInfo!.value!;
+  //     } else {
+  //       ctx.opcode = (ctx.opcode << 8) | this.readInfo!.value!;
+  //     }
+
+  //     // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
+  //     // it says that if the second byte is 0x10 or 0x11, we need to fetch another
+  //     // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
+  //     if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
+  //       this.queryMemory(this.registers.pc++, 1);
+  //       return null;
+  //     } else {
+  //       // We now have the full opcode, so we can store it, and decode it.
+  //       this.opcode = ctx.opcode;
+  //       const instruction = INSTRUCTIONS[ctx.opcode];
+
+  //       if (!instruction) return this.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
+  //       this.instruction = instruction;
+
+  //       switch (instruction.mode) {
+  //         case "immediate":
+  //           return "immediate";
+  //         default:
+  //           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
+  //       }
+  //     }
+  //   }
+  // };
+
+  // stateImmediate: CpuStateFunction<"immediate"> = ({
+  //   readPending,
+  //   writePending,
+  //   cyclesOnState,
+  //   ctx,
+  // }) => {
+  //   // Fetch the immediate value.
+  //   if (cyclesOnState === 0) {
+  //     const reg = this.instruction!.register;
+  //     const regSize = REGISTER_SIZE[reg];
+  //     this.queryMemory(this.registers.pc++, regSize);
+  //     return null;
+  //   }
+
+  //   if (readPending) return null;
+
+  //   // We have the immediate value, so we can store it in the addressing info.
+  //   const value = this.readInfo!.value!;
+  //   this.addressing = { mode: "immediate", value };
+
+  //   // Perform instruction execution.
+  //   return "execute";
+  // };
+
+  // stateExecute: CpuStateFunction<"execute"> = (info) => {
+  //   if (this.instruction === undefined) return this.fail("No instruction to execute");
+  //   if (this.addressing === undefined) return this.fail("No addressing mode to execute");
+
+  //   const done = performInstructionLogic(
+  //     this,
+  //     info,
+  //     this.instruction,
+  //     this.addressing,
+  //     this.registers,
+  //   );
+
+  //   if (done) {
+  //     this.onInstructionFinish();
+  //     return "opcode";
+  //   } else {
+  //     return null;
+  //   }
+  // };
+
+  enterFetchOpcode: OnEnterFn<"fetch_opcode"> = ({ readPending }, _) => {
     if (readPending) return null;
 
-    if (cyclesOnState === 0) {
-      // Fetch the opcode.
+    // Fetch the opcode.
+    this.queryMemory(this.registers.pc++, 1);
+    return null;
+  };
+  exitFetchOpcode: OnExitFn<"fetch_opcode"> = ({ readPending }, { ctx }) => {
+    if (readPending) return null;
+
+    // Convert the opcode bytes (one or two) to a single u16 containing the
+    // whole opcode.
+    // The low byte is the last byte read.
+    // e.g. 0x10 0xAB -> 0x10AB
+    // e.g. 0xAB -> 0xAB
+    if (ctx.opcode === undefined) {
+      ctx.opcode = this.readInfo!.value!;
+    } else {
+      ctx.opcode = (ctx.opcode << 8) | this.readInfo!.value!;
+    }
+
+    // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
+    // it says that if the second byte is 0x10 or 0x11, we need to fetch another
+    // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
+    if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
       this.queryMemory(this.registers.pc++, 1);
       return null;
     } else {
-      // Convert the opcode bytes (one or two) to a single u16 containing the
-      // whole opcode.
-      // The low byte is the last byte read.
-      // e.g. 0x10 0xAB -> 0x10AB
-      // e.g. 0xAB -> 0xAB
-      if (ctx.opcode === undefined) {
-        ctx.opcode = this.readInfo!.value!;
-      } else {
-        ctx.opcode = (ctx.opcode << 8) | this.readInfo!.value!;
+      // We now have the full opcode, so we can store it, and decode it.
+      this.opcode = ctx.opcode;
+      const instruction = INSTRUCTIONS[ctx.opcode];
+
+      if (!instruction) return this.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
+      this.instruction = instruction;
+
+      switch (instruction.mode) {
+        case "immediate":
+          return "immediate";
+        default:
+          return this.fail(`Addressing mode ${instruction.mode} not implemented`);
       }
-
-      // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
-      // it says that if the second byte is 0x10 or 0x11, we need to fetch another
-      // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
-      if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
-        this.queryMemory(this.registers.pc++, 1);
-        return null;
-      } else {
-        // We now have the full opcode, so we can store it, and decode it.
-        this.opcode = ctx.opcode;
-        const instruction = INSTRUCTIONS[ctx.opcode];
-
-        if (!instruction) return this.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
-        this.instruction = instruction;
-
-        switch (instruction.mode) {
-          case "immediate":
-            return "immediate";
-          default:
-            return this.fail(`Addressing mode ${instruction.mode} not implemented`);
-        }
-      }
-    }
-  };
-
-  stateImmediate: CpuStateFunction<"immediate"> = ({
-    readPending,
-    writePending,
-    cyclesOnState,
-    ctx,
-  }) => {
-    // Fetch the immediate value.
-    if (cyclesOnState === 0) {
-      const reg = this.instruction!.register;
-      const regSize = REGISTER_SIZE[reg];
-      this.queryMemory(this.registers.pc++, regSize);
-      return null;
-    }
-
-    if (readPending) return null;
-
-    // We have the immediate value, so we can store it in the addressing info.
-    const value = this.readInfo!.value!;
-    this.addressing = { mode: "immediate", value };
-
-    // Perform instruction execution.
-    return "execute";
-  };
-
-  stateExecute: CpuStateFunction<"execute"> = (info) => {
-    if (this.instruction === undefined) return this.fail("No instruction to execute");
-    if (this.addressing === undefined) return this.fail("No addressing mode to execute");
-
-    const done = performInstructionLogic(
-      this,
-      info,
-      this.instruction,
-      this.addressing,
-      this.registers,
-    );
-
-    if (done) {
-      this.onInstructionFinish();
-      return "opcode";
-    } else {
-      return null;
     }
   };
 
@@ -288,7 +303,6 @@ class Cpu implements IModule {
     // NOTE: Could be a good idea to modify this to also emit the instruction
     // that was executed, so other modules can react to it.
     this.et.emit("cpu:instruction_finish");
-    console.log(`[${this.id}] Instruction finished, took ${this.instructionCycles} cycles`);
     this.commitRegisters();
 
     this.opcode = undefined;
@@ -296,20 +310,36 @@ class Cpu implements IModule {
     this.addressing = undefined;
   };
 
-  states: { [S in CpuState]: CpuStateFunction<S> } = {
-    unreset: () => this.fail("CPU is not reset"),
-    opcode: this.stateOpcode,
-    immediate: this.stateImmediate,
-    execute: this.stateExecute,
-    fail: () => "fail",
-  };
+  stateMachine: StateMachine = new StateMachine(
+    {
+      unreset: {
+        onEnter: () => this.fail("CPU is not reset"),
+        onExit: () => null,
+      },
+      fetch_opcode: {
+        onEnter: this.enterFetchOpcode,
+        onExit: this.exitFetchOpcode,
+      },
+      immediate: {
+        onEnter: () => {},
+        onExit: () => null,
+      },
+      execute: {
+        onEnter: () => {},
+        onExit: () => null,
+      },
+      fail: {
+        onEnter: () => {},
+        onExit: () => null,
+      },
+    },
+    "unreset",
+  );
 
   /**
    * The entry point of the CPU state machine.
    */
   onCycleStart = () => {
-    this.instructionCycles++;
-
     const readPending = this.readInfo != null && this.readInfo.bytes !== this.readInfo.raw.length;
     const writePending = false;
 
@@ -320,28 +350,13 @@ class Cpu implements IModule {
       this.queryPendingMemory();
     }
 
-    console.debug(`[${this.id}] CPU state: ${this.state}`);
-
-    const nextState = this.states[this.state]({
+    console.debug(`[${this.id}] CPU state: ${this.stateMachine.current}`);
+    this.stateMachine.tick({
       readPending,
       writePending,
-      cyclesOnState: this.cyclesOnState,
-      // biome-ignore lint/suspicious/noExplicitAny: This is a type coercion.
-      ctx: this.stateContext as any,
     });
-    this.cyclesOnState++;
-
-    if (nextState !== this.state && nextState != null) {
-      this.transitionToState(nextState);
-    }
-
-    console.debug(`[${this.id}] next CPU state: ${this.state}`);
+    console.debug(`[${this.id}] next CPU state: ${this.stateMachine.current}`);
   };
-  transitionToState(state: CpuState) {
-    this.state = state;
-    this.cyclesOnState = 0;
-    this.stateContext = {};
-  }
 }
 
 export default Cpu;

@@ -1,5 +1,6 @@
 import type Cpu from "../hardware/cpu.js";
-import type { CpuAddressingData, StateInfo } from "../hardware/cpu.js";
+import type { CpuAddressingData } from "../hardware/cpu.js";
+import type { CpuInfo, StateInfo } from "./state_machine.js";
 import { ConditionCodes, type Registers } from "../util/cpu_parts.js";
 import { signExtend, truncate } from "./numbers.js";
 
