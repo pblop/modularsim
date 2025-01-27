@@ -150,7 +150,7 @@ class M6809Simulator implements ISimulator {
         callback(...args);
       }
     };
-    this.events[event].push(wrappedCallback);
+    this.events[event].unshift(wrappedCallback);
   }
   /**
    * once but in promise.
