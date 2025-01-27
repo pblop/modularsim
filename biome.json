@@ -6,6 +6,10 @@
   },
   "linter": {
     "rules": {
+      "style": {
+        "noUselessElse": "off",
+        "noNonNullAssertion": "off"
+      },
       "complexity": {
         "useSimpleNumberKeys": "off"
       }
