@@ -286,6 +286,7 @@ class Cpu implements IModule {
       // biome-ignore lint/suspicious/noExplicitAny: This is a type coercion.
       ctx: this.stateContext as any,
     });
+    this.cyclesOnState++;
 
     if (nextState !== this.state && nextState != null) {
       this.transitionToState(nextState);
