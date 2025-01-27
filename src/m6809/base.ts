@@ -118,7 +118,6 @@ class M6809Simulator implements ISimulator {
     const eventListeners = this.events[event].slice();
 
     for (const callback of eventListeners) {
-      if (event === "clock:cycle_start") debugger;
       callback(...args);
     }
   }
