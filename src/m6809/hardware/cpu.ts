@@ -7,7 +7,7 @@ import {
   INSTRUCTIONS,
   performInstructionLogic,
 } from "../util/instructions.js";
-import { Registers, ConditionCodes } from "../util/cpu_parts.js";
+import { Registers, ConditionCodes, REGISTER_SIZE } from "../util/cpu_parts.js";
 
 type CpuConfig = {
   pc: number;
@@ -64,7 +64,13 @@ class Cpu implements IModule {
   registers: Registers;
 
   // Store the last read memory address, and the value read between states.
-  readInfo: { address: number; value: number | null } | null = null;
+  readInfo: {
+    address: number;
+    value: number;
+    bytes: number;
+    raw: number[];
+    waiting: boolean;
+  } | null = null;
   stateContext: StateContexts[CpuState] | EmptyObject = {};
 
   // The current opcode being executed (if any)
@@ -77,6 +83,7 @@ class Cpu implements IModule {
   state: CpuState;
   // The number of cycles spent in the current state (for substates).
   cyclesOnState: number;
+  instructionCycles: number;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -109,6 +116,7 @@ class Cpu implements IModule {
     this.registers = new Registers();
     this.state = "unreset";
     this.cyclesOnState = 0;
+    this.instructionCycles = 0;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -132,10 +140,11 @@ class Cpu implements IModule {
     this.registers.U = 0;
     this.registers.S = 0;
     this.registers.pc = this.config.pc;
-
     this.commitRegisters();
 
-    this.printRegisters();
+    this.instructionCycles = 0;
+
+    // this.printRegisters();
 
     this.transitionToState("opcode");
   };
@@ -148,17 +157,32 @@ class Cpu implements IModule {
     ]);
   };
 
-  queryMemory = (address: number) => {
-    this.readInfo = { address, value: null };
-    this.et.emit("memory:read", address);
+  queryMemory = (address: number, bytes: number) => {
+    this.readInfo = { address, value: 0, bytes, raw: [], waiting: false };
+    this.queryPendingMemory();
+  };
+  queryPendingMemory = () => {
+    if (!this.readInfo || this.readInfo.raw.length === this.readInfo.bytes) return;
+
+    this.et.emit("memory:read", this.readInfo.address + this.readInfo.raw.length);
+    this.readInfo.waiting = true;
   };
   onMemoryReadResult = (address: number, data: number) => {
     if (!this.readInfo) return;
+
     // If the address is different, this is another module's read, or a stale
     // read, or something else, but we don't want it either way.
-    if (this.readInfo.address !== address) return;
+    if (this.readInfo.address + this.readInfo.raw.length !== address) return;
 
-    this.readInfo.value = data;
+    this.readInfo.raw.push(data);
+    this.readInfo.waiting = false;
+
+    // If we have all the bytes, we can convert them to a single Big-Endian
+    // value. I do this here, but doing it at the beginning of the onCycleStart
+    // function would be functionally equivalent.
+    if (this.readInfo.raw.length === this.readInfo.bytes) {
+      this.readInfo.value = this.readInfo.raw.reduce((acc, byte) => (acc << 8) | byte, 0);
+    }
   };
 
   fail = (message: string): CpuState => {
@@ -173,7 +197,7 @@ class Cpu implements IModule {
 
     if (cyclesOnState === 0) {
       // Fetch the opcode.
-      this.queryMemory(this.registers.pc++);
+      this.queryMemory(this.registers.pc++, 1);
       return null;
     } else {
       // Convert the opcode bytes (one or two) to a single u16 containing the
@@ -191,7 +215,7 @@ class Cpu implements IModule {
       // it says that if the second byte is 0x10 or 0x11, we need to fetch another
       // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
       if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
-        this.queryMemory(this.registers.pc++);
+        this.queryMemory(this.registers.pc++, 1);
         return null;
       } else {
         // We now have the full opcode, so we can store it, and decode it.
@@ -219,7 +243,9 @@ class Cpu implements IModule {
   }) => {
     // Fetch the immediate value.
     if (cyclesOnState === 0) {
-      this.queryMemory(this.registers.pc++);
+      const reg = this.instruction!.register;
+      const regSize = REGISTER_SIZE[reg];
+      this.queryMemory(this.registers.pc++, regSize);
       return null;
     }
 
@@ -262,6 +288,7 @@ class Cpu implements IModule {
     // NOTE: Could be a good idea to modify this to also emit the instruction
     // that was executed, so other modules can react to it.
     this.et.emit("cpu:instruction_finish");
+    console.log(`[${this.id}] Instruction finished, took ${this.instructionCycles} cycles`);
     this.commitRegisters();
 
     this.opcode = undefined;
@@ -281,8 +308,17 @@ class Cpu implements IModule {
    * The entry point of the CPU state machine.
    */
   onCycleStart = () => {
-    const readPending = this.readInfo != null && this.readInfo.value === null;
+    this.instructionCycles++;
+
+    const readPending = this.readInfo != null && this.readInfo.bytes !== this.readInfo.raw.length;
     const writePending = false;
+
+    // Read memory is ubiquitous for all states. We query it if we need it.
+    // Explanation: we query if we haven't finished a read, but we're not waiting
+    // for a result (i.e. we only read one byte at a time).
+    if (readPending && !this.readInfo!.waiting) {
+      this.queryPendingMemory();
+    }
 
     console.debug(`[${this.id}] CPU state: ${this.state}`);
 
@@ -298,6 +334,8 @@ class Cpu implements IModule {
     if (nextState !== this.state && nextState != null) {
       this.transitionToState(nextState);
     }
+
+    console.debug(`[${this.id}] next CPU state: ${this.state}`);
   };
   transitionToState(state: CpuState) {
     this.state = state;
