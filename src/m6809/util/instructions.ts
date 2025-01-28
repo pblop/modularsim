@@ -255,17 +255,25 @@ function ld8<M extends AddressingMode>(
   reg: Accumulator,
   mode: M,
   cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
+  { readPending }: CpuInfo,
+  { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  if (addr.mode !== "immediate") {
-    throw new Error("[cpu] ld8 immediate only wip");
+  if (readPending) return false;
+
+  let val: number;
+  if (addr.mode === "immediate") {
+    val = addr.value;
+  } else {
+    if (ticksOnState === 0) {
+      // We need to fetch the value from memory.
+      cpu.queryMemory(addr.address, 1);
+      return false;
+    } else {
+      val = cpu.readInfo!.value;
+    }
   }
-
-  const val = addr.value;
-
   regs[reg] = val;
 
   // Clear V flag, set N if negative, Z if zero
@@ -280,15 +288,25 @@ function ld16<M extends AddressingMode>(
   reg: Register,
   mode: M,
   cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
+  { readPending }: CpuInfo,
+  { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  if (addr.mode !== "immediate") {
-    throw new Error("[cpu] ld16 immediate only wip");
+  if (readPending) return false;
+
+  let val: number;
+  if (addr.mode === "immediate") {
+    val = addr.value;
+  } else {
+    if (ticksOnState === 0) {
+      // We need to fetch the value from memory.
+      cpu.queryMemory(addr.address, 2);
+      return false;
+    } else {
+      val = cpu.readInfo!.value;
+    }
   }
-  const val = addr.value;
 
   regs[reg] = val;
 
