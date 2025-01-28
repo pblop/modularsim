@@ -12,7 +12,8 @@ type ExecuteStateInfo = StateInfo<"execute">;
 // given a certain addressing mode.
 type InstructionLogic<M extends AddressingMode = AddressingMode> = (
   cpu: Cpu,
-  info: ExecuteStateInfo,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
   addressingData: CpuAddressingData<M>,
   registers: Registers,
 ) => boolean;
@@ -278,7 +279,8 @@ function ld16<M extends AddressingMode>(
   reg: Register,
   mode: M,
   cpu: Cpu,
-  info: ExecuteStateInfo,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
@@ -409,23 +411,24 @@ addInstructions(
     [0xbe, "X", "extended", "6/5"],
     [0x10be, "Y", "extended", "7/6"],
   ],
-  (reg, mode, cycles) => (cpu, info, addr, regs) => ld16(reg, mode, cpu, info, addr, regs),
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    ld16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
 // // ld8 (lda, ldb)
-addInstructions(
-  "ld{register}",
-  [
-    [0x86, "A", "immediate", "2"],
-    [0x96, "A", "direct", "4/3"],
-    [0xa6, "A", "indexed", "4+"],
-    [0xb6, "A", "extended", "5/4"],
-    [0xc6, "B", "immediate", "2"],
-    [0xd6, "B", "direct", "4/3"],
-    [0xe6, "B", "indexed", "4+"],
-    [0xf6, "B", "extended", "5/4"],
-  ],
-  (reg, mode, cycles) => (cpu, info, addr, regs) => ld8(reg, mode, cpu, info, addr, regs),
-);
+// addInstructions(
+//   "ld{register}",
+//   [
+//     [0x86, "A", "immediate", "2"],
+//     [0x96, "A", "direct", "4/3"],
+//     [0xa6, "A", "indexed", "4+"],
+//     [0xb6, "A", "extended", "5/4"],
+//     [0xc6, "B", "immediate", "2"],
+//     [0xd6, "B", "direct", "4/3"],
+//     [0xe6, "B", "indexed", "4+"],
+//     [0xf6, "B", "extended", "5/4"],
+//   ],
+//   (reg, mode, cycles) => (cpu, info, addr, regs) => ld8(reg, mode, cpu, info, addr, regs),
+// );
 // // st8 (sta, stb)
 // addInstructions(
 //   "st{register}",
@@ -442,11 +445,12 @@ addInstructions(
 
 export function performInstructionLogic<M extends AddressingMode>(
   cpu: Cpu,
-  // This is being executed in the execute state (we can safely modify any context, it is ours!).
-  info: ExecuteStateInfo,
+  cpuInfo: CpuInfo,
+  // This is being executed in the execute state (we can safely modify the context, it is ours!).
+  stateInfo: ExecuteStateInfo,
   data: InstructionData<M>,
   addressing: CpuAddressingData<M>,
   registers: Registers,
 ): boolean {
-  return data.function(cpu, info, addressing, registers);
+  return data.function(cpu, cpuInfo, stateInfo, addressing, registers);
 }

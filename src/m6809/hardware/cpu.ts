@@ -117,7 +117,8 @@ class Cpu implements IModule {
     this.commitRegisters();
 
     // this.printRegisters();
-    this.stateMachine.setState("start"); // Start the CPU state machine.
+    // this.stateMachine.forceTransition("fetch_opcode", { readPending: false, writePending: false }); // Start the CPU state machine.
+    this.stateMachine.setState("start");
   };
 
   printRegisters = () => {
@@ -160,95 +161,6 @@ class Cpu implements IModule {
     console.error(`[${this.id}] ${message}`);
     return "fail";
   };
-
-  // // Fetch and decode opcode.
-  // stateOpcode: CpuStateFunction<"opcode"> = ({ readPending, writePending, cyclesOnState, ctx }) => {
-  //   // If we have a read pending, we can't continue.
-  //   if (readPending) return null;
-
-  //   if (cyclesOnState === 0) {
-  //     // Fetch the opcode.
-  //     this.queryMemory(this.registers.pc++, 1);
-  //     return null;
-  //   } else {
-  //     // Convert the opcode bytes (one or two) to a single u16 containing the
-  //     // whole opcode.
-  //     // The low byte is the last byte read.
-  //     // e.g. 0x10 0xAB -> 0x10AB
-  //     // e.g. 0xAB -> 0xAB
-  //     if (ctx.opcode === undefined) {
-  //       ctx.opcode = this.readInfo!.value!;
-  //     } else {
-  //       ctx.opcode = (ctx.opcode << 8) | this.readInfo!.value!;
-  //     }
-
-  //     // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
-  //     // it says that if the second byte is 0x10 or 0x11, we need to fetch another
-  //     // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
-  //     if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
-  //       this.queryMemory(this.registers.pc++, 1);
-  //       return null;
-  //     } else {
-  //       // We now have the full opcode, so we can store it, and decode it.
-  //       this.opcode = ctx.opcode;
-  //       const instruction = INSTRUCTIONS[ctx.opcode];
-
-  //       if (!instruction) return this.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
-  //       this.instruction = instruction;
-
-  //       switch (instruction.mode) {
-  //         case "immediate":
-  //           return "immediate";
-  //         default:
-  //           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
-  //       }
-  //     }
-  //   }
-  // };
-
-  // stateImmediate: CpuStateFunction<"immediate"> = ({
-  //   readPending,
-  //   writePending,
-  //   cyclesOnState,
-  //   ctx,
-  // }) => {
-  //   // Fetch the immediate value.
-  //   if (cyclesOnState === 0) {
-  //     const reg = this.instruction!.register;
-  //     const regSize = REGISTER_SIZE[reg];
-  //     this.queryMemory(this.registers.pc++, regSize);
-  //     return null;
-  //   }
-
-  //   if (readPending) return null;
-
-  //   // We have the immediate value, so we can store it in the addressing info.
-  //   const value = this.readInfo!.value!;
-  //   this.addressing = { mode: "immediate", value };
-
-  //   // Perform instruction execution.
-  //   return "execute";
-  // };
-
-  // stateExecute: CpuStateFunction<"execute"> = (info) => {
-  //   if (this.instruction === undefined) return this.fail("No instruction to execute");
-  //   if (this.addressing === undefined) return this.fail("No addressing mode to execute");
-
-  //   const done = performInstructionLogic(
-  //     this,
-  //     info,
-  //     this.instruction,
-  //     this.addressing,
-  //     this.registers,
-  //   );
-
-  //   if (done) {
-  //     this.onInstructionFinish();
-  //     return "opcode";
-  //   } else {
-  //     return null;
-  //   }
-  // };
 
   enterFetchOpcode: OnEnterFn<"fetch_opcode"> = ({ readPending }, _) => {
     if (readPending) return null;
@@ -294,6 +206,54 @@ class Cpu implements IModule {
     }
   };
 
+  enterImmediate: OnEnterFn<"immediate"> = ({ readPending }, _) => {
+    if (readPending) return null;
+
+    // Fetch the immediate value.
+    const reg = this.instruction!.register;
+    const regSize = REGISTER_SIZE[reg];
+    this.queryMemory(this.registers.pc++, regSize);
+  };
+  exitImmediate: OnExitFn<"immediate"> = ({ readPending }, _) => {
+    if (readPending) return null;
+
+    // We have the immediate value, so we can store it in the addressing info.
+    const value = this.readInfo!.value!;
+    this.addressing = { mode: "immediate", value };
+
+    // Perform instruction execution.
+    return "execute";
+  };
+
+  enterExecute: OnEnterFn<"execute"> = (cpuInfo, stateInfo) => {
+    if (stateInfo.ctx.isDone === undefined) stateInfo.ctx.isDone = false;
+
+    if (this.instruction === undefined) return this.fail("No instruction to execute");
+    if (this.addressing === undefined) return this.fail("No addressing mode to execute");
+
+    console.log(
+      `[${this.id}] Executing instruction ${this.instruction.mnemonic} ${this.addressing.mode}`,
+    );
+
+    const done = performInstructionLogic(
+      this,
+      cpuInfo,
+      stateInfo,
+      this.instruction,
+      this.addressing,
+      this.registers,
+    );
+    debugger;
+
+    stateInfo.ctx.isDone = done;
+  };
+
+  exitExecute: OnExitFn<"execute"> = (cpuInfo, stateInfo) => {
+    if (!stateInfo.ctx.isDone) return null;
+
+    this.onInstructionFinish();
+    return "fetch_opcode";
+  };
   /**
    * Notify other modules that the instruction has ended, and, as such, our
    * registers have been updated.
@@ -313,8 +273,8 @@ class Cpu implements IModule {
   stateMachine: StateMachine = new StateMachine(
     {
       unreset: {
-        onEnter: () => this.fail("CPU is not reset"),
-        onExit: () => null,
+        onEnter: () => {},
+        onExit: () => this.fail("CPU is not reset"),
       },
       start: {
         onEnter: () => {}, // This is never called
@@ -325,12 +285,12 @@ class Cpu implements IModule {
         onExit: this.exitFetchOpcode,
       },
       immediate: {
-        onEnter: () => {},
-        onExit: () => null,
+        onEnter: this.enterImmediate,
+        onExit: this.exitImmediate,
       },
       execute: {
-        onEnter: () => {},
-        onExit: () => null,
+        onEnter: this.enterExecute,
+        onExit: this.exitExecute,
       },
       fail: {
         onEnter: () => {},
@@ -354,6 +314,7 @@ class Cpu implements IModule {
       this.queryPendingMemory();
     }
 
+    debugger;
     console.debug(`[${this.id}] exit CPU state: ${this.stateMachine.current}`);
     this.stateMachine.tick({
       readPending,

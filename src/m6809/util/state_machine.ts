@@ -10,7 +10,7 @@ type StateContexts = {
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>
-  execute: any;
+  execute: { isDone: boolean; instructionCtx: any };
   fail: EmptyObject;
 };
 
