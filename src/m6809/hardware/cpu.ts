@@ -328,12 +328,6 @@ class Cpu implements IModule {
 
     if (readPending) return null;
 
-    // If we're done waiting however many cycles we needed to wait for this indexed action,
-    // we can move on to the next state.
-    if (ctx.remainingTicks === 0) {
-      this.addressing!.address = truncate(ctx.baseAddress + ctx.offset!, 16);
-      return "indexed_indirect";
-    }
     const postbyte = this.addressing.postbyte;
 
     // Otherwise, we do whatever we need to do in this state, and decrement the remaining ticks.
@@ -395,6 +389,13 @@ class Cpu implements IModule {
     }
 
     ctx.remainingTicks--;
+    // If we're done waiting however many cycles we needed to wait for this indexed action,
+    // we can move on to the next state.
+    if (ctx.remainingTicks === 0) {
+      this.addressing!.address = truncate(ctx.baseAddress + ctx.offset!, 16);
+      return "indexed_indirect";
+    }
+
     return null;
   };
 
