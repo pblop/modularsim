@@ -212,7 +212,8 @@ class Cpu implements IModule {
     // Fetch the immediate value.
     const reg = this.instruction!.register;
     const regSize = REGISTER_SIZE[reg];
-    this.queryMemory(this.registers.pc++, regSize);
+    this.queryMemory(this.registers.pc, regSize);
+    this.registers.pc += regSize;
   };
   exitImmediate: OnExitFn<"immediate"> = ({ readPending }, _) => {
     if (readPending) return null;
