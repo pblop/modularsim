@@ -1,9 +1,10 @@
 import type { EmptyObject } from "../../types/common.js";
 
-export type CpuState = "unreset" | "fetch_opcode" | "immediate" | "fail" | "execute";
+export type CpuState = "unreset" | "start" | "fetch_opcode" | "immediate" | "fail" | "execute";
 
 type StateContexts = {
   unreset: EmptyObject;
+  start: EmptyObject;
   fetch_opcode: { opcode?: number };
   immediate: EmptyObject;
   // I could type this correctly, but it's not worth the effort. Every
@@ -102,5 +103,11 @@ export class StateMachine {
     if (nextFns == null) throw new Error(`[StateMachine] Unknown state: ${this.current}`);
 
     (nextFns.onEnter as OnEnterFn<CpuState>)(cpuInfo, this.getStateInfo<CpuState>());
+  }
+
+  setState(state: CpuState): void {
+    this.current = state;
+    this.ctx = {};
+    this.ticksOnState = 0;
   }
 }

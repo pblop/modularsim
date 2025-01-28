@@ -117,7 +117,7 @@ class Cpu implements IModule {
     this.commitRegisters();
 
     // this.printRegisters();
-    this.stateMachine.forceTransition("fetch_opcode", { readPending: false, writePending: false });
+    this.stateMachine.setState("start"); // Start the CPU state machine.
   };
 
   printRegisters = () => {
@@ -316,6 +316,10 @@ class Cpu implements IModule {
         onEnter: () => this.fail("CPU is not reset"),
         onExit: () => null,
       },
+      start: {
+        onEnter: () => {}, // This is never called
+        onExit: () => "fetch_opcode",
+      },
       fetch_opcode: {
         onEnter: this.enterFetchOpcode,
         onExit: this.exitFetchOpcode,
@@ -350,12 +354,12 @@ class Cpu implements IModule {
       this.queryPendingMemory();
     }
 
-    console.debug(`[${this.id}] CPU state: ${this.stateMachine.current}`);
+    console.debug(`[${this.id}] exit CPU state: ${this.stateMachine.current}`);
     this.stateMachine.tick({
       readPending,
       writePending,
     });
-    console.debug(`[${this.id}] next CPU state: ${this.stateMachine.current}`);
+    console.debug(`[${this.id}] enter CPU state: ${this.stateMachine.current}`);
   };
 }
 
