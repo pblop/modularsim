@@ -1,3 +1,1 @@
-# This is a script gotten from https://gist.github.com/textarcana/1306223, but
-# modified a bit so it only shows the last commit.
-git log -1 --pretty=format:'{%n  "commit": "%H",%n  "author": "%aN <%aE>",%n  "date": "%ad",%n  "message": "%s"%n}'
+git log -1 --pretty=format:'%H%x00%aN <%aE>%x00%ad%x00%s' | jq --slurp --raw-input 'split("\u0000") as $arr | {commit: $arr[0], author: $arr[1], date: $arr[2], message: $arr[3]}'
