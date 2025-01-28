@@ -319,6 +319,7 @@ class Cpu implements IModule {
       }[this.addressing!.postbyte.action];
 
       ctx.baseAddress = this.registers[this.addressing.postbyte.register];
+      ctx.offset = 0; // Default offset is 0 (we will modify it if not 0 in exitIndexedMain)
     }
     return false;
   };
@@ -338,7 +339,6 @@ class Cpu implements IModule {
     // Otherwise, we do whatever we need to do in this state, and decrement the remaining ticks.
     switch (postbyte.action) {
       case IndexedAction.Offset0: // Don't Care cycle.
-        if (ctx.remainingTicks === 1) ctx.offset = 0;
         break;
       case IndexedAction.Offset5: // 2 DC cycles.
         if (ctx.remainingTicks === 1) ctx.offset = signExtend(postbyte.rest, 5, 16);
