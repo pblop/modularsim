@@ -452,19 +452,18 @@ class InstructionUI implements IModule {
 
     const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
     (row.children[0] as HTMLDivElement).innerText = this.formatAddress(currentAddress);
-    if (!decompiled) {
+    if (decompiled != null) {
+      generateInstructionElement(
+        decompiled,
+        this.formatAddress,
+        row.children[1] as HTMLDivElement,
+        row.children[2] as HTMLDivElement,
+      );
+
+      currentAddress += decompiled.size;
+    } else {
       (row.children[1] as HTMLDivElement).innerText = "??";
-      return;
     }
-
-    generateInstructionElement(
-      decompiled,
-      this.formatAddress,
-      row.children[1] as HTMLDivElement,
-      row.children[2] as HTMLDivElement,
-    );
-
-    currentAddress += decompiled.size;
 
     // Auto scroll to bottom if already on bottom. I haven't been able to achieve
     // this with CSS, so I'm doing it here.
