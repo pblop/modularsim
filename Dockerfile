@@ -21,7 +21,7 @@ COPY . .
 RUN bun run build
 
 # generate deployment info
-RUN apt-get update && apt-get install -y git 
+RUN apt-get update && apt-get install -y git jq
 RUN /usr/src/app/scripts/generate-deployment-info.sh > /usr/src/app/dist/deployment-info.json
 
 # copy production dependencies and source code into final image
