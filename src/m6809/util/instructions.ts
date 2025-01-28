@@ -45,9 +45,9 @@ export enum IndexedAction {
   OffsetPC8,
   OffsetPC16,
 }
-export type ParsedIndexedPostbyte = {
-  action: IndexedAction;
-  register: Register | "pc";
+export type ParsedIndexedPostbyte<A extends IndexedAction = IndexedAction> = {
+  action: A;
+  register: A extends IndexedAction.OffsetPC8 | IndexedAction.OffsetPC16 ? "pc" : Register;
   indirect: boolean;
   rest: number; // 4-bit integer
 };
@@ -255,7 +255,8 @@ function ld8<M extends AddressingMode>(
   reg: Accumulator,
   mode: M,
   cpu: Cpu,
-  info: ExecuteStateInfo,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
@@ -265,12 +266,12 @@ function ld8<M extends AddressingMode>(
 
   const val = addr.value;
 
-  cpu.registers[reg] = val;
+  regs[reg] = val;
 
   // Clear V flag, set N if negative, Z if zero
-  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
+  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
+  regs.cc |= val === 0 ? ConditionCodes.ZERO : 0;
+  regs.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
 
   return true;
 }
@@ -289,12 +290,12 @@ function ld16<M extends AddressingMode>(
   }
   const val = addr.value;
 
-  cpu.registers[reg] = val;
+  regs[reg] = val;
 
   // Clear V flag, set N if negative, Z if zero
-  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  cpu.registers.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
+  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
+  regs.cc |= val === 0 ? ConditionCodes.ZERO : 0;
+  regs.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
 
   return true;
 }
@@ -414,21 +415,22 @@ addInstructions(
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     ld16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
-// // ld8 (lda, ldb)
-// addInstructions(
-//   "ld{register}",
-//   [
-//     [0x86, "A", "immediate", "2"],
-//     [0x96, "A", "direct", "4/3"],
-//     [0xa6, "A", "indexed", "4+"],
-//     [0xb6, "A", "extended", "5/4"],
-//     [0xc6, "B", "immediate", "2"],
-//     [0xd6, "B", "direct", "4/3"],
-//     [0xe6, "B", "indexed", "4+"],
-//     [0xf6, "B", "extended", "5/4"],
-//   ],
-//   (reg, mode, cycles) => (cpu, info, addr, regs) => ld8(reg, mode, cpu, info, addr, regs),
-// );
+// ld8 (lda, ldb)
+addInstructions(
+  "ld{register}",
+  [
+    [0x86, "A", "immediate", "2"],
+    [0x96, "A", "direct", "4/3"],
+    [0xa6, "A", "indexed", "4+"],
+    [0xb6, "A", "extended", "5/4"],
+    [0xc6, "B", "immediate", "2"],
+    [0xd6, "B", "direct", "4/3"],
+    [0xe6, "B", "indexed", "4+"],
+    [0xf6, "B", "extended", "5/4"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    ld8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+);
 // // st8 (sta, stb)
 // addInstructions(
 //   "st{register}",

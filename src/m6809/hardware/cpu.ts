@@ -4,8 +4,11 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.
 import type { EmptyObject } from "../../types/common.js";
 import {
   type AddressingMode,
+  IndexedAction,
   type InstructionData,
   INSTRUCTIONS,
+  type ParsedIndexedPostbyte,
+  parseIndexedPostbyte,
   performInstructionLogic,
 } from "../util/instructions.js";
 import { Registers, ConditionCodes, REGISTER_SIZE } from "../util/cpu_parts.js";
@@ -15,6 +18,7 @@ import {
   type OnExitFn,
   StateMachine,
 } from "../util/state_machine.js";
+import { intNToNumber, numberToIntN, signExtend, truncate } from "../util/numbers.js";
 
 type CpuConfig = {
   pc: number;
@@ -34,9 +38,16 @@ type CpuDirectAddressingData = {
   mode: "direct";
   address: number;
 };
-export type CpuAddressingData<M extends AddressingMode> = M extends "immediate"
-  ? CpuImmediateAddressingData
-  : CpuDirectAddressingData;
+type CpuIndexedAddressingData = {
+  mode: "indexed";
+  postbyte: ParsedIndexedPostbyte;
+  address: number;
+};
+// biome-ignore format: this is easier to read if not biome-formatted
+export type CpuAddressingData<M extends AddressingMode> = 
+  M extends "immediate" ? CpuImmediateAddressingData : 
+  M extends "direct" ? CpuDirectAddressingData : 
+  CpuIndexedAddressingData;
 
 class Cpu implements IModule {
   id: string;
@@ -200,6 +211,8 @@ class Cpu implements IModule {
       switch (instruction.mode) {
         case "immediate":
           return "immediate";
+        case "indexed":
+          return "indexed_postbyte";
         default:
           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
       }
@@ -254,13 +267,175 @@ class Cpu implements IModule {
     stateInfo.ctx.isDone = done;
     if (done) return true;
   };
-
   exitExecute: OnExitFn<"execute"> = (cpuInfo, stateInfo) => {
     if (!stateInfo.ctx.isDone) return null;
 
     this.onInstructionFinish();
     return "fetch_opcode";
   };
+
+  enterIndexedPostbyte: OnEnterFn<"indexed_postbyte"> = ({ readPending }, { ctx }) => {
+    if (readPending) return false;
+
+    // Fetch the indexed postbyte.
+    this.queryMemory(this.registers.pc++, 1);
+    return false;
+  };
+  exitIndexedPostbyte: OnExitFn<"indexed_postbyte"> = ({ readPending }, { ctx }) => {
+    if (readPending) return null;
+
+    // Parse the postbyte.
+    const postbyte = this.readInfo!.value!;
+    const parsedPostbyte = parseIndexedPostbyte(postbyte);
+    if (!parsedPostbyte) return this.fail(`Invalid indexed postbyte ${postbyte.toString(16)}`);
+
+    this.addressing = { mode: "indexed", postbyte: parsedPostbyte, address: 0 };
+
+    // Perform instruction execution.
+    return "indexed_main";
+  };
+
+  enterIndexedMain: OnEnterFn<"indexed_main"> = ({ readPending }, { ctx }) => {
+    if (this.addressing?.mode !== "indexed") {
+      this.fail("[indexed_main] Invalid addressing mode");
+      return false;
+    }
+
+    if (ctx.remainingTicks === undefined) {
+      ctx.remainingTicks = {
+        [IndexedAction.Offset0]: 1,
+        [IndexedAction.Offset5]: 2,
+        [IndexedAction.Offset8]: 2,
+        [IndexedAction.Offset16]: 5,
+        [IndexedAction.OffsetA]: 2,
+        [IndexedAction.OffsetB]: 2,
+        [IndexedAction.OffsetD]: 5,
+        [IndexedAction.PostInc1]: 3,
+        [IndexedAction.PreDec1]: 3,
+        [IndexedAction.PostInc2]: 4,
+        [IndexedAction.PreDec2]: 4,
+        [IndexedAction.OffsetPC16]: 6,
+        [IndexedAction.OffsetPC8]: 3,
+      }[this.addressing!.postbyte.action];
+
+      ctx.baseAddress = this.registers[this.addressing.postbyte.register];
+    }
+    return false;
+  };
+  exitIndexedMain: OnExitFn<"indexed_main"> = ({ readPending }, { ctx }) => {
+    if (this.addressing?.mode !== "indexed") return this.fail("Invalid addressing mode");
+
+    if (readPending) return null;
+
+    // If we're done waiting however many cycles we needed to wait for this indexed action,
+    // we can move on to the next state.
+    if (ctx.remainingTicks === 0) {
+      this.addressing!.address = truncate(ctx.baseAddress + ctx.offset!, 16);
+      return "indexed_indirect";
+    }
+    const postbyte = this.addressing.postbyte;
+
+    // Otherwise, we do whatever we need to do in this state, and decrement the remaining ticks.
+    switch (postbyte.action) {
+      case IndexedAction.Offset0: // Don't Care cycle.
+        if (ctx.remainingTicks === 1) ctx.offset = 0;
+        break;
+      case IndexedAction.Offset5: // 2 DC cycles.
+        if (ctx.remainingTicks === 1) ctx.offset = signExtend(postbyte.rest, 5, 16);
+        break;
+      case IndexedAction.Offset8: // 1 data read, 1 DC
+        if (ctx.remainingTicks === 2) this.queryMemory(this.registers.pc++, 1);
+        else if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.readInfo!.value!, 8, 16);
+        break;
+      case IndexedAction.Offset16: // 2 DR, 3 DC
+        if (ctx.remainingTicks === 5) this.queryMemory(this.registers.pc++, 1);
+        else if (ctx.remainingTicks === 4) {
+          ctx.offset = this.readInfo!.value << 8;
+          this.queryMemory(this.registers.pc++, 1);
+        } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
+        break;
+      case IndexedAction.OffsetA: // 2 DC
+        if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.registers.A, 8, 16);
+        break;
+      case IndexedAction.OffsetB: // 2 DC
+        if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.registers.B, 8, 16);
+        break;
+      case IndexedAction.OffsetD: // 5 DC
+        if (ctx.remainingTicks === 1) ctx.offset = this.registers.D;
+        break;
+      case IndexedAction.PostInc1: // 3 DC
+        if (ctx.remainingTicks === 1) this.registers[postbyte.register]++;
+        break;
+      case IndexedAction.PreDec1: // 3 DC
+        if (ctx.remainingTicks === 1) {
+          // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
+          this.registers[postbyte.register] += numberToIntN(-1, 2);
+          ctx.baseAddress = this.registers[postbyte.register];
+        }
+        break;
+      case IndexedAction.PostInc2: // 4 DC
+        if (ctx.remainingTicks === 1) this.registers[postbyte.register] += 2;
+        break;
+      case IndexedAction.PreDec2: // 4 DC
+        // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
+        this.registers[postbyte.register] += numberToIntN(-2, 2);
+        ctx.baseAddress = this.registers[postbyte.register];
+        break;
+      case IndexedAction.OffsetPC16: // 2 DR, 4 DC
+        if (ctx.remainingTicks === 6) this.queryMemory(this.registers.pc++, 1);
+        else if (ctx.remainingTicks === 5) {
+          ctx.offset = this.readInfo!.value << 8;
+          this.queryMemory(this.registers.pc++, 1);
+        } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
+        break;
+      case IndexedAction.OffsetPC8: // 1 DR, 2 DC
+        if (ctx.remainingTicks === 3) this.queryMemory(this.registers.pc++, 1);
+        else if (ctx.remainingTicks === 2) ctx.offset = signExtend(this.readInfo!.value, 8, 16);
+        break;
+    }
+
+    ctx.remainingTicks--;
+    return null;
+  };
+
+  enterIndexedIndirect: OnEnterFn<"indexed_indirect"> = ({ readPending }, { ctx }) => {
+    if (this.addressing?.mode !== "indexed") {
+      this.fail("[indexed_indirect] Invalid addressing mode");
+      return false;
+    }
+
+    if (this.addressing.postbyte.indirect) {
+      if (readPending) return false;
+      ctx.remainingTicks = 1;
+
+      // If the addressing is indirect, we need to read the memory at the address we calculated.
+      this.queryMemory(this.addressing.address, 2);
+      return false;
+    } else {
+      // This state is immediate if the addressing is not indirect (we don't need to read any memory).
+      return !this.addressing.postbyte.indirect;
+    }
+  };
+  exitIndexedIndirect: OnExitFn<"indexed_indirect"> = ({ readPending }, { ctx }) => {
+    if (this.addressing?.mode !== "indexed") return this.fail("Invalid addressing mode");
+
+    if (this.addressing.postbyte.indirect) {
+      // If the addressing is indirect, we need to read the memory at the address we calculated.
+      if (readPending) return null;
+      if (ctx.remainingTicks === 1) {
+        this.addressing!.address = this.readInfo!.value;
+      } else if (ctx.remainingTicks === 0) {
+        return "execute";
+      }
+      ctx.remainingTicks--;
+    } else {
+      // If the addressing is not indirect, we don't need to do any reading, so we can move on.
+      return "execute";
+    }
+
+    return null;
+  };
+
   /**
    * Notify other modules that the instruction has ended, and, as such, our
    * registers have been updated.
@@ -295,6 +470,18 @@ class Cpu implements IModule {
         onEnter: this.enterImmediate,
         onExit: this.exitImmediate,
       },
+      indexed_postbyte: {
+        onEnter: this.enterIndexedPostbyte,
+        onExit: this.exitIndexedPostbyte,
+      },
+      indexed_main: {
+        onEnter: this.enterIndexedMain,
+        onExit: this.exitIndexedMain,
+      },
+      indexed_indirect: {
+        onEnter: this.enterIndexedIndirect,
+        onExit: this.exitIndexedIndirect,
+      },
       execute: {
         onEnter: this.enterExecute,
         onExit: this.exitExecute,
@@ -321,7 +508,6 @@ class Cpu implements IModule {
       this.queryPendingMemory();
     }
 
-    debugger;
     console.debug(`[${this.id}] exit CPU state: ${this.stateMachine.current}`);
     this.stateMachine.tick({
       readPending,

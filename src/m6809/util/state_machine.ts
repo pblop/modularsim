@@ -1,12 +1,29 @@
 import type { EmptyObject } from "../../types/common.js";
+import type { ParsedIndexedPostbyte } from "./instructions.js";
 
-export type CpuState = "unreset" | "start" | "fetch_opcode" | "immediate" | "fail" | "execute";
+export type CpuState =
+  | "unreset"
+  | "start"
+  | "fetch_opcode"
+  | "immediate"
+  | "indexed_postbyte"
+  | "indexed_main"
+  | "indexed_indirect"
+  | "fail"
+  | "execute";
 
 type StateContexts = {
   unreset: EmptyObject;
   start: EmptyObject;
   fetch_opcode: { opcode?: number };
   immediate: EmptyObject;
+  indexed_postbyte: EmptyObject;
+  indexed_main: {
+    baseAddress: number;
+    offset: number;
+    remainingTicks: number;
+  };
+  indexed_indirect: { remainingTicks: number };
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>
