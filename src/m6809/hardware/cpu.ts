@@ -376,6 +376,7 @@ class Cpu implements IModule {
         ctx.baseAddress = this.registers[postbyte.register];
         break;
       case IndexedAction.OffsetPC16: // 2 DR, 4 DC
+        // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
         if (ctx.remainingTicks === 6) this.queryMemory(this.registers.pc++, 1);
         else if (ctx.remainingTicks === 5) {
           ctx.offset = this.readInfo!.value << 8;
@@ -383,6 +384,7 @@ class Cpu implements IModule {
         } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
         break;
       case IndexedAction.OffsetPC8: // 1 DR, 2 DC
+        // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
         if (ctx.remainingTicks === 3) this.queryMemory(this.registers.pc++, 1);
         else if (ctx.remainingTicks === 2) ctx.offset = signExtend(this.readInfo!.value, 8, 16);
         break;
