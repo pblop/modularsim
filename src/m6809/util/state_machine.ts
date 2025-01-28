@@ -19,9 +19,17 @@ export type CpuInfo = {
   readPending: boolean;
   writePending: boolean;
 };
-export type StateInfo<S extends CpuState> = { ctx: StateContexts[S]; ticksOnState: number };
+export type StateInfo<S extends CpuState> = {
+  ctx: StateContexts[S];
+  ticksOnState: number;
+  // Whether the transition that lead to this state was immediate (i.e., no tick was added).
+  immediateTick: boolean;
+};
 
-export type OnEnterFn<S extends CpuState> = (cpuInfo: CpuInfo, stateInfo: StateInfo<S>) => void;
+export type OnEnterFn<S extends CpuState> = (
+  cpuInfo: CpuInfo,
+  stateInfo: StateInfo<S>,
+) => boolean | undefined;
 // Returns the next state, or null if self-transition.
 export type OnExitFn<S extends CpuState> = (
   cpuInfo: CpuInfo,
@@ -51,8 +59,8 @@ export class StateMachine {
     this.ticksOnState = 0;
   }
 
-  getStateInfo<S extends CpuState>(): StateInfo<S> {
-    return { ctx: this.ctx as StateContexts[S], ticksOnState: this.ticksOnState };
+  getStateInfo<S extends CpuState>(immediateTick: boolean): StateInfo<S> {
+    return { ctx: this.ctx as StateContexts[S], ticksOnState: this.ticksOnState, immediateTick };
   }
 
   /**
@@ -60,8 +68,11 @@ export class StateMachine {
    * - Calls the current state's exit function (and updates the state info if needed).
    * - Calls the next state's enter function.
    * @param cpuInfo The CPU information.
+   * @param immediateTick Whether to _not_ add a tick to the current state (default: false),
+   * will be set to true when onEnter requires an immediate transition (because it
+   * technically doesn't tick, but I want all the tick functionality).
    */
-  tick(cpuInfo: CpuInfo): void {
+  tick(cpuInfo: CpuInfo, immediateTick = false): void {
     const currentFns = this.stateFns[this.current];
     if (currentFns == null) throw new Error(`[StateMachine] Unknown state: ${this.current}`);
 
@@ -71,7 +82,7 @@ export class StateMachine {
     // current state, but I don't know how to make TypeScript understand that.
     const nextState = (currentFns.onExit as OnExitFn<CpuState>)(
       cpuInfo,
-      this.getStateInfo<CpuState>(),
+      this.getStateInfo<CpuState>(immediateTick),
     );
     if (nextState != null && nextState !== this.current) {
       // Update the state info if we're indeed changing state
@@ -79,13 +90,18 @@ export class StateMachine {
       this.ctx = {};
       this.ticksOnState = 0;
     } else {
-      this.ticksOnState++;
+      if (!immediateTick) this.ticksOnState++;
     }
 
     const nextFns = this.stateFns[this.current];
     if (nextFns == null) throw new Error(`[StateMachine] Unknown state: ${this.current}`);
 
-    (nextFns.onEnter as OnEnterFn<CpuState>)(cpuInfo, this.getStateInfo<CpuState>());
+    const isImmediate = (nextFns.onEnter as OnEnterFn<CpuState>)(
+      cpuInfo,
+      this.getStateInfo<CpuState>(immediateTick),
+    );
+
+    if (isImmediate) this.tick(cpuInfo, true);
   }
 
   /**
@@ -102,7 +118,7 @@ export class StateMachine {
     const nextFns = this.stateFns[this.current];
     if (nextFns == null) throw new Error(`[StateMachine] Unknown state: ${this.current}`);
 
-    (nextFns.onEnter as OnEnterFn<CpuState>)(cpuInfo, this.getStateInfo<CpuState>());
+    (nextFns.onEnter as OnEnterFn<CpuState>)(cpuInfo, this.getStateInfo<CpuState>(false));
   }
 
   setState(state: CpuState): void {

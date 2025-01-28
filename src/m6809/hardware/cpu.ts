@@ -163,11 +163,11 @@ class Cpu implements IModule {
   };
 
   enterFetchOpcode: OnEnterFn<"fetch_opcode"> = ({ readPending }, _) => {
-    if (readPending) return null;
+    if (readPending) return undefined;
 
     // Fetch the opcode.
     this.queryMemory(this.registers.pc++, 1);
-    return null;
+    return;
   };
   exitFetchOpcode: OnExitFn<"fetch_opcode"> = ({ readPending }, { ctx }) => {
     if (readPending) return null;
@@ -207,7 +207,7 @@ class Cpu implements IModule {
   };
 
   enterImmediate: OnEnterFn<"immediate"> = ({ readPending }, _) => {
-    if (readPending) return null;
+    if (readPending) return undefined;
 
     // Fetch the immediate value.
     const reg = this.instruction!.register;
@@ -228,8 +228,14 @@ class Cpu implements IModule {
   enterExecute: OnEnterFn<"execute"> = (cpuInfo, stateInfo) => {
     if (stateInfo.ctx.isDone === undefined) stateInfo.ctx.isDone = false;
 
-    if (this.instruction === undefined) return this.fail("No instruction to execute");
-    if (this.addressing === undefined) return this.fail("No addressing mode to execute");
+    if (this.instruction === undefined) {
+      this.fail("No instruction to execute");
+      return false;
+    }
+    if (this.addressing === undefined) {
+      this.fail("No addressing mode to execute");
+      return false;
+    }
 
     console.log(
       `[${this.id}] Executing instruction ${this.instruction.mnemonic} ${this.addressing.mode}`,
@@ -243,9 +249,9 @@ class Cpu implements IModule {
       this.addressing,
       this.registers,
     );
-    debugger;
 
     stateInfo.ctx.isDone = done;
+    if (done) return true;
   };
 
   exitExecute: OnExitFn<"execute"> = (cpuInfo, stateInfo) => {
@@ -273,11 +279,11 @@ class Cpu implements IModule {
   stateMachine: StateMachine = new StateMachine(
     {
       unreset: {
-        onEnter: () => {},
+        onEnter: () => false,
         onExit: () => this.fail("CPU is not reset"),
       },
       start: {
-        onEnter: () => {}, // This is never called
+        onEnter: () => false, // This is never called
         onExit: () => "fetch_opcode",
       },
       fetch_opcode: {
@@ -293,7 +299,7 @@ class Cpu implements IModule {
         onExit: this.exitExecute,
       },
       fail: {
-        onEnter: () => {},
+        onEnter: () => false,
         onExit: () => null,
       },
     },
