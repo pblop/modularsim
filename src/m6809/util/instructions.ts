@@ -251,6 +251,28 @@ export type FetchableAddress = number | "pc";
 //   return val;
 // }
 
+function getValueFromMemory(
+  bytes: number,
+  cpu: Cpu,
+  readPending: boolean,
+  ticksOnState: number,
+  addr: CpuAddressingData<AddressingMode>,
+): number | null {
+  if (readPending) return null;
+
+  if (addr.mode === "immediate") {
+    return addr.value;
+  } else {
+    if (ticksOnState === 0) {
+      // We need to fetch the value from memory.
+      cpu.queryMemory(addr.address, bytes);
+      return null;
+    } else {
+      return cpu.readInfo!.value;
+    }
+  }
+}
+
 function ld8<M extends AddressingMode>(
   reg: Accumulator,
   mode: M,
@@ -260,20 +282,9 @@ function ld8<M extends AddressingMode>(
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  if (readPending) return false;
+  const val = getValueFromMemory(1, cpu, readPending, ticksOnState, addr);
+  if (val === null) return false;
 
-  let val: number;
-  if (addr.mode === "immediate") {
-    val = addr.value;
-  } else {
-    if (ticksOnState === 0) {
-      // We need to fetch the value from memory.
-      cpu.queryMemory(addr.address, 1);
-      return false;
-    } else {
-      val = cpu.readInfo!.value;
-    }
-  }
   regs[reg] = val;
 
   // Clear V flag, set N if negative, Z if zero
@@ -293,20 +304,8 @@ function ld16<M extends AddressingMode>(
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  if (readPending) return false;
-
-  let val: number;
-  if (addr.mode === "immediate") {
-    val = addr.value;
-  } else {
-    if (ticksOnState === 0) {
-      // We need to fetch the value from memory.
-      cpu.queryMemory(addr.address, 2);
-      return false;
-    } else {
-      val = cpu.readInfo!.value;
-    }
-  }
+  const val = getValueFromMemory(2, cpu, readPending, ticksOnState, addr);
+  if (val === null) return false;
 
   regs[reg] = val;
 
