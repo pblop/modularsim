@@ -563,8 +563,8 @@ class Cpu implements IModule {
   onInstructionFinish = () => {
     // NOTE: Could be a good idea to modify this to also emit the instruction
     // that was executed, so other modules can react to it.
-    this.et.emit("cpu:instruction_finish");
     this.commitRegisters();
+    this.et.emit("cpu:instruction_finish");
 
     this.opcode = undefined;
     this.instruction = undefined;
