@@ -231,17 +231,15 @@ function st8<M extends "direct" | "indexed" | "extended">(
   return true;
 }
 
-// async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
-//   console.debug(`[cpu] instruction clr${reg}`);
+function clracc(reg: Accumulator, regs: Registers): boolean {
+  regs[reg] = 0;
 
-//   cpu.registers[reg] = 0;
+  // Clear N,V,C, set Z
+  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
+  regs.cc |= ConditionCodes.ZERO;
 
-//   // Clear N,V,C, set Z
-//   cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
-//   cpu.registers.cc |= ConditionCodes.ZERO;
-
-//   return 2;
-// }
+  return true;
+}
 
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
@@ -297,15 +295,15 @@ addInstructions(
     branching(cpu, "bra", cpuInfo, stateInfo, addr, regs, () => true),
 );
 
-// // clr(accumulator)
-// addInstructions(
-//   "clr{register}",
-//   [
-//     [0x4f, "A", "inherent", "3/1"],
-//     [0x5f, "B", "inherent", "3/1"],
-//   ],
-//   (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
-// );
+// clr(accumulator)
+addInstructions(
+  "clr{register}",
+  [
+    [0x4f, "A", "inherent", "3/1"],
+    [0x5f, "B", "inherent", "3/1"],
+  ],
+  (reg, mode, cycles) => (_, __, ___, ____, regs) => clracc(reg, regs),
+);
 
 // ld16 (ldx, ...)
 addInstructions(

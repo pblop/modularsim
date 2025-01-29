@@ -53,6 +53,9 @@ export type CpuRelativeAddressingData = {
   offset: number;
   address: number;
 };
+type CpuInherentAddressingData = {
+  mode: "inherent";
+};
 
 // biome-ignore format: this is easier to read if not biome-formatted
 export type CpuAddressingData<M extends AddressingMode> = 
@@ -60,7 +63,9 @@ export type CpuAddressingData<M extends AddressingMode> =
   M extends "direct" ? CpuDirectAddressingData : 
   M extends "extended" ? CpuExtendedAddressingData :
   M extends "indexed" ? CpuIndexedAddressingData :
-  CpuRelativeAddressingData;
+  M extends "relative" ? CpuRelativeAddressingData :
+  M extends "inherent" ? CpuInherentAddressingData :
+  never;
 
 class Cpu implements IModule {
   id: string;
@@ -257,6 +262,11 @@ class Cpu implements IModule {
           return "relative";
         case "extended":
           return "extended";
+        case "inherent":
+          // Inherent instructions don't need any more data, so we can execute
+          // them right away.
+          this.addressing = { mode: "inherent" };
+          return "execute";
         default:
           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
       }
