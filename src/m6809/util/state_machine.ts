@@ -9,6 +9,7 @@ export type CpuState =
   | "indexed_postbyte"
   | "indexed_main"
   | "indexed_indirect"
+  | "relative"
   | "fail"
   | "execute";
 
@@ -24,6 +25,7 @@ type StateContexts = {
     remainingTicks: number;
   };
   indexed_indirect: { remainingTicks: number };
+  relative: EmptyObject;
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>
@@ -62,6 +64,7 @@ type StateFns = {
   };
 };
 
+// TODO: Make this generic
 export class StateMachine {
   current: CpuState;
   ctx: StateContexts | EmptyObject;

@@ -38,16 +38,29 @@ type CpuDirectAddressingData = {
   mode: "direct";
   address: number;
 };
+type CpuExtendedAddressingData = {
+  mode: "extended";
+  address: number;
+};
 type CpuIndexedAddressingData = {
   mode: "indexed";
   postbyte: ParsedIndexedPostbyte;
   address: number;
 };
+export type CpuRelativeAddressingData = {
+  mode: "relative";
+  long: boolean;
+  offset: number;
+  address: number;
+};
+
 // biome-ignore format: this is easier to read if not biome-formatted
 export type CpuAddressingData<M extends AddressingMode> = 
   M extends "immediate" ? CpuImmediateAddressingData : 
   M extends "direct" ? CpuDirectAddressingData : 
-  CpuIndexedAddressingData;
+  M extends "extended" ? CpuDirectAddressingData :
+  M extends "indexed" ? CpuIndexedAddressingData :
+  CpuRelativeAddressingData;
 
 class Cpu implements IModule {
   id: string;
@@ -213,6 +226,8 @@ class Cpu implements IModule {
           return "immediate";
         case "indexed":
           return "indexed_postbyte";
+        case "relative":
+          return "relative";
         default:
           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
       }
@@ -240,7 +255,10 @@ class Cpu implements IModule {
   };
 
   enterExecute: OnEnterFn<"execute"> = (cpuInfo, stateInfo) => {
-    if (stateInfo.ctx.isDone === undefined) stateInfo.ctx.isDone = false;
+    if (stateInfo.ctx.isDone === undefined) {
+      stateInfo.ctx.isDone = false;
+      stateInfo.ctx.instructionCtx = {};
+    }
 
     if (this.instruction === undefined) {
       this.fail("No instruction to execute");
@@ -439,6 +457,30 @@ class Cpu implements IModule {
     return null;
   };
 
+  enterRelative: OnEnterFn<"relative"> = ({ readPending }, _) => {
+    if (readPending) return false;
+
+    // Fetch the relative value.
+    // TODO: Implement LONG branches.
+    this.queryMemory(this.registers.pc++, 1);
+    return false;
+  };
+  exitRelative: OnExitFn<"relative"> = ({ readPending }, _) => {
+    if (readPending) return null;
+
+    const long = false;
+    const offset = long ? this.readInfo!.value : signExtend(this.readInfo!.value, 8, 16);
+
+    this.addressing = {
+      mode: "relative",
+      long,
+      offset,
+      address: truncate(this.registers.pc + offset, 16),
+    };
+
+    return "execute";
+  };
+
   /**
    * Notify other modules that the instruction has ended, and, as such, our
    * registers have been updated.
@@ -484,6 +526,10 @@ class Cpu implements IModule {
       indexed_indirect: {
         onEnter: this.enterIndexedIndirect,
         onExit: this.exitIndexedIndirect,
+      },
+      relative: {
+        onEnter: this.enterRelative,
+        onExit: this.exitRelative,
       },
       execute: {
         onEnter: this.enterExecute,

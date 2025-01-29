@@ -1,5 +1,5 @@
 import type Cpu from "../hardware/cpu.js";
-import type { CpuAddressingData } from "../hardware/cpu.js";
+import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
 import type { CpuInfo, StateInfo } from "./state_machine.js";
 import { ConditionCodes, type Registers } from "../util/cpu_parts.js";
 import { signExtend, truncate } from "./numbers.js";
@@ -19,6 +19,7 @@ type InstructionLogic<M extends AddressingMode = AddressingMode> = (
 ) => boolean;
 
 export type AddressingMode = AddressableAddressingMode | "inherent";
+type GeneralAddressingMode = "immediate" | "direct" | "indexed" | "extended";
 export type AddressableAddressingMode =
   | "immediate"
   | "direct"
@@ -256,7 +257,7 @@ function getValueFromMemory(
   cpu: Cpu,
   readPending: boolean,
   ticksOnState: number,
-  addr: CpuAddressingData<AddressingMode>,
+  addr: CpuAddressingData<GeneralAddressingMode>,
 ): number | null {
   if (readPending) return null;
 
@@ -273,7 +274,7 @@ function getValueFromMemory(
   }
 }
 
-function ld8<M extends AddressingMode>(
+function ld8<M extends GeneralAddressingMode>(
   reg: Accumulator,
   mode: M,
   cpu: Cpu,
@@ -295,7 +296,7 @@ function ld8<M extends AddressingMode>(
   return true;
 }
 
-function ld16<M extends AddressingMode>(
+function ld16<M extends GeneralAddressingMode>(
   reg: Register,
   mode: M,
   cpu: Cpu,
@@ -317,18 +318,33 @@ function ld16<M extends AddressingMode>(
   return true;
 }
 
-// async function beq(cpu: Cpu, address: number): Promise<number> {
-//   // Zero flag set -> branch
-//   if (cpu.registers.cc & ConditionCodes.ZERO) {
-//     cpu.registers.pc = address;
-//   }
-//   return 3;
-// }
+function branching<M extends "relative">(
+  cpu: Cpu,
+  mnemonic: string,
+  { readPending }: CpuInfo,
+  { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+  condition: (cc: number) => boolean | number,
+): boolean {
+  if (instructionCtx.branchTaken === undefined) {
+    instructionCtx.branchTaken = condition(regs.cc);
+  }
+  // Long Branch instructions take 0 extra cycles if the branch is not taken.
+  if (!instructionCtx.branchTaken && addr.long) return true;
 
-// async function bra(cpu: Cpu, address: number): Promise<number> {
-//   cpu.registers.pc = address;
-//   return 3;
-// }
+  // The rest of the instructions take 1 extra cycle: long branches if taken, short branches always.
+  if (ticksOnState === 0) return false;
+
+  if (instructionCtx.branchTaken) {
+    if (mnemonic === "bsr" || mnemonic === "lbsr") {
+      console.error("BSR/LBSR not implemented");
+    }
+    regs.pc = addr.address;
+  }
+
+  return true;
+}
 
 // async function st8(cpu: Cpu, reg: Accumulator, address: number): Promise<number> {
 //   const val = cpu.registers[reg];
@@ -388,8 +404,26 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
   }
 }
 
-// addInstructions("beq", [[0x27, "pc", "relative", "3"]], () => beq);
-// addInstructions("bra", [[0x20, "pc", "relative", "3"]], () => bra);
+addInstructions(
+  "beq",
+  [[0x27, "pc", "relative", "3"]],
+  () => (cpu, cpuInfo, stateInfo, addressingData, registers) =>
+    branching(
+      cpu,
+      "beq",
+      cpuInfo,
+      stateInfo,
+      addressingData,
+      registers,
+      (cc) => cc & ConditionCodes.ZERO,
+    ),
+);
+addInstructions(
+  "bra",
+  [[0x20, "pc", "relative", "3"]],
+  () => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    branching(cpu, "bra", cpuInfo, stateInfo, addr, regs, () => true),
+);
 
 // // clr(accumulator)
 // addInstructions(
