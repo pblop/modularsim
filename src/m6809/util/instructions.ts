@@ -221,7 +221,7 @@ function st8<M extends "direct" | "indexed" | "extended">(
   regs: Registers,
 ): boolean {
   const val = regs[reg];
-  if (writeValueToMemory(1, cpu, writePending, ticksOnState, addr, val)) return false;
+  if (!writeValueToMemory(1, cpu, writePending, ticksOnState, addr, val)) return false;
 
   // Clear V flag, set N if negative, Z if zero
   cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
