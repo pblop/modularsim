@@ -514,7 +514,8 @@ class Cpu implements IModule {
     if (readPending) return false;
 
     // Fetch the extended address.
-    this.queryMemory(this.registers.pc++, 2);
+    this.queryMemory(this.registers.pc, 2);
+    this.registers.pc += 2;
     return false;
   };
 
