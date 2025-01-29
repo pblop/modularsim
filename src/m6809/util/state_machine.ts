@@ -11,6 +11,7 @@ export type CpuState =
   | "indexed_indirect"
   | "relative"
   | "extended"
+  | "direct"
   | "fail"
   | "execute";
 
@@ -28,6 +29,7 @@ type StateContexts = {
   indexed_indirect: { remainingTicks: number };
   relative: EmptyObject;
   extended: EmptyObject;
+  direct: EmptyObject;
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>

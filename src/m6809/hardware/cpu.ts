@@ -528,6 +528,23 @@ class Cpu implements IModule {
     return "execute";
   };
 
+  enterDirect: OnEnterFn<"direct"> = ({ readPending }, _) => {
+    if (readPending) return false;
+
+    // Fetch the direct low byte.
+    this.queryMemory(this.registers.pc++, 1);
+    return false;
+  };
+  exitDirect: OnExitFn<"direct"> = ({ readPending }, _) => {
+    if (readPending) return null;
+
+    const low = this.readInfo!.value;
+    const address = truncate((this.registers.dp << 8) | low, 16);
+    this.addressing = { mode: "direct", address };
+
+    return "execute";
+  };
+
   /**
    * Notify other modules that the instruction has ended, and, as such, our
    * registers have been updated.
@@ -581,6 +598,10 @@ class Cpu implements IModule {
       extended: {
         onEnter: this.enterExtended,
         onExit: this.exitExtended,
+      },
+      direct: {
+        onEnter: this.enterDirect,
+        onExit: this.exitDirect,
       },
       execute: {
         onEnter: this.enterExecute,
