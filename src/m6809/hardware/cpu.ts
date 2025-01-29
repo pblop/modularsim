@@ -58,7 +58,7 @@ export type CpuRelativeAddressingData = {
 export type CpuAddressingData<M extends AddressingMode> = 
   M extends "immediate" ? CpuImmediateAddressingData : 
   M extends "direct" ? CpuDirectAddressingData : 
-  M extends "extended" ? CpuDirectAddressingData :
+  M extends "extended" ? CpuExtendedAddressingData :
   M extends "indexed" ? CpuIndexedAddressingData :
   CpuRelativeAddressingData;
 
@@ -77,6 +77,13 @@ class Cpu implements IModule {
     value: number;
     bytes: number;
     raw: number[];
+    waiting: boolean;
+  } | null = null;
+  writeInfo: {
+    address: number;
+    value: number;
+    bytes: number;
+    bytesWritten: number;
     waiting: boolean;
   } | null = null;
 
@@ -99,7 +106,7 @@ class Cpu implements IModule {
         "clock:cycle_start": this.onCycleStart,
         "signal:reset": this.reset,
         "memory:read:result": this.onMemoryReadResult,
-        "memory:write:result": () => {},
+        "memory:write:result": this.onMemoryWriteResult,
       },
       optional: {},
     };
@@ -155,9 +162,9 @@ class Cpu implements IModule {
 
   queryMemory = (address: number, bytes: number) => {
     this.readInfo = { address, value: 0, bytes, raw: [], waiting: false };
-    this.queryPendingMemory();
+    this.performPendingRead();
   };
-  queryPendingMemory = () => {
+  performPendingRead = () => {
     if (!this.readInfo || this.readInfo.raw.length === this.readInfo.bytes) return;
 
     this.et.emit("memory:read", this.readInfo.address + this.readInfo.raw.length);
@@ -179,6 +186,26 @@ class Cpu implements IModule {
     if (this.readInfo.raw.length === this.readInfo.bytes) {
       this.readInfo.value = this.readInfo.raw.reduce((acc, byte) => (acc << 8) | byte, 0);
     }
+  };
+  queryMemoryWrite = (address: number, bytes: number, value: number) => {
+    this.writeInfo = { address, value, bytes, bytesWritten: 0, waiting: false };
+    this.performPendingWrite();
+  };
+  performPendingWrite = () => {
+    if (!this.writeInfo || this.writeInfo.bytesWritten === this.writeInfo.bytes) return;
+
+    this.et.emit("memory:write", this.writeInfo.address, this.writeInfo.value);
+    this.writeInfo.waiting = true;
+  };
+  onMemoryWriteResult = (address: number, _: number) => {
+    if (!this.writeInfo) return;
+
+    // If the address is different, this is another module's write, or a stale
+    // write, or something else, but we don't want it either way.
+    if (this.writeInfo.address + this.writeInfo.bytesWritten !== address) return;
+
+    this.writeInfo.bytesWritten++;
+    this.writeInfo.waiting = false;
   };
 
   fail = (message: string): CpuState => {
@@ -228,6 +255,8 @@ class Cpu implements IModule {
           return "indexed_postbyte";
         case "relative":
           return "relative";
+        case "extended":
+          return "extended";
         default:
           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
       }
@@ -481,6 +510,23 @@ class Cpu implements IModule {
     return "execute";
   };
 
+  enterExtended: OnEnterFn<"extended"> = ({ readPending }, _) => {
+    if (readPending) return false;
+
+    // Fetch the extended address.
+    this.queryMemory(this.registers.pc++, 2);
+    return false;
+  };
+
+  exitExtended: OnExitFn<"extended"> = ({ readPending }, _) => {
+    if (readPending) return null;
+
+    const address = this.readInfo!.value;
+    this.addressing = { mode: "extended", address };
+
+    return "execute";
+  };
+
   /**
    * Notify other modules that the instruction has ended, and, as such, our
    * registers have been updated.
@@ -531,6 +577,10 @@ class Cpu implements IModule {
         onEnter: this.enterRelative,
         onExit: this.exitRelative,
       },
+      extended: {
+        onEnter: this.enterExtended,
+        onExit: this.exitExtended,
+      },
       execute: {
         onEnter: this.enterExecute,
         onExit: this.exitExecute,
@@ -548,13 +598,18 @@ class Cpu implements IModule {
    */
   onCycleStart = () => {
     const readPending = this.readInfo != null && this.readInfo.bytes !== this.readInfo.raw.length;
-    const writePending = false;
+    const writePending =
+      this.writeInfo != null && this.writeInfo.bytes !== this.writeInfo.bytesWritten;
 
     // Read memory is ubiquitous for all states. We query it if we need it.
     // Explanation: we query if we haven't finished a read, but we're not waiting
-    // for a result (i.e. we only read one byte at a time).
+    // for a result (we only read one byte at a time).
     if (readPending && !this.readInfo!.waiting) {
-      this.queryPendingMemory();
+      this.performPendingRead();
+    }
+    // Write memory is also ubiquitous for all states.
+    if (writePending && !this.writeInfo!.waiting) {
+      this.performPendingWrite();
     }
 
     console.debug(`[${this.id}] exit CPU state: ${this.stateMachine.current}`);

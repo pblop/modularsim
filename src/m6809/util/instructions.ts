@@ -235,22 +235,6 @@ export type FetchableAddress = number | "pc";
 
 //   throw new Error("[cpu] Unknown addressing mode passed to addressing function");
 // }
-/**
- * Returns the value at the given address, incrementing the program counter if the address is "pc"
- * (in the case of immediate addressing).
- * @param size The size of the value to read (in bytes).
- * @returns The value at the address.
- */
-// async function fetch(cpu: Cpu, address: FetchableAddress, size: number): Promise<number> {
-//   let val: number;
-//   if (address === "pc") {
-//     val = await cpu.read(cpu.registers.pc, size);
-//     cpu.registers.pc += size;
-//   } else {
-//     val = await cpu.read(address, size);
-//   }
-//   return val;
-// }
 
 function getValueFromMemory(
   bytes: number,
@@ -271,6 +255,25 @@ function getValueFromMemory(
     } else {
       return cpu.readInfo!.value;
     }
+  }
+}
+
+function writeValueToMemory(
+  bytes: number,
+  cpu: Cpu,
+  writePending: boolean,
+  ticksOnState: number,
+  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
+  value: number,
+): boolean {
+  if (writePending) return false;
+
+  if (ticksOnState === 0) {
+    // We need to write the value to memory.
+    cpu.queryMemoryWrite(addr.address, bytes, value);
+    return false;
+  } else {
+    return true;
   }
 }
 
@@ -346,18 +349,25 @@ function branching<M extends "relative">(
   return true;
 }
 
-// async function st8(cpu: Cpu, reg: Accumulator, address: number): Promise<number> {
-//   const val = cpu.registers[reg];
+function st8<M extends "direct" | "indexed" | "extended">(
+  reg: Accumulator,
+  mode: M,
+  cpu: Cpu,
+  { writePending }: CpuInfo,
+  { ticksOnState, ctx }: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+): boolean {
+  const val = regs[reg];
+  if (writeValueToMemory(1, cpu, writePending, ticksOnState, addr, val)) return false;
 
-//   // await cpu.write(address, val, 1);
+  // Clear V flag, set N if negative, Z if zero
+  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
+  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
+  cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
 
-//   // Clear V flag, set N if negative, Z if zero
-//   cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-//   cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-//   cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
-
-//   return 2;
-// }
+  return true;
+}
 
 // async function clracc(cpu: Cpu, reg: Accumulator): Promise<number> {
 //   console.debug(`[cpu] instruction clr${reg}`);
@@ -435,7 +445,7 @@ addInstructions(
 //   (reg, mode, cycles) => (cpu) => clracc(cpu, reg),
 // );
 
-// // ld16 (ldx, ...)
+// ld16 (ldx, ...)
 addInstructions(
   "ld{register}",
   [
@@ -482,19 +492,20 @@ addInstructions(
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     ld8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
-// // st8 (sta, stb)
-// addInstructions(
-//   "st{register}",
-//   [
-//     [0x97, "A", "direct", "4/3"],
-//     [0xa7, "A", "indexed", "4+"],
-//     [0xb7, "A", "extended", "5/4"],
-//     [0xd7, "B", "direct", "4/3"],
-//     [0xe7, "B", "indexed", "4+"],
-//     [0xf7, "B", "extended", "5/4"],
-//   ],
-//   (reg, mode, cycles) => (cpu, address) => st8(cpu, reg, address),
-// );
+// st8 (sta, stb)
+addInstructions(
+  "st{register}",
+  [
+    [0x97, "A", "direct", "4/3"],
+    [0xa7, "A", "indexed", "4+"],
+    [0xb7, "A", "extended", "5/4"],
+    [0xd7, "B", "direct", "4/3"],
+    [0xe7, "B", "indexed", "4+"],
+    [0xf7, "B", "extended", "5/4"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    st8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+);
 
 export function performInstructionLogic<M extends AddressingMode>(
   cpu: Cpu,
