@@ -58,7 +58,7 @@
               "row": "2 / span 6"
             },
             {
-              "id": "screen",
+              "id": "screen_ui",
               "column": "1 / span 3",
               "row": "8 / span 2"
             },
@@ -118,9 +118,9 @@
         "config": {}
       },
       {
-        "id": "screen",
+        "id": "screen_ui",
         "type": "ui",
-        "url": "./m6809/ui/screen.js",
+        "url": "./m6809/ui/screen_ui.js",
         "config": {
           "address": 65280
         }

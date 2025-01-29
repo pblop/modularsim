@@ -13,7 +13,7 @@ function validateScreenConfig(config: Record<string, unknown>): ScreenConfig {
   return config as ScreenConfig;
 }
 
-class Screen implements IModule {
+class ScreenUI implements IModule {
   id: string;
   event_transceiver: TypedEventTransceiver;
   config: ScreenConfig;
@@ -63,7 +63,7 @@ class Screen implements IModule {
     if (panel_id !== this.id) return;
     this.panel = panel;
 
-    this.panel.classList.add("screen");
+    this.panel.classList.add("screen-ui");
 
     this.panel.appendChild(element("h2", { properties: { textContent: "Screen" } }));
 
@@ -73,4 +73,4 @@ class Screen implements IModule {
   };
 }
 
-export default Screen;
+export default ScreenUI;
