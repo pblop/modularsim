@@ -32,6 +32,8 @@ export interface EventMap {
   "ui:memory:read:result": [address: number, data: number];
   "ui:memory:write": [address: number, data: number];
   "ui:memory:write:result": [address: number, data: number];
+  "ui:memory:bulk:write": [data: Uint8Array];
+  "ui:memory:bulk:write:result": [data: Uint8Array];
   // Add more events here.
 }
 

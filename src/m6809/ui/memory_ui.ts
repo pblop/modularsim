@@ -37,6 +37,7 @@ class MemoryUI implements IModule {
         "memory:write": this.updateLastMemoryWrite,
         "memory:write:result": this.onMemoryWriteResult,
         "ui:memory:write:result": this.onMemoryWriteResult,
+        "ui:memory:bulk:write:result": this.onMemoryBulkWriteResult,
       },
       optional: {
         "cpu:register_update": this.onRegisterUpdate,
@@ -121,7 +122,21 @@ class MemoryUI implements IModule {
     cell.classList.add("write-highlight");
     this.lastMemoryWrite = address;
   };
+  onMemoryBulkWriteResult = (data: Uint8Array): void => {
+    if (!this.panel) return;
+    if (!this.memoryTable) return;
 
+    for (
+      let addr = this.config.start;
+      addr < this.config.start + this.config.size && addr < data.length;
+      addr++
+    ) {
+      const cell = this.panel.querySelector(`.byte-${addr}`);
+      if (!cell) continue;
+
+      cell.textContent = this.formatMemoryData(data[addr]);
+    }
+  };
   onMemoryWriteResult = (address: number, data: number): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;

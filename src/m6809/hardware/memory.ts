@@ -43,6 +43,7 @@ class Memory implements IModule {
         "memory:write:result",
         "ui:memory:read:result",
         "ui:memory:write:result",
+        "ui:memory:bulk:write:result",
       ],
       required: { "clock:cycle_start": () => {} },
       optional: {
@@ -50,6 +51,7 @@ class Memory implements IModule {
         "memory:write": this.onMemoryWrite,
         "ui:memory:read": this.onUiMemoryRead,
         "ui:memory:write": this.onUiMemoryWrite,
+        "ui:memory:bulk:write": this.onUiMemoryBulkWrite,
       },
     };
   }
@@ -93,6 +95,14 @@ class Memory implements IModule {
 
     this.memory[address - this.start] = data;
     this.event_transceiver.emit("ui:memory:write:result", address, data);
+  };
+  onUiMemoryBulkWrite = (data: Uint8Array): void => {
+    if (data.length > this.memory.length) {
+      throw new Error(`[${this.id}] Attempted to write more data than memory size.`);
+    }
+
+    this.memory.set(data);
+    this.event_transceiver.emit("ui:memory:bulk:write:result", data);
   };
   onMemoryRead = (address: number) => {
     // If the address is out of bounds, do nothing.
