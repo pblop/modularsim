@@ -231,7 +231,9 @@ function st8<M extends "direct" | "indexed" | "extended">(
   return true;
 }
 
-function clracc(reg: Accumulator, regs: Registers): boolean {
+function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers): boolean {
+  if (stateInfo.ticksOnState === 0) return false;
+
   regs[reg] = 0;
 
   // Clear N,V,C, set Z
@@ -302,7 +304,7 @@ addInstructions(
     [0x4f, "A", "inherent", "3/1"],
     [0x5f, "B", "inherent", "3/1"],
   ],
-  (reg, mode, cycles) => (_, __, ___, ____, regs) => clracc(reg, regs),
+  (reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
 );
 
 // ld16 (ldx, ...)
