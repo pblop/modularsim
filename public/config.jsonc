@@ -70,7 +70,7 @@
             {
               "id": "clock_ui",
               "column": "-3 / -1",
-              "row": 1
+              "row": "1 / span 2"
             }
           ]
         }
@@ -80,7 +80,7 @@
         "type": "clock",
         "url": "./m6809/hardware/clock.js",
         "config": {
-          "frequency": 100000000000 // Hz
+          "frequency": 10000000 // Hz
         }
       },
       {
@@ -89,7 +89,7 @@
         "url": "./m6809/ui/clock_ui.js",
         "css": ["./m6809/ui/clock_ui.css"],
         "config": {
-          "frequency": 100000000000
+          "frequency": 10000000
         }
       },
       {

@@ -15,6 +15,7 @@ function verifyClockUIConfig(config: Record<string, unknown>): ClockUIConfig {
 type ClockUIState = {
   machineState: "running" | "instruction_run" | "paused" | "stopped";
   lastCycleTime: number;
+  cycles: number;
 };
 
 class ClockUI implements IModule {
@@ -57,6 +58,7 @@ class ClockUI implements IModule {
     this.state = {
       machineState: "stopped",
       lastCycleTime: 0,
+      cycles: 0,
     };
 
     console.log(`[${this.id}] Module initialized.`);
@@ -64,7 +66,7 @@ class ClockUI implements IModule {
 
   onCycleStart = (): void => {
     console.log(`[${this.id}] Clock cycle started`);
-    this.setState({ lastCycleTime: performance.now() });
+    this.setState({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
   };
 
   setState(state: Partial<ClockUIState>): void {
@@ -135,7 +137,7 @@ class ClockUI implements IModule {
             textContent: "Reset",
             onclick: () => {
               this.event_transceiver.emit("signal:reset");
-              this.setState({ machineState: "paused" });
+              this.setState({ machineState: "paused", cycles: 0 });
             },
           },
         }),
@@ -151,6 +153,11 @@ class ClockUI implements IModule {
       marker.offsetHeight; // Trigger reflow
       marker.style.animation = "";
     }
+    if (changes && "cycles" in changes) {
+      const cycles = this.panel.querySelector(".clock-cycles") as HTMLElement;
+      if (cycles == null) return; // This should never happen.
+      cycles.textContent = `${this.state.cycles}`;
+    }
   }
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
@@ -161,7 +168,15 @@ class ClockUI implements IModule {
     this.panel.style.setProperty("--clock-frequency", `${this.config.frequency}`);
 
     this.panel.appendChild(element("div", { properties: { className: "clock-main" } }));
-    this.panel.appendChild(element("div", { properties: { className: "clock-marker" } }));
+    this.panel.appendChild(
+      element("div", {
+        properties: { className: "clock-extra" },
+        children: [
+          element("div", { properties: { className: "clock-marker" } }),
+          element("span", { properties: { className: "clock-cycles" } }),
+        ],
+      }),
+    );
 
     this.draw();
   };
