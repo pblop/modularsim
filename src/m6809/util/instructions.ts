@@ -301,8 +301,8 @@ addInstructions(
 addInstructions(
   "clr{register}",
   [
-    [0x4f, "A", "inherent", "3/1"],
-    [0x5f, "B", "inherent", "3/1"],
+    [0x4f, "A", "inherent", "1"],
+    [0x5f, "B", "inherent", "1"],
   ],
   (reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
 );
@@ -317,11 +317,11 @@ addInstructions(
     [0x8e, "X", "immediate", "3"],
     [0x108e, "Y", "immediate", "4"],
 
-    [0xdc, "D", "direct", "5/4"],
-    [0x10de, "S", "direct", "6/5"],
-    [0xde, "U", "direct", "5/4"],
-    [0x9e, "X", "direct", "5/4"],
-    [0x109e, "Y", "direct", "6/5"],
+    [0xdc, "D", "direct", "5"],
+    [0x10de, "S", "direct", "6"],
+    [0xde, "U", "direct", "5"],
+    [0x9e, "X", "direct", "5"],
+    [0x109e, "Y", "direct", "6"],
 
     [0xec, "D", "indexed", "5+"],
     [0x10ee, "S", "indexed", "6+"],
@@ -329,11 +329,11 @@ addInstructions(
     [0xae, "X", "indexed", "5+"],
     [0x10ae, "Y", "indexed", "6+"],
 
-    [0xfc, "D", "extended", "6/5"],
-    [0x10fe, "S", "extended", "7/6"],
-    [0xfe, "U", "extended", "6/5"],
-    [0xbe, "X", "extended", "6/5"],
-    [0x10be, "Y", "extended", "7/6"],
+    [0xfc, "D", "extended", "6"],
+    [0x10fe, "S", "extended", "7"],
+    [0xfe, "U", "extended", "6"],
+    [0xbe, "X", "extended", "6"],
+    [0x10be, "Y", "extended", "7"],
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     ld16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
@@ -343,13 +343,13 @@ addInstructions(
   "ld{register}",
   [
     [0x86, "A", "immediate", "2"],
-    [0x96, "A", "direct", "4/3"],
+    [0x96, "A", "direct", "4"],
     [0xa6, "A", "indexed", "4+"],
-    [0xb6, "A", "extended", "5/4"],
+    [0xb6, "A", "extended", "5"],
     [0xc6, "B", "immediate", "2"],
-    [0xd6, "B", "direct", "4/3"],
+    [0xd6, "B", "direct", "4"],
     [0xe6, "B", "indexed", "4+"],
-    [0xf6, "B", "extended", "5/4"],
+    [0xf6, "B", "extended", "5"],
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     ld8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
@@ -358,12 +358,12 @@ addInstructions(
 addInstructions(
   "st{register}",
   [
-    [0x97, "A", "direct", "4/3"],
+    [0x97, "A", "direct", "4"],
     [0xa7, "A", "indexed", "4+"],
-    [0xb7, "A", "extended", "5/4"],
-    [0xd7, "B", "direct", "4/3"],
+    [0xb7, "A", "extended", "5"],
+    [0xd7, "B", "direct", "4"],
     [0xe7, "B", "indexed", "4+"],
-    [0xf7, "B", "extended", "5/4"],
+    [0xf7, "B", "extended", "5"],
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     st8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
