@@ -121,6 +121,7 @@
         "id": "screen_ui",
         "type": "ui",
         "url": "./m6809/ui/screen_ui.js",
+        "css": ["./m6809/ui/screen_ui.css"],
         "config": {
           "address": 65280
         }

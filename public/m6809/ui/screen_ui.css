@@ -1,0 +1,17 @@
+.screen-ui {
+  pre::after {
+    content: " ";
+    background: #555555;
+
+    animation: screen-ui-cursor-blink 1.25s steps(2, jump-none) infinite;
+  }
+}
+
+@keyframes screen-ui-cursor-blink {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
