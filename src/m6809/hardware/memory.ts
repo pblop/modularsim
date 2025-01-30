@@ -109,9 +109,13 @@ class Memory implements IModule {
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    this.event_transceiver.once("clock:cycle_start", () => {
-      this.event_transceiver.emit("memory:read:result", address, data);
-    });
+    this.event_transceiver.once(
+      "clock:cycle_start",
+      () => {
+        this.event_transceiver.emit("memory:read:result", address, data);
+      },
+      { order: -1 },
+    );
   };
   onMemoryWrite = (address: number, data: number) => {
     // If the address is out of bounds, do nothing.
@@ -119,9 +123,13 @@ class Memory implements IModule {
 
     this.memory[address - this.start] = data;
 
-    this.event_transceiver.once("clock:cycle_start", () => {
-      this.event_transceiver.emit("memory:write:result", address, data);
-    });
+    this.event_transceiver.once(
+      "clock:cycle_start",
+      () => {
+        this.event_transceiver.emit("memory:write:result", address, data);
+      },
+      { order: -1 },
+    );
   };
 }
 
