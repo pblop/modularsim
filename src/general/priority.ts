@@ -7,10 +7,16 @@ enum Ordering {
   Equal = 0,
   GreaterThan = 1,
 }
-type Comparator<T> = (x: T, y: T) => Ordering;
+/**
+ * A function that compares two values, returning:
+ * - a negative number if x < y
+ * - 0 if x == y
+ * - a positive number if x > y
+ */
+type Comparator<T> = (x: T, y: T) => number;
 export class PriorityQueue<T> {
   _heap: T[];
-  _cmp: Comparator<T>;
+  _comparator: Comparator<T>;
 
   constructor(comparator: Comparator<T>);
   constructor(item: T, comparator: Comparator<T>);
@@ -18,11 +24,19 @@ export class PriorityQueue<T> {
     if (b === undefined) {
       // constructor(comparator: Comparator<T>);
       this._heap = [];
-      this._cmp = a as Comparator<T>;
+      this._comparator = a as Comparator<T>;
     } else {
       this._heap = [a as T];
-      this._cmp = b;
+      this._comparator = b;
     }
+  }
+
+  _compare(x: T, y: T): Ordering {
+    const cmp = this._comparator(x, y);
+
+    if (cmp < 0) return Ordering.LessThan;
+    else if (cmp > 0) return Ordering.GreaterThan;
+    else return Ordering.Equal;
   }
 
   size(): number {
@@ -56,7 +70,7 @@ export class PriorityQueue<T> {
     while (idx > 0) {
       const pidx = this._parentIdx(idx);
 
-      if (this._cmp(this._heap[idx], this._heap[pidx]) !== Ordering.LessThan) {
+      if (this._compare(this._heap[idx], this._heap[pidx]) !== Ordering.LessThan) {
         break;
       }
 
@@ -76,12 +90,12 @@ export class PriorityQueue<T> {
       const ridx = this._rightIdx(idx);
       const childIdx =
         ridx < this._heap.length
-          ? this._cmp(this._heap[lidx], this._heap[ridx]) === Ordering.LessThan
+          ? this._compare(this._heap[lidx], this._heap[ridx]) === Ordering.LessThan
             ? lidx
             : ridx
           : lidx;
 
-      if (this._cmp(this._heap[childIdx], this._heap[idx]) !== Ordering.LessThan) {
+      if (this._compare(this._heap[childIdx], this._heap[idx]) !== Ordering.LessThan) {
         break;
       }
 
