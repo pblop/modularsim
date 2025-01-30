@@ -98,8 +98,13 @@ export interface TypedEventTransceiver {
   ): Promise<EventParams<F>>;
 }
 
+// The event declaration type, which specifies the events that a module provides,
+// requires, and optionally requires.
 export type EventDeclaration = {
   provided: EventNames[];
-  required: { [E in EventNames]?: EventCallback<E> };
-  optional: { [E in EventNames]?: EventCallback<E> };
+  // The required and optional events are specified as an object, where the key is
+  // the event name, and the value is the callback function for the event or an array
+  // containing the callback function and the order.
+  required: { [E in EventNames]?: [EventCallback<E>, number] | EventCallback<E> | null };
+  optional?: { [E in EventNames]?: [EventCallback<E>, number] | EventCallback<E> | null };
 };

@@ -140,10 +140,18 @@ class M6809Simulator implements ISimulator {
       // event declaration), so we can cast it to EventNames.
       // We know that the event is in the event declaration, so we can just
       // call on (instead of onNamed).
-      for (const [name, callback] of Object.entries(eventDeclaration.required))
-        this.on(name as EventNames, callback as EventCallback<EventNames>);
-      for (const [name, callback] of Object.entries(eventDeclaration.optional))
-        this.on(name as EventNames, callback as EventCallback<EventNames>);
+      for (const [name, callbackObject] of Object.entries(eventDeclaration.required)) {
+        if (callbackObject == null) continue;
+        if (typeof callbackObject === "function") {
+          this.on(name as EventNames, callbackObject as EventCallback<EventNames>);
+        } else {
+          const [callback, order] = callbackObject;
+          this.on(name as EventNames, callback as EventCallback<EventNames>, { order });
+        }
+      }
+      if (eventDeclaration.optional)
+        for (const [name, callback] of Object.entries(eventDeclaration.optional))
+          this.on(name as EventNames, callback as EventCallback<EventNames>);
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
