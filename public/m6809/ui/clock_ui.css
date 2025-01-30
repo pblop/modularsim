@@ -21,7 +21,8 @@
       visibility: visible;
       opacity: 1;
       animation-name: fadeOut;
-      animation-duration: calc(1s / var(--clock-frequency, 1));
+      /* Convert the frequency to a duration, with a minimum of 0.05s */
+      animation-duration: max(calc(1s / var(--clock-frequency, 1)), 0.05s);
       animation-fill-mode: forwards;
     }
 
