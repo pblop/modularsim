@@ -107,12 +107,11 @@ class M6809Simulator implements ISimulator {
       // This way, the module can only emit and listen to the events it has
       // declared.
       const module = new Module(moduleId, module_config.config, {
-        emit: (event, ...args) => this.namedEmit(moduleId, event, ...args),
-        on: (event, callback) => this.namedOn(moduleId, event, callback),
-        once: (event, callback) => this.namedOnce(moduleId, event, callback),
-        wait: (event) => this.namedWait(moduleId, event),
-        emitAndWait: (emittedEvent, event, ...args) =>
-          this.namedEmitAndWait(moduleId, emittedEvent, event, ...args),
+        emit: (...args) => this.namedEmit(moduleId, ...args),
+        on: (...args) => this.namedOn(moduleId, ...args),
+        once: (...args) => this.namedOnce(moduleId, ...args),
+        wait: (...args) => this.namedWait(moduleId, ...args),
+        emitAndWait: (...args) => this.namedEmitAndWait(moduleId, ...args),
       });
 
       const eventDeclaration = module.getEventDeclaration();
