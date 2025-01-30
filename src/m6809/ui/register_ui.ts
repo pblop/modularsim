@@ -98,7 +98,7 @@ class RegisterUI implements IModule {
         // TODO: mem:read:result is only needed for the hover effect, maybe the
         // base module should be able to tell us if it's available, and we could
         // provide the hover effect only if it is.
-        "ui:memory:read:result": () => {},
+        "ui:memory:read:result": null,
       },
       optional: {},
     };

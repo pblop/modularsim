@@ -354,7 +354,7 @@ class InstructionUI implements IModule {
     return {
       provided: ["ui:memory:read"],
       required: {
-        "ui:memory:read:result": () => {},
+        "ui:memory:read:result": null,
         "gui:panel_created": this.onGuiPanelCreated,
         "cpu:registers_update": this.onRegistersUpdate,
         "signal:reset": this.clearPanel,

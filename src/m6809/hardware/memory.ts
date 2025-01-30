@@ -45,7 +45,7 @@ class Memory implements IModule {
         "ui:memory:write:result",
         "ui:memory:bulk:write:result",
       ],
-      required: { "clock:cycle_start": () => {} },
+      required: { "clock:cycle_start": null },
       optional: {
         "memory:read": this.onMemoryRead,
         "memory:write": this.onMemoryWrite,
