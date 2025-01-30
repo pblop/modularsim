@@ -176,7 +176,6 @@ class M6809Simulator implements ISimulator {
    * Emit an event.
    */
   emit<E extends EventNames>(event: E, ...args: EventParams<E>) {
-    debugger;
     console.debug(`[${this.constructor.name}] Emitting event ${event}(${args.join(", ")})`);
 
     // If there are no listeners for this event, do nothing.
@@ -187,7 +186,6 @@ class M6809Simulator implements ISimulator {
     this.events[event].incrementIndex();
 
     while (!this.events[event].hasFinishedIndex()) {
-      debugger;
       const callback = this.events[event].dequeue();
       if (!callback) {
         throw new Error("[MC6809] callback for listener is undefined");
