@@ -12,6 +12,7 @@ import type { ISimulator } from "../types/simulator.js";
 import { PriorityQueue } from "../general/priority.js";
 
 type EventQueuePriority = {
+  // The index of the tick when the event should be executed (starting on 1).
   index: number;
   order: number;
 };
@@ -25,13 +26,14 @@ type EventQueueElement = {
 };
 class EventQueue {
   queue: PriorityQueue<EventQueueElement>;
-  tick: number;
+  // The number of ticks that have passed since the start of the simulation (1 is the first tick).
+  ticks: number;
 
   constructor() {
     this.queue = new PriorityQueue(
       (a, b) => a.priority.index - b.priority.index || a.priority.order - b.priority.order,
     );
-    this.tick = 0;
+    this.ticks = 0;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: see above
@@ -49,14 +51,14 @@ class EventQueue {
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this.queue.peek()!.priority.index > this.tick;
+    return this.queue.peek()!.priority.index > this.ticks;
   }
   dequeue() {
     return this.queue.dequeue()?.callback;
   }
 
   incrementIndex() {
-    this.tick++;
+    this.ticks++;
   }
 }
 
@@ -145,7 +147,6 @@ class M6809Simulator implements ISimulator {
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
-    debugger;
     this.emit("system:load_finish");
   }
 
@@ -159,15 +160,17 @@ class M6809Simulator implements ISimulator {
     // If there are no listeners for this event, do nothing.
     if (!this.events[event]) return;
 
-    // We're emitting an event, so we increment the index of the event queue.
+    // We're emitting an event, so we increment the index of the event queue (all the
+    // new listeners will be added to the index following this one).
     this.events[event].incrementIndex();
+
     while (!this.events[event].hasFinishedIndex()) {
+      debugger;
       const callback = this.events[event].dequeue();
       if (!callback) {
         throw new Error("[MC6809] callback for listener is undefined");
       }
       callback(...args);
-      debugger;
     }
   }
   /**
@@ -204,7 +207,7 @@ class M6809Simulator implements ISimulator {
     // offset is given.
     const order = listenerPriority?.order ?? 0;
 
-    let index = queue.tick + 1;
+    let index = queue.ticks + 1;
     if (listenerPriority?.index) index = listenerPriority.index;
     else if (listenerPriority?.indexOffset) {
       if (listenerPriority.indexOffset < 0) throw new Error("Index offset must be positive");
