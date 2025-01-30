@@ -247,6 +247,24 @@ class M6809Simulator implements ISimulator {
     return promise;
   }
 
+  namedEmitterCheck(caller: string, event: EventNames): void {
+    if (!this.event_declarations[caller])
+      throw new Error(`[${caller}] Module has no event declaration`);
+    const eventDeclaration = this.event_declarations[caller];
+    if (!eventDeclaration.provided.includes(event))
+      throw new Error(`[${caller}] Cannot emit event ${event}.`);
+  }
+  namedListenerCheck(caller: string, event: EventNames): void {
+    if (!this.event_declarations[caller])
+      throw new Error(`[${caller}] Module has no event declaration`);
+    const eventDeclaration = this.event_declarations[caller];
+    if (
+      !(event in eventDeclaration.required) &&
+      (!eventDeclaration.optional || !(event in eventDeclaration.optional))
+    )
+      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
+  }
+
   /**
    * Add a new event listener, but check that the event is declared in the module.
    * **NOTE: Don't forget to correctly bind the function to the class instance
@@ -258,12 +276,7 @@ class M6809Simulator implements ISimulator {
     callback: EventCallback<E>,
     listenerPriority?: ListenerPriority,
   ): void {
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
-    if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
-      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
-
+    this.namedListenerCheck(caller, event);
     this.on(event, callback, listenerPriority);
   }
   /**
@@ -277,12 +290,7 @@ class M6809Simulator implements ISimulator {
     callback: EventCallback<E>,
     listenerPriority?: ListenerPriority,
   ): void {
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
-    if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
-      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
-
+    this.namedListenerCheck(caller, event);
     this.once(event, callback, listenerPriority);
   }
   /**
@@ -295,24 +303,14 @@ class M6809Simulator implements ISimulator {
     event: E,
     listenerPriority?: ListenerPriority,
   ): Promise<EventParams<E>> {
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
-    if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
-      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
-
+    this.namedListenerCheck(caller, event);
     return this.wait(event, listenerPriority);
   }
   /**
    * Emit an event, but check that the event is declared in the module.
    */
   namedEmit<E extends EventNames>(caller: string, event: E, ...args: EventParams<E>): void {
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
-    if (!eventDeclaration.provided.includes(event))
-      throw new Error(`[${caller}] Cannot emit event ${event}.`);
-
+    this.namedEmitterCheck(caller, event);
     this.emit(event, ...args);
   }
   /**
@@ -325,13 +323,8 @@ class M6809Simulator implements ISimulator {
     event: F,
     ...args: EventParams<E>
   ): Promise<NonNullable<EventParams<F>>> {
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
-    if (!(event in eventDeclaration.required) && !(event in eventDeclaration.optional))
-      throw new Error(`[${caller}] Cannot listen to event ${event}.`);
-    if (!eventDeclaration.provided.includes(emittedEvent))
-      throw new Error(`[${caller}] Cannot emit event ${emittedEvent}.`);
+    this.namedEmitterCheck(caller, emittedEvent);
+    this.namedListenerCheck(caller, event);
 
     return this.emitAndWait(emittedEvent, event, ...args);
   }
