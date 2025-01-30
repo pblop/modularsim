@@ -56,6 +56,21 @@ class EventQueue {
   dequeue() {
     return this.queue.dequeue()?.callback;
   }
+  debugView() {
+    const sorted = this.queue._heap.sort(
+      (a, b) => a.priority.index - b.priority.index || a.priority.order - b.priority.order,
+    );
+    return sorted.reduce(
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      (acc: Map<string, EventCallback<any>[]>, el) => {
+        const str = `${el.priority.index}|${el.priority.order}`;
+        if (!acc.has(str)) acc.set(str, []);
+        acc.get(str)!.push(el.callback);
+        return acc;
+      },
+      new Map(),
+    );
+  }
 
   incrementIndex() {
     this.ticks++;
