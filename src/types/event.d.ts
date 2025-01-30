@@ -48,13 +48,41 @@ export type EventNames = keyof EventMap;
 export type EventParams<E extends EventNames> = EventMap[E];
 type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
 
+/**
+ * Priority object for listeners, with the following properties:
+ * - order: The order within an index, lower is higher (default: 0)
+ * - index: The index of the listener in the list (default: next available index)
+ * - indexOffset: The offset to apply to the next available index, must be
+ *   positive (default: 0)
+ * Only one of index or indexOffset should be provided, if both are provided,
+ * index will be used.
+ */
+export type ListenerPriority = {
+  order?: number;
+} & (
+  | { index: number; indexOffset?: never }
+  | { index?: never; indexOffset: number }
+  | { index?: never; indexOffset?: never }
+);
+
 // Typed event emitter interface.
 export interface TypedEventTransceiver {
-  on<E extends EventNames>(event: E, listener: EventCallback<E>): void;
+  on<E extends EventNames>(
+    event: E,
+    listener: EventCallback<E>,
+    listenerPriority?: ListenerPriority,
+  ): void;
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void;
 
-  once<E extends EventNames>(event: E, listener: EventCallback<E>): void;
-  wait<E extends EventNames>(event: E): Promise<EventParams<E>>;
+  once<E extends EventNames>(
+    event: E,
+    listener: EventCallback<E>,
+    listenerPriority?: ListenerPriority,
+  ): void;
+  wait<E extends EventNames>(
+    event: E,
+    listenerPriority?: ListenerPriority,
+  ): Promise<EventParams<E>>;
   // TODO: add waitAny, waitAll?
   // TODO: add once, implement it wrapping on
   //       reimplement wait, wrapping once
@@ -62,6 +90,7 @@ export interface TypedEventTransceiver {
   // wait<E extends EventNames>(event: E): Promise<EventParams<E>>;
   // Emits an event, and waits for another
   // Maybe also change the argument order??
+  // TODO: add listenerPriority to emitAndWait as well
   emitAndWait<E extends EventNames, F extends EventNames>(
     emittedEvent: E,
     event: F,
