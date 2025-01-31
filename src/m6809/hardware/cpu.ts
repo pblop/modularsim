@@ -108,6 +108,7 @@ class Cpu implements IModule {
         "memory:write",
         "cpu:register_update",
         "cpu:registers_update",
+        "cpu:fail",
       ],
       required: {
         "clock:cycle_start": this.onCycleStart,
@@ -620,7 +621,7 @@ class Cpu implements IModule {
         onExit: this.exitExecute,
       },
       fail: {
-        onEnter: () => false,
+        onEnter: () => this.et.emit("cpu:fail"),
         onExit: () => null,
       },
     },

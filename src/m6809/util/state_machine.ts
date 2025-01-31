@@ -52,7 +52,8 @@ export type StateInfo<S extends CpuState> = {
 export type OnEnterFn<S extends CpuState> = (
   cpuInfo: CpuInfo,
   stateInfo: StateInfo<S>,
-) => boolean | undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: if I don't use void, TypeScript complains.q
+) => boolean | undefined | void;
 // Returns the next state, or null if self-transition.
 export type OnExitFn<S extends CpuState> = (
   cpuInfo: CpuInfo,
