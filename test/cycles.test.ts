@@ -17,6 +17,7 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
         if (address === 0xff01) {
           console.log("Finished");
           finished = true;
+          cycles++; // Extra cycle for the last instruction.
           resolve(cycles);
         } else {
           memory[address] = data;
@@ -43,11 +44,19 @@ describe("Cycles", () => {
     cycleTester = CycleTester();
   });
 
-  test("Hola mundo", async () => {
-    const file = Bun.file("./test/programs/hola.bin");
-    const contents = await file.bytes();
-    const cycles = await cycleTester(contents);
+  function genCycleTest(fileName: string, expectedCycles: number) {
+    return async () => {
+      const file = Bun.file(`./test/programs/${fileName}`);
+      const contents = await file.bytes();
+      const cycles = await cycleTester(contents);
 
-    expect(cycles).toBe(240);
-  });
+      expect(cycles).toBe(expectedCycles);
+    };
+  }
+
+  test("Hola mundo", genCycleTest("hola.bin", 240));
+  test("1.asm", genCycleTest("1.bin", 21));
+  test("2.asm", genCycleTest("2.bin", 10));
+  test("3.asm", genCycleTest("3.bin", 8));
+  test("4.asm", genCycleTest("4.bin", 5));
 });
