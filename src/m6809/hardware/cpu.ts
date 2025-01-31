@@ -523,37 +523,53 @@ class Cpu implements IModule {
     return "execute";
   };
 
-  enterExtended: OnEnterFn<"extended"> = ({ readPending }, _) => {
+  enterExtended: OnEnterFn<"extended"> = ({ readPending }, { ctx }) => {
+    if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
     if (readPending) return false;
 
-    // Fetch the extended address.
-    this.queryMemory(this.registers.pc, 2);
-    this.registers.pc += 2;
-    return false;
+    if (ctx.remainingTicks === 1) {
+      // Fetch the extended address.
+      this.queryMemory(this.registers.pc, 2);
+      this.registers.pc += 2;
+      return false;
+    }
   };
 
-  exitExtended: OnExitFn<"extended"> = ({ readPending }, _) => {
+  exitExtended: OnExitFn<"extended"> = ({ readPending }, { ctx }) => {
     if (readPending) return null;
 
     const address = this.readInfo!.value;
     this.addressing = { mode: "extended", address };
 
+    if (ctx.remainingTicks !== 0) {
+      ctx.remainingTicks--;
+      return null;
+    }
+
     return "execute";
   };
 
-  enterDirect: OnEnterFn<"direct"> = ({ readPending }, _) => {
+  enterDirect: OnEnterFn<"direct"> = ({ readPending }, { ctx }) => {
+    if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
     if (readPending) return false;
 
-    // Fetch the direct low byte.
-    this.queryMemory(this.registers.pc++, 1);
-    return false;
+    if (ctx.remainingTicks === 1) {
+      // Fetch the direct low byte.
+      this.queryMemory(this.registers.pc++, 1);
+      return false;
+    }
   };
-  exitDirect: OnExitFn<"direct"> = ({ readPending }, _) => {
+  exitDirect: OnExitFn<"direct"> = ({ readPending }, { ctx }) => {
     if (readPending) return null;
 
     const low = this.readInfo!.value;
     const address = truncate((this.registers.dp << 8) | low, 16);
     this.addressing = { mode: "direct", address };
+
+    if (ctx.remainingTicks !== 0) {
+      ctx.remainingTicks--;
+      return null;
+    }
 
     return "execute";
   };

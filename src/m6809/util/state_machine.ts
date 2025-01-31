@@ -28,8 +28,8 @@ type StateContexts = {
   };
   indexed_indirect: { remainingTicks: number };
   relative: EmptyObject;
-  extended: EmptyObject;
-  direct: EmptyObject;
+  extended: { remainingTicks: number };
+  direct: { remainingTicks: number };
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>
