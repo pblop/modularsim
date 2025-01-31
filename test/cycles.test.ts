@@ -45,7 +45,7 @@ describe("Cycles", () => {
 
   function genCycleTest(fileName: string, expectedCycles: number) {
     return async () => {
-      const file = Bun.file(`./test/programs/${fileName}`);
+      const file = Bun.file(`./programs/${fileName}`);
       const contents = await file.bytes();
       const cycles = await cycleTester(contents);
 
