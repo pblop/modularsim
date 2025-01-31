@@ -42,6 +42,10 @@ export function generateCpuOnlySimulator() {
   }
   const modules = [Cpu as ModuleConstructor, EventDeclarator as ModuleConstructor];
 
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+
   const simulator = new M6809Simulator(config, modules);
   // NOTE: As of now, the simulator is initialised purely synchronously, so we can
   // take the returned simulator object as a completely initialised simulator.
