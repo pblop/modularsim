@@ -17,7 +17,6 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
         if (address === 0xff01) {
           console.log("Finished");
           finished = true;
-          cycles++; // Extra cycle for the last instruction.
           resolve(cycles);
         } else {
           memory[address] = data;
@@ -30,8 +29,8 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
       });
       simulator.emit("signal:reset");
       while (!finished) {
-        simulator.emit("clock:cycle_start");
         cycles++;
+        simulator.emit("clock:cycle_start");
       }
     });
   };
