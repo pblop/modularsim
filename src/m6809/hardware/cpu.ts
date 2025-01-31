@@ -175,8 +175,8 @@ class Cpu implements IModule {
   performPendingRead = () => {
     if (!this.readInfo || this.readInfo.raw.length === this.readInfo.bytes) return;
 
-    this.et.emit("memory:read", this.readInfo.address + this.readInfo.raw.length);
     this.readInfo.waiting = true;
+    this.et.emit("memory:read", this.readInfo.address + this.readInfo.raw.length);
   };
   onMemoryReadResult = (address: number, data: number) => {
     if (!this.readInfo) return;
@@ -202,8 +202,8 @@ class Cpu implements IModule {
   performPendingWrite = () => {
     if (!this.writeInfo || this.writeInfo.bytesWritten === this.writeInfo.bytes) return;
 
-    this.et.emit("memory:write", this.writeInfo.address, this.writeInfo.value);
     this.writeInfo.waiting = true;
+    this.et.emit("memory:write", this.writeInfo.address, this.writeInfo.value);
   };
   onMemoryWriteResult = (address: number, _: number) => {
     if (!this.writeInfo) return;
