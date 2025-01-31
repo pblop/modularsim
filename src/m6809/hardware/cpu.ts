@@ -18,14 +18,16 @@ import {
   type OnExitFn,
   StateMachine,
 } from "../util/state_machine.js";
-import { numberToIntN, signExtend, truncate } from "../util/numbers.js";
+import { intNToNumber, numberToIntN, signExtend, truncate } from "../util/numbers.js";
+import { isNumber, parseNumber } from "../../utils.js";
 
 type CpuConfig = {
   pc: number;
 };
 
 function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
-  if (typeof config.pc !== "number") throw new Error("[CPU] pc must be a number");
+  if (!isNumber(config.pc)) throw new Error("[CPU] pc must be a number");
+  if (typeof config.pc !== "string") config.pc = parseNumber(config.pc as string);
 
   return config as CpuConfig;
 }
