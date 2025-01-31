@@ -270,6 +270,8 @@ class Cpu implements IModule {
           // them right away.
           this.addressing = { mode: "inherent" };
           return "execute";
+        case "direct":
+          return "direct";
         default:
           return this.fail(`Addressing mode ${instruction.mode} not implemented`);
       }
