@@ -76,6 +76,7 @@ class Cpu implements IModule {
 
   interval_id?: number;
 
+  _registers: Registers;
   registers: Registers;
 
   // Store the last read memory address, and the value read between states.
@@ -131,19 +132,32 @@ class Cpu implements IModule {
     this.config = validate_cpu_config(config);
     this.et = eventTransceiver;
 
-    this.registers = new Registers();
+    this._registers = new Registers();
+    this.registers = this.getRegistersProxy();
 
     console.log(`[${this.id}] Module initialized.`);
+  }
+
+  getRegistersProxy() {
+    return new Proxy<Registers>(this._registers, {
+      set: (target, prop, value) => {
+        if (prop === "pc") {
+          this.et.emit("cpu:register_update", "pc", value);
+        }
+        target[prop as keyof Registers] = value;
+        return true;
+      },
+    });
   }
 
   commitRegisters = () => {
     // Object.entries doesn't include the prototype properties (A, B, copy, ...),
     // so we don't need to filter them out.
-    const registers = Object.entries(this.registers);
+    const registers = Object.entries(this._registers);
     for (const [key, value] of registers) {
       this.et.emit("cpu:register_update", key, value);
     }
-    this.et.emit("cpu:registers_update", this.registers.copy());
+    this.et.emit("cpu:registers_update", this._registers.copy());
   };
 
   reset = () => {
