@@ -22,6 +22,7 @@ ADD --chmod=755 "https://github.com/pblop/asxxxx/releases/download/5p10/as6809-l
 ADD --chmod=755 "https://github.com/pblop/asxxxx/releases/download/5p10/aslink-linux-${BUILDARCH}" /usr/bin/aslink
 # make is for building programs
 # git,jq are for deployment info
+# python3 is for s19 to bin conversion
 RUN apt-get update && apt-get install -y make git jq python3
 
 # [tests?] & build
