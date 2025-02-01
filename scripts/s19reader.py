@@ -13,14 +13,13 @@ with open(sys.argv[1], 'r', encoding="ASCII") as inf:
       data = line[8:-2]
       checksum = line[-2:]
     
-      match recordtype:
-        case "S0":
-          print(f"S0 (Header): {data}")
-        case "S1":
-          print(f"S1 (Data): {data}")
-          outf.seek(address, 0) # seek_set=0
-          outf.write(bytes.fromhex(data))
-        case "S9":
-          print(f"S9 (Termination): {data}")
+      if recordtype == "S0":
+        print(f"S0 (Header): {data}")
+      elif recordtype == "S1":
+        print(f"S1 (Data): {data}")
+        outf.seek(address, 0)
+        outf.write(bytes.fromhex(data))
+      elif recordtype == "S9":
+        print(f"S9 (Termination): {data}")
 
 
