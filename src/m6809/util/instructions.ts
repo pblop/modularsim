@@ -139,6 +139,24 @@ function writeValueToMemory(
   }
 }
 
+type ShortCCNames = "E" | "F" | "H" | "I" | "N" | "Z" | "V" | "C";
+const SHORT_CC_NAME_MAP: Record<ShortCCNames, ConditionCodes> = {
+  E: ConditionCodes.ENTIRE_FLAG,
+  F: ConditionCodes.FIRQ_MASK,
+  H: ConditionCodes.HALF_CARRY,
+  I: ConditionCodes.IRQ_MASK,
+  N: ConditionCodes.NEGATIVE,
+  Z: ConditionCodes.ZERO,
+  V: ConditionCodes.OVERFLOW,
+  C: ConditionCodes.CARRY,
+};
+function updateConditionCodes(regs: Registers, ccs: { [K in ShortCCNames]?: boolean | number }) {
+  for (const [cc, value] of Object.entries(ccs)) {
+    if (value) regs.cc |= SHORT_CC_NAME_MAP[cc as ShortCCNames];
+    else regs.cc &= ~SHORT_CC_NAME_MAP[cc as ShortCCNames];
+  }
+}
+
 function ld8<M extends GeneralAddressingMode>(
   reg: Accumulator,
   mode: M,
@@ -239,6 +257,36 @@ function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers):
   // Clear N,V,C, set Z
   regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
   regs.cc |= ConditionCodes.ZERO;
+
+  return true;
+}
+
+function add8<M extends GeneralAddressingMode>(
+  reg: Accumulator,
+  mode: M,
+  cpu: Cpu,
+  { readPending }: CpuInfo,
+  { ticksOnState, ctx }: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+) {
+  const b = getValueFromMemory(1, cpu, readPending, ticksOnState, addr);
+  if (b === null) return false;
+
+  const a = regs[reg];
+  const untruncated = a + b;
+  const result = truncate(untruncated, 8);
+
+  // CC: H, N, Z, V, C
+  updateConditionCodes(regs, {
+    // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
+    H: truncate(a, 4) + truncate(b, 4) > 0xf,
+    N: result & 0x80,
+    Z: result === 0,
+    V: untruncated > 0xff,
+    // For carry, we add the bits up to 7 and check if the result is greater than 0x7f.
+    C: truncate(a, 7) + truncate(b, 7) > 0x7f,
+  });
 
   return true;
 }
@@ -367,6 +415,22 @@ addInstructions(
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     st8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+);
+// add8 (adda, addb)
+addInstructions(
+  "add{register}",
+  [
+    [0x8b, "A", "immediate", "2"],
+    [0x9b, "A", "direct", "4"],
+    [0xab, "A", "indexed", "4+"],
+    [0xbb, "A", "extended", "5"],
+    [0xcb, "B", "immediate", "2"],
+    [0xdb, "B", "direct", "4"],
+    [0xeb, "B", "indexed", "4+"],
+    [0xfb, "B", "extended", "5"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    add8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
 
 export function performInstructionLogic<M extends AddressingMode>(
