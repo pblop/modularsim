@@ -17,8 +17,8 @@ COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
 # these two are the assembler and linker to build as6809 files
-ADD --chmod=755 https://github.com/pblop/asxxxx/releases/latest/download/as6809-linux-x86-64 /usr/bin/as6809
-ADD --chmod=755 https://github.com/pblop/asxxxx/releases/latest/download/aslink-linux-x86-64 /usr/bin/aslink
+ADD --chmod=755 https://github.com/pblop/asxxxx/releases/download/5p10/as6809-linux-x86-64 /usr/bin/as6809
+ADD --chmod=755 https://github.com/pblop/asxxxx/releases/download/5p10/aslink-linux-x86-64 /usr/bin/aslink
 # make is for building programs
 # git,jq are for deployment info
 RUN apt-get update && apt-get install -y make git jq
