@@ -168,7 +168,7 @@ class Cpu implements IModule {
     ]);
   };
 
-  queryMemory = (address: number, bytes: number) => {
+  queryMemoryRead = (address: number, bytes: number) => {
     this.readInfo = { address, value: 0, bytes, raw: [], waiting: false };
     this.performPendingRead();
   };
@@ -225,7 +225,7 @@ class Cpu implements IModule {
     if (readPending) return undefined;
 
     // Fetch the opcode.
-    this.queryMemory(this.registers.pc++, 1);
+    this.queryMemoryRead(this.registers.pc++, 1);
     return;
   };
   exitFetchOpcode: OnExitFn<"fetch_opcode"> = ({ readPending }, { ctx }) => {
@@ -246,7 +246,7 @@ class Cpu implements IModule {
     // it says that if the second byte is 0x10 or 0x11, we need to fetch another
     // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
     if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
-      this.queryMemory(this.registers.pc++, 1);
+      this.queryMemoryRead(this.registers.pc++, 1);
       return null;
     } else {
       // We now have the full opcode, so we can store it, and decode it.
@@ -284,7 +284,7 @@ class Cpu implements IModule {
     // Fetch the immediate value.
     const reg = this.instruction!.register;
     const regSize = REGISTER_SIZE[reg];
-    this.queryMemory(this.registers.pc, regSize);
+    this.queryMemoryRead(this.registers.pc, regSize);
     this.registers.pc += regSize;
   };
   exitImmediate: OnExitFn<"immediate"> = ({ readPending }, _) => {
@@ -340,7 +340,7 @@ class Cpu implements IModule {
     if (readPending) return false;
 
     // Fetch the indexed postbyte.
-    this.queryMemory(this.registers.pc++, 1);
+    this.queryMemoryRead(this.registers.pc++, 1);
     return false;
   };
   exitIndexedPostbyte: OnExitFn<"indexed_postbyte"> = ({ readPending }, { ctx }) => {
@@ -400,14 +400,14 @@ class Cpu implements IModule {
         if (ctx.remainingTicks === 1) ctx.offset = signExtend(postbyte.rest, 5, 16);
         break;
       case IndexedAction.Offset8: // 1 data read, 1 DC
-        if (ctx.remainingTicks === 2) this.queryMemory(this.registers.pc++, 1);
+        if (ctx.remainingTicks === 2) this.queryMemoryRead(this.registers.pc++, 1);
         else if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.readInfo!.value!, 8, 16);
         break;
       case IndexedAction.Offset16: // 2 DR, 3 DC
-        if (ctx.remainingTicks === 5) this.queryMemory(this.registers.pc++, 1);
+        if (ctx.remainingTicks === 5) this.queryMemoryRead(this.registers.pc++, 1);
         else if (ctx.remainingTicks === 4) {
           ctx.offset = this.readInfo!.value << 8;
-          this.queryMemory(this.registers.pc++, 1);
+          this.queryMemoryRead(this.registers.pc++, 1);
         } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
         break;
       case IndexedAction.OffsetA: // 2 DC
@@ -439,15 +439,15 @@ class Cpu implements IModule {
         break;
       case IndexedAction.OffsetPC16: // 2 DR, 4 DC
         // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
-        if (ctx.remainingTicks === 6) this.queryMemory(this.registers.pc++, 1);
+        if (ctx.remainingTicks === 6) this.queryMemoryRead(this.registers.pc++, 1);
         else if (ctx.remainingTicks === 5) {
           ctx.offset = this.readInfo!.value << 8;
-          this.queryMemory(this.registers.pc++, 1);
+          this.queryMemoryRead(this.registers.pc++, 1);
         } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
         break;
       case IndexedAction.OffsetPC8: // 1 DR, 2 DC
         // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
-        if (ctx.remainingTicks === 3) this.queryMemory(this.registers.pc++, 1);
+        if (ctx.remainingTicks === 3) this.queryMemoryRead(this.registers.pc++, 1);
         else if (ctx.remainingTicks === 2) ctx.offset = signExtend(this.readInfo!.value, 8, 16);
         break;
     }
@@ -474,7 +474,7 @@ class Cpu implements IModule {
       ctx.remainingTicks = 1;
 
       // If the addressing is indirect, we need to read the memory at the address we calculated.
-      this.queryMemory(this.addressing.address, 2);
+      this.queryMemoryRead(this.addressing.address, 2);
       return false;
     } else {
       // This state is immediate if the addressing is not indirect (we don't need to read any memory).
@@ -506,7 +506,7 @@ class Cpu implements IModule {
 
     // Fetch the relative value.
     // TODO: Implement LONG branches.
-    this.queryMemory(this.registers.pc++, 1);
+    this.queryMemoryRead(this.registers.pc++, 1);
     return false;
   };
   exitRelative: OnExitFn<"relative"> = ({ readPending }, _) => {
@@ -531,7 +531,7 @@ class Cpu implements IModule {
 
     if (ctx.remainingTicks === 1) {
       // Fetch the extended address.
-      this.queryMemory(this.registers.pc, 2);
+      this.queryMemoryRead(this.registers.pc, 2);
       this.registers.pc += 2;
       return false;
     }
@@ -557,7 +557,7 @@ class Cpu implements IModule {
 
     if (ctx.remainingTicks === 1) {
       // Fetch the direct low byte.
-      this.queryMemory(this.registers.pc++, 1);
+      this.queryMemoryRead(this.registers.pc++, 1);
       return false;
     }
   };

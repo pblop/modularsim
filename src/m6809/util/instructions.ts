@@ -112,7 +112,7 @@ function getValueFromMemory(
   } else {
     if (ticksOnState === 0) {
       // We need to fetch the value from memory.
-      cpu.queryMemory(addr.address, bytes);
+      cpu.queryMemoryRead(addr.address, bytes);
       return null;
     } else {
       return cpu.readInfo!.value;
