@@ -321,8 +321,17 @@ function add16<M extends GeneralAddressingMode>(
   regs: Registers,
   withCarry = false,
 ) {
+  if (ticksOnState === 0) {
+    ctx.instructionCtx.remainingCycles = 1;
+  }
   const b = getValueFromMemory(2, cpu, readPending, ticksOnState, addr);
   if (b === null) return false;
+
+  // add16 takes 1 cycle to do internal calculations, after the read.
+  if (ctx.instructionCtx.remainingCycles) {
+    ctx.instructionCtx.remainingCycles--;
+    return false;
+  }
 
   const a = regs[reg];
   const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
