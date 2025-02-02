@@ -1,7 +1,7 @@
 import type Cpu from "../hardware/cpu.js";
 import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
 import type { CpuInfo, StateInfo } from "./state_machine.js";
-import { ConditionCodes, type Registers } from "../util/cpu_parts.js";
+import { ConditionCodes, REGISTER_SIZE, type Registers } from "../util/cpu_parts.js";
 import { signExtend, truncate } from "../../general/numbers.js";
 
 type ExecuteStateInfo = StateInfo<"execute">;
@@ -288,12 +288,14 @@ function add8<M extends GeneralAddressingMode>(
   { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
+  withCarry = false,
 ) {
   const b = getValueFromMemory(1, cpu, readPending, ticksOnState, addr);
   if (b === null) return false;
 
   const a = regs[reg];
-  const untruncated = a + b;
+  const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
+  const untruncated = a + b + carry;
   const result = truncate(untruncated, 8);
 
   // CC: H, N, Z, V, C
@@ -317,12 +319,14 @@ function add16<M extends GeneralAddressingMode>(
   { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
+  withCarry = false,
 ) {
   const b = getValueFromMemory(2, cpu, readPending, ticksOnState, addr);
   if (b === null) return false;
 
   const a = regs[reg];
-  const untruncated = a + b;
+  const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
+  const untruncated = a + b + carry;
   const result = truncate(untruncated, 16);
 
   // CC: N, Z, V, C
@@ -503,7 +507,7 @@ addInstructions(
     [0xfb, "B", "extended", "5"],
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    add8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+    add8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
 );
 // add16 (addd)
 addInstructions(
@@ -516,6 +520,34 @@ addInstructions(
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     add16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+);
+// adc8 (adca, adcb)
+addInstructions(
+  "adc{register}",
+  [
+    [0x89, "A", "immediate", "2"],
+    [0x99, "A", "direct", "4"],
+    [0xa9, "A", "indexed", "4+"],
+    [0xb9, "A", "extended", "5"],
+    [0xc9, "B", "immediate", "2"],
+    [0xd9, "B", "direct", "4"],
+    [0xe9, "B", "indexed", "4+"],
+    [0xf9, "B", "extended", "5"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    add8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
+);
+// adc16 (adcd)
+addInstructions(
+  "adc{register}",
+  [
+    [0x1089, "D", "immediate", "5"],
+    [0x1099, "D", "direct", "7"],
+    [0x10a9, "D", "indexed", "7+"],
+    [0x10b9, "D", "extended", "8"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    add16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
 );
 
 export function performInstructionLogic<M extends AddressingMode>(
