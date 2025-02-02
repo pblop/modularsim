@@ -214,7 +214,12 @@ class Cpu implements IModule {
     if (!this.writeInfo || this.writeInfo.bytesWritten === this.writeInfo.bytes) return;
 
     this.writeInfo.waiting = true;
-    this.et.emit("memory:write", this.writeInfo.address, this.writeInfo.value);
+
+    const position = 8 * (this.writeInfo.bytes - this.writeInfo.bytesWritten);
+    const mask = 0xff << position;
+    const nibble = (this.writeInfo.value & mask) >> position;
+
+    this.et.emit("memory:write", this.writeInfo.address + this.writeInfo.bytesWritten, nibble);
   };
   onMemoryWriteResult = (address: number, _: number) => {
     if (!this.writeInfo) return;
