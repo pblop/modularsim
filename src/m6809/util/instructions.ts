@@ -248,6 +248,25 @@ function st8<M extends "direct" | "indexed" | "extended">(
 
   return true;
 }
+function st16<M extends "direct" | "indexed" | "extended">(
+  reg: Register,
+  mode: M,
+  cpu: Cpu,
+  { writePending }: CpuInfo,
+  { ticksOnState, ctx }: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+): boolean {
+  const val = regs[reg];
+  if (!writeValueToMemory(2, cpu, writePending, ticksOnState, addr, val)) return false;
+
+  updateConditionCodes(regs, {
+    N: val & 0x8000,
+    Z: val === 0,
+    V: 0,
+  });
+  return true;
+}
 
 function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers): boolean {
   if (stateInfo.ticksOnState === 0) return false;
@@ -284,8 +303,36 @@ function add8<M extends GeneralAddressingMode>(
     N: result & 0x80,
     Z: result === 0,
     V: untruncated > 0xff,
-    // For carry, we add the bits up to 7 and check if the result is greater than 0x7f.
+    // For carry, we add the bits up to 7 and check if the result overflowed.
     C: truncate(a, 7) + truncate(b, 7) > 0x7f,
+  });
+
+  return true;
+}
+function add16<M extends GeneralAddressingMode>(
+  reg: Register,
+  mode: M,
+  cpu: Cpu,
+  { readPending }: CpuInfo,
+  { ticksOnState, ctx }: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+) {
+  const b = getValueFromMemory(2, cpu, readPending, ticksOnState, addr);
+  if (b === null) return false;
+
+  const a = regs[reg];
+  const untruncated = a + b;
+  const result = truncate(untruncated, 16);
+
+  // CC: N, Z, V, C
+  updateConditionCodes(regs, {
+    // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
+    N: result & 0x8000,
+    Z: result === 0,
+    V: untruncated > 0xffff,
+    // For carry, we add the bits up to 15 and check if the result overflowed.
+    C: truncate(a, 15) + truncate(b, 15) > 0x7fff,
   });
 
   return true;
@@ -416,6 +463,32 @@ addInstructions(
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     st8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
+// st16 (std, sts, stu, stx, sty)
+addInstructions(
+  "st{register}",
+  [
+    [0xdd, "D", "direct", "5"],
+    [0x10df, "S", "direct", "6"],
+    [0xdf, "U", "direct", "5"],
+    [0x9f, "X", "direct", "5"],
+    [0x109f, "Y", "direct", "6"],
+
+    [0xed, "D", "indexed", "5+"],
+    [0x10ef, "S", "indexed", "6+"],
+    [0xef, "U", "indexed", "5+"],
+    [0xaf, "X", "indexed", "5+"],
+    [0x10af, "Y", "indexed", "6+"],
+
+    [0xfd, "D", "extended", "6"],
+    [0x10ff, "S", "extended", "7"],
+    [0xff, "U", "extended", "6"],
+    [0xbf, "X", "extended", "6"],
+    [0x10bf, "Y", "extended", "7"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    st16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+);
+
 // add8 (adda, addb)
 addInstructions(
   "add{register}",
@@ -431,6 +504,18 @@ addInstructions(
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     add8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+);
+// add16 (addd)
+addInstructions(
+  "add{register}",
+  [
+    [0xc3, "D", "immediate", "4"],
+    [0xd3, "D", "direct", "6"],
+    [0xe3, "D", "indexed", "6+"],
+    [0xf3, "D", "extended", "7"],
+  ],
+  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    add16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
 
 export function performInstructionLogic<M extends AddressingMode>(
