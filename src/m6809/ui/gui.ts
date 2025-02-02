@@ -81,7 +81,7 @@ class Gui implements IModule {
           properties: {
             className: "deployment-info",
             innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
-            title: info.message,
+            title: `${info.message}\n\n${info.body}`.trimEnd(),
           },
         });
         this.root_element.appendChild(deployment_info_element);
