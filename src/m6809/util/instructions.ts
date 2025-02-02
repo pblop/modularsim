@@ -2,7 +2,7 @@ import type Cpu from "../hardware/cpu.js";
 import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
 import type { CpuInfo, StateInfo } from "./state_machine.js";
 import { ConditionCodes, REGISTER_SIZE, type Registers } from "../util/cpu_parts.js";
-import { signExtend, truncate } from "../../general/numbers.js";
+import { isNegative, signExtend, truncate } from "../../general/numbers.js";
 
 type ExecuteStateInfo = StateInfo<"execute">;
 
@@ -225,7 +225,7 @@ function st<M extends "direct" | "indexed" | "extended">(
   if (!writeValueToMemory(size, cpu, writePending, ticksOnState, addr, val)) return false;
 
   updateConditionCodes(regs, {
-    N: val & (size === 1 ? 0x80 : 0x8000),
+    N: isNegative(val, size * 8),
     Z: val === 0,
     V: 0,
   });
@@ -283,7 +283,7 @@ function add<M extends GeneralAddressingMode>(
     updateConditionCodes(regs, {
       // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
       H: truncate(a, 4) + truncate(b, 4) > 0xf,
-      N: result & 0x80,
+      N: isNegative(result, size * 8),
       Z: result === 0,
       V: untruncated > 0xff,
       // For carry, we add the bits up to 7 and check if the result overflowed.
@@ -294,7 +294,7 @@ function add<M extends GeneralAddressingMode>(
     // CC: N, Z, V, C
     updateConditionCodes(regs, {
       // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
-      N: result & 0x8000,
+      N: isNegative(result, size * 8),
       Z: result === 0,
       V: untruncated > 0xffff,
       // For carry, we add the bits up to 15 and check if the result overflowed.

@@ -3,6 +3,11 @@ export function truncate(val: number, bits: number): number {
   return val & mask;
 }
 
+export function isNegative(val: number, bits: number): boolean {
+  // If the MSB is set, the number is negative.
+  return !!(val & (1 << (bits - 1)));
+}
+
 export function signExtend(val: number, valBits: number, outBits: number): number {
   const signBit = 1 << (valBits - 1);
   // (1 << outBits) - 1 is a mask with the bottom outBits bits set to 1.
@@ -39,8 +44,7 @@ export function numberToIntN(num: number, size: number): number {
  * @returns The converted Number.
  */
 export function intNToNumber(int: number, size: number): number {
-  // If the MSB is set, the number is negative.
-  if (int & (1 << (size - 1))) {
+  if (isNegative(int, size)) {
     // The opposite of twosComplement is twosComplement itself, so we inverse
     // the negative number to get its positive counterpart, and then negate it.
     return -twosComplement(int, size);
