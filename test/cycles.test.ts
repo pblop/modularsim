@@ -58,9 +58,11 @@ describe("Cycles", () => {
     };
   }
 
-  test("Hola mundo", genCycleTest("hola.bin", 240));
+  test("Hola mundo (1/3)", genCycleTest("hola.bin", 240));
   test("1.asm", genCycleTest("1.bin", 21));
   test("2.asm", genCycleTest("2.bin", 10));
   test("3.asm", genCycleTest("3.bin", 8));
   test("4.asm", genCycleTest("4.bin", 5));
+  test("Sumar (2/2)", genCycleTest("sumar.bin", 56));
+  test("5.asm", genCycleTest("5.bin", 12));
 });
