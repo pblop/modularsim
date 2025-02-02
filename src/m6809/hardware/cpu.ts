@@ -18,7 +18,7 @@ import {
   type OnExitFn,
   StateMachine,
 } from "../util/state_machine.js";
-import { intNToNumber, numberToIntN, signExtend, truncate } from "../util/numbers.js";
+import { intNToNumber, numberToIntN, signExtend, truncate } from "../../general/numbers.js";
 import { isNumber, parseNumber } from "../../utils.js";
 
 type CpuConfig = {

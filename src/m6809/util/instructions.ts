@@ -2,7 +2,7 @@ import type Cpu from "../hardware/cpu.js";
 import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
 import type { CpuInfo, StateInfo } from "./state_machine.js";
 import { ConditionCodes, type Registers } from "../util/cpu_parts.js";
-import { signExtend, truncate } from "./numbers.js";
+import { signExtend, truncate } from "../../general/numbers.js";
 
 type ExecuteStateInfo = StateInfo<"execute">;
 
