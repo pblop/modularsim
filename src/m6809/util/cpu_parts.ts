@@ -46,6 +46,9 @@ export class Registers {
   }
 }
 
+/**
+ * Register sizes in _bytes_.
+ */
 export const REGISTER_SIZE = {
   A: 1,
   B: 1,
