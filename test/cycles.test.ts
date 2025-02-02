@@ -7,7 +7,7 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
   return (memory: Uint8Array) => {
     return new Promise((resolve, reject) => {
       const simulator = generateCpuOnlySimulator();
-      let cycles = -2; // The reset takes 2 cycles
+      let cycles = 0;
       let finished = false;
 
       simulator.on("memory:read", (address: number) => {
@@ -26,6 +26,11 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
       simulator.on("cpu:fail", () => {
         finished = true;
         reject();
+      });
+      simulator.on("cpu:reset_finish", () => {
+        // The cycle that finishes the reset is already the first IF cycle,
+        // so the "actual" cycles start at 1 once the reset finishes.
+        cycles = 1;
       });
       simulator.emit("signal:reset");
       while (!finished) {
