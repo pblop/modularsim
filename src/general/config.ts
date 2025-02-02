@@ -52,17 +52,25 @@ export function verify<T>(
         throw new Error(
           `${prepend} field "${key}" must be a number (or a string representation thereof)`,
         );
-      if (typeof obj[key] === "string") obj[key] = parseNumber(obj[key]);
+      if (typeof obj[key] === "string") obj[key] = parseNumber(obj[key] as string);
     }
     if (value.type === "string" && typeof obj[key] !== "string") {
       throw new Error(`${prepend} field "${key}" must be a string`);
     }
 
     // Value checks
-    if (value.min !== undefined && typeof obj[key] === "number" && obj[key] < value.min) {
+    if (
+      value.min !== undefined &&
+      typeof obj[key] === "number" &&
+      (obj[key] as number) < value.min
+    ) {
       throw new Error(`${prepend} field "${key}" must be greater than or equal to ${value.min}`);
     }
-    if (value.max !== undefined && typeof obj[key] === "number" && obj[key] > value.max) {
+    if (
+      value.max !== undefined &&
+      typeof obj[key] === "number" &&
+      (obj[key] as number) > value.max
+    ) {
       throw new Error(`${prepend} field "${key}" must be less than or equal to ${value.max}`);
     }
     if (
