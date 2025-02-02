@@ -85,12 +85,10 @@ class ClockUI implements IModule {
       if (this.state.machineState === "running" || this.state.machineState === "instruction_run") {
         main.appendChild(
           element("button", {
-            properties: {
-              textContent: "Pause",
-              onclick: () => {
-                this.event_transceiver.emit("ui:clock:pause");
-                this.setState({ machineState: "paused" });
-              },
+            textContent: "Pause",
+            onclick: () => {
+              this.event_transceiver.emit("ui:clock:pause");
+              this.setState({ machineState: "paused" });
             },
           }),
         );
@@ -99,33 +97,27 @@ class ClockUI implements IModule {
       if (this.state.machineState === "paused") {
         main.appendChild(
           element("button", {
-            properties: {
-              textContent: "Continue",
-              onclick: () => {
-                this.event_transceiver.emit("ui:clock:start");
-                this.setState({ machineState: "running" });
-              },
+            textContent: "Continue",
+            onclick: () => {
+              this.event_transceiver.emit("ui:clock:start");
+              this.setState({ machineState: "running" });
             },
           }),
         );
         main.appendChild(
           element("button", {
-            properties: {
-              textContent: "Step (cycle)",
-              onclick: () => {
-                this.event_transceiver.emit("ui:clock:step_cycle");
-              },
+            textContent: "Step (cycle)",
+            onclick: () => {
+              this.event_transceiver.emit("ui:clock:step_cycle");
             },
           }),
         );
         main.appendChild(
           element("button", {
-            properties: {
-              textContent: "Step (instruction)",
-              onclick: () => {
-                this.event_transceiver.emit("ui:clock:step_instruction");
-                this.setState({ machineState: "instruction_run" });
-              },
+            textContent: "Step (instruction)",
+            onclick: () => {
+              this.event_transceiver.emit("ui:clock:step_instruction");
+              this.setState({ machineState: "instruction_run" });
             },
           }),
         );
@@ -133,12 +125,10 @@ class ClockUI implements IModule {
 
       main.appendChild(
         element("button", {
-          properties: {
-            textContent: "Reset",
-            onclick: () => {
-              this.event_transceiver.emit("signal:reset");
-              this.setState({ machineState: "paused", cycles: 0 });
-            },
+          textContent: "Reset",
+          onclick: () => {
+            this.event_transceiver.emit("signal:reset");
+            this.setState({ machineState: "paused", cycles: 0 });
           },
         }),
       );
@@ -167,15 +157,16 @@ class ClockUI implements IModule {
     this.panel.classList.add("clock-ui");
     this.panel.style.setProperty("--clock-frequency", `${this.config.frequency}`);
 
-    this.panel.appendChild(element("div", { properties: { className: "clock-main" } }));
+    this.panel.appendChild(element("div", { className: "clock-main" }));
     this.panel.appendChild(
-      element("div", {
-        properties: { className: "clock-extra" },
-        children: [
-          element("div", { properties: { className: "clock-marker" } }),
-          element("span", { properties: { className: "clock-cycles" } }),
-        ],
-      }),
+      element(
+        "div",
+        {
+          className: "clock-extra",
+        },
+        element("div", { className: "clock-marker" }),
+        element("span", { className: "clock-cycles" }),
+      ),
     );
 
     this.draw();

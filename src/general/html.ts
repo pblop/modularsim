@@ -7,44 +7,34 @@ export function checkProperties(obj: { [key: string]: unknown }, properties: str
   }
 }
 
-/**
- * Set the style properties of an element to the ones given in the style object,
- * removing any existing styles that are not in the style object.
- * @param element The element to set the style of.
- * @param style The style object to set.
- * @returns void
- */
-export function setStyle(element: HTMLElement, style: Record<string, string>): void {
-  element.style.cssText = "";
-  for (const [key, value] of Object.entries(style)) {
-    const kebabKey = key.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, "$1-$2").toLowerCase();
-    element.style.setProperty(kebabKey, value);
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
+
+function setProperties<T>(target: T, properties: T) {
+  for (const key in properties) {
+    if (typeof properties[key] === "object") {
+      setProperties(target[key], properties[key]);
+    } else {
+      target[key] = properties[key];
+    }
   }
 }
 
 export function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
-  options: {
-    properties?: Partial<HTMLElementTagNameMap[K]>;
-    attributes?: Record<string, string>;
-    // NOTE: This could be style?: Partial<CSSStyleDeclaration>, but then I would
-    // have to convert camelCase names to kebab-case.
-    style?: Record<string, string>;
-    children?: HTMLElement[];
-  },
+  properties: DeepPartial<HTMLElementTagNameMap[K]> = {},
+  ...children: HTMLElement[]
 ): HTMLElementTagNameMap[K] {
-  const { properties = {}, style = {}, attributes = {}, children = [] } = options;
-
   const el = document.createElement(tag);
-  for (const [key, value] of Object.entries(properties)) {
-    (el as unknown as Record<string, unknown>)[key] = value;
+
+  // Allow for children to be passed as the second argument (no properties).
+  if (properties instanceof HTMLElement) {
+    children.unshift(properties);
+  } else {
+    setProperties(el, properties);
   }
 
-  if (Object.keys(style).length > 0) setStyle(el, style);
-
-  for (const [key, value] of Object.entries(attributes)) {
-    el.setAttribute(key, value);
-  }
   for (const child of children) {
     el.appendChild(child);
   }

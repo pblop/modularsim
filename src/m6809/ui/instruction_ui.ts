@@ -439,16 +439,16 @@ class InstructionUI implements IModule {
     const startAddress = this.registers.pc;
     let currentAddress = startAddress;
 
-    const row = element("div", {
-      properties: { className: "row" },
-      children: [
-        element("span", {
-          properties: { className: "address", innerText: "0000" },
-        }),
-        element("span", { properties: { className: "data", innerText: "..." } }),
-        element("span", { properties: { className: "extra", innerText: "" } }),
-      ],
-    });
+    const row = element(
+      "div",
+      { className: "row" },
+      element("span", {
+        className: "address",
+        innerText: "0000",
+      }),
+      element("span", { className: "data", innerText: "..." }),
+      element("span", { className: "extra", innerText: "" }),
+    );
 
     const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
     (row.children[0] as HTMLDivElement).innerText = this.formatAddress(currentAddress);

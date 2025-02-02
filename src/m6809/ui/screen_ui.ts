@@ -65,9 +65,9 @@ class ScreenUI implements IModule {
 
     this.panel.classList.add("screen-ui");
 
-    this.panel.appendChild(element("h2", { properties: { textContent: "Screen" } }));
+    this.panel.appendChild(element("h2", { textContent: "Screen" }));
 
-    this.textElement = element("pre", { properties: { textContent: "" } });
+    this.textElement = element("pre", { textContent: "" });
 
     this.panel.appendChild(this.textElement);
   };

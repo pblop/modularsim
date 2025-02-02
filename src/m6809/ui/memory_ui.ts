@@ -152,63 +152,52 @@ class MemoryUI implements IModule {
   createMemoryUI(): void {
     if (!this.panel) return;
 
-    const addrinput = element("input", {
-      properties: { type: "text", placeholder: "Memory address" },
-    });
-    const valinput = element("input", { properties: { type: "text", placeholder: "Value" } });
+    const addrinput = element("input", { type: "text", placeholder: "Memory address" });
+    const valinput = element("input", { type: "text", placeholder: "Value" });
     const writebutton = element("button", {
-      properties: {
-        textContent: "Write",
-        onclick: () => {
-          const address = Number.parseInt(addrinput.value, 16);
-          const data = Number.parseInt(valinput.value, 16);
-          if (Number.isNaN(address)) return;
-          if (Number.isNaN(data)) return;
-          this.event_transceiver.emit("ui:memory:write", address, data);
-        },
+      textContent: "Write",
+      onclick: () => {
+        const address = Number.parseInt(addrinput.value, 16);
+        const data = Number.parseInt(valinput.value, 16);
+        if (Number.isNaN(address)) return;
+        if (Number.isNaN(data)) return;
+        this.event_transceiver.emit("ui:memory:write", address, data);
       },
     });
     const readbutton = element("button", {
-      properties: {
-        textContent: "Read",
-        onclick: () => {
-          const address = Number.parseInt(addrinput.value, 16);
-          if (Number.isNaN(address)) return;
-          this.event_transceiver.emit("ui:memory:read", address);
-        },
+      textContent: "Read",
+      onclick: () => {
+        const address = Number.parseInt(addrinput.value, 16);
+        if (Number.isNaN(address)) return;
+        this.event_transceiver.emit("ui:memory:read", address);
       },
     });
 
-    const output = element("div", { properties: { className: "memory-output" } });
+    const output = element("div", { className: "memory-output" });
 
-    this.panel.appendChild(
-      element("div", {
-        children: [addrinput, valinput, writebutton, readbutton, output],
-      }),
+    this.panel.appendChild(element("div", addrinput, valinput, writebutton, readbutton, output));
+
+    this.memoryTable = element(
+      "table",
+      { className: "memory-table" },
+      element(
+        "tr",
+        ...Array.from({ length: 17 }).map((_, i) =>
+          element("th", {
+            textContent: i === 0 ? "" : `_${(i - 1).toString(16)}`,
+          }),
+        ),
+      ),
     );
-
-    this.memoryTable = element("table", {
-      properties: { className: "memory-table" },
-      children: [
-        element("tr", {
-          children: Array.from({ length: 17 }).map((_, i) =>
-            element("th", {
-              properties: { textContent: i === 0 ? "" : `_${(i - 1).toString(16)}` },
-            }),
-          ),
-        }),
-      ],
-    });
 
     for (let i = this.config.start; i < this.config.start + this.config.size; i += 16) {
       const rowName = `0x${i.toString(16).padStart(4, "0")}`;
-      const row = element("tr", {
-        children: [element("th", { properties: { textContent: rowName } })],
-      });
+      const row = element("tr", element("th", { textContent: rowName }));
       for (let j = i; j < i + 16 && j < this.config.start + this.config.size; j++) {
         row.appendChild(
           element("td", {
-            properties: { className: `byte-${j}`, textContent: this.formatMemoryData(0) },
+            className: `byte-${j}`,
+            textContent: this.formatMemoryData(0),
           }),
         );
       }

@@ -78,11 +78,9 @@ class Gui implements IModule {
       .then((info) => {
         const date = new Date(info.date);
         const deployment_info_element = element("div", {
-          properties: {
-            className: "deployment-info",
-            innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
-            title: `${info.message}\n\n${info.body}`.trimEnd(),
-          },
+          className: "deployment-info",
+          innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
+          title: `${info.message}\n\n${info.body}`.trimEnd(),
         });
         this.root_element.appendChild(deployment_info_element);
       })
@@ -97,10 +95,8 @@ class Gui implements IModule {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
 
       const panel_element = element("div", {
-        properties: {
-          id: `panel_${panel.id}`,
-          className: "gui-panel",
-        },
+        id: `panel_${panel.id}`,
+        className: "gui-panel",
         style: {
           gridColumn: `${panel.column}`,
           gridRow: `${panel.row}`,

@@ -217,37 +217,36 @@ class RegisterUI implements IModule {
   createRegisterUI(): void {
     if (!this.panel) return;
 
-    this.registerTable = element("table", {
-      properties: { className: "register-table" },
-      children: [
-        // Header row
-        element("tr", {
-          children: Object.entries(this.config.registers).map(([name, { pointer }]) =>
-            element("th", {
-              properties: {
-                textContent: name,
-                className: `${pointer ? "pointer-register" : ""}`,
-                title: pointer ? "Pointer register" : undefined,
-              },
-            }),
-          ),
-        }),
-        // Register values row
-        element("tr", {
-          children: Object.keys(this.config.registers).map((name) =>
-            element("td", {
-              properties: {
-                className: `register-${name} ${this.config.registers[name].pointer ? "pointer-register-value" : ""}`,
-                textContent: "unk.",
-                onmouseenter: this.config.registers[name].pointer
-                  ? this.generateTooltipFunction(name)
-                  : undefined,
-              },
-            }),
-          ),
-        }),
-      ],
-    });
+    this.registerTable = element(
+      "table",
+      {
+        className: "register-table",
+      },
+      // Header row
+      element(
+        "tr",
+        ...Object.entries(this.config.registers).map(([name, { pointer }]) =>
+          element("th", {
+            textContent: name,
+            className: `${pointer ? "pointer-register" : ""}`,
+            title: pointer ? "Pointer register" : undefined,
+          }),
+        ),
+      ),
+      // Register values row
+      element(
+        "tr",
+        ...Object.keys(this.config.registers).map((name) =>
+          element("td", {
+            className: `register-${name} ${this.config.registers[name].pointer ? "pointer-register-value" : ""}`,
+            textContent: "unk.",
+            onmouseenter: this.config.registers[name].pointer
+              ? this.generateTooltipFunction(name)
+              : undefined,
+          }),
+        ),
+      ),
+    );
 
     this.panel.appendChild(this.registerTable);
   }
