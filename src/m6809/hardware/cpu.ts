@@ -105,6 +105,7 @@ class Cpu implements IModule {
         "cpu:register_update",
         "cpu:registers_update",
         "cpu:fail",
+        "cpu:reset_finish",
       ],
       required: {
         "clock:cycle_start": this.onCycleStart,
@@ -584,23 +585,28 @@ class Cpu implements IModule {
     return "execute";
   };
 
-  enterResetting: OnEnterFn<"resetting"> = ({ readPending }) => {
+  enterResetting: OnEnterFn<"resetting"> = ({ readPending }, { ticksOnState, ctx }) => {
     if (readPending) return false;
 
-    // Fetch the reset vector.
-    this.queryMemoryRead(this.config.resetVector, 2);
+    if (ctx.remainingTicks === 3) {
+      // Fetch the reset vector.
+      this.queryMemoryRead(this.config.resetVector, 2);
+    }
   };
-  exitResetting: OnExitFn<"resetting"> = ({ readPending }, { ticksOnState }) => {
+  exitResetting: OnExitFn<"resetting"> = ({ readPending }, { ticksOnState, ctx }) => {
     // This state is a bit special because of it being the "first" one. It
     // doesn't get entered into, so onExit actually gets called before onExit.
     // Doing the reading here and doing it in onEnter are, thus, functionally
     // equivalent (on the first cycle, both onExit and onEnter are called), so
     // I'm doing it on onEnter to be consistent with the other states.
-    // That means, that the first time this state is entered, readPending will
-    // be false, but not because we've already read the reset vector, but because
-    // we haven't read anything yet (no read -> nothing pending).
-    if (ticksOnState === 0) return null;
-    if (readPending) return null;
+    // That means that we need to set the remainingTicks here, and we need to make
+    // sure that we only get the read value after we've read it!
+    if (ticksOnState === 0) {
+      ctx.remainingTicks = 7; // 7 cycles to reset.
+      return null;
+    }
+    ctx.remainingTicks--;
+    if (readPending || ctx.remainingTicks > 0) return null;
 
     // Clear all registers.
     // Set pc to the value stored at the reset vector.
@@ -614,6 +620,7 @@ class Cpu implements IModule {
     this.registers.pc = this.readInfo!.value;
     this.commitRegisters();
 
+    this.et.emit("cpu:reset_finish");
     return "fetch_opcode";
   };
 

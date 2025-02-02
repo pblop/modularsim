@@ -17,7 +17,7 @@ export type CpuState =
 
 type StateContexts = {
   unreset: EmptyObject;
-  resetting: EmptyObject;
+  resetting: { remainingTicks: number };
   fetch_opcode: { opcode?: number };
   immediate: EmptyObject;
   indexed_postbyte: EmptyObject;
