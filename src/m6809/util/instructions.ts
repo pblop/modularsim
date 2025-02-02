@@ -157,8 +157,8 @@ function updateConditionCodes(regs: Registers, ccs: { [K in ShortCCNames]?: bool
   }
 }
 
-function ld8<M extends GeneralAddressingMode>(
-  reg: Accumulator,
+function ld<M extends GeneralAddressingMode>(
+  reg: Accumulator | Register,
   mode: M,
   cpu: Cpu,
   { readPending }: CpuInfo,
@@ -166,37 +166,18 @@ function ld8<M extends GeneralAddressingMode>(
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  const val = getValueFromMemory(1, cpu, readPending, ticksOnState, addr);
+  const size = REGISTER_SIZE[reg];
+
+  const val = getValueFromMemory(size, cpu, readPending, ticksOnState, addr);
   if (val === null) return false;
 
   regs[reg] = val;
 
-  // Clear V flag, set N if negative, Z if zero
-  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  regs.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  regs.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
-
-  return true;
-}
-
-function ld16<M extends GeneralAddressingMode>(
-  reg: Register,
-  mode: M,
-  cpu: Cpu,
-  { readPending }: CpuInfo,
-  { ticksOnState, ctx }: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-) {
-  const val = getValueFromMemory(2, cpu, readPending, ticksOnState, addr);
-  if (val === null) return false;
-
-  regs[reg] = val;
-
-  // Clear V flag, set N if negative, Z if zero
-  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  regs.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  regs.cc |= val & 0x8000 ? ConditionCodes.NEGATIVE : 0;
+  updateConditionCodes(regs, {
+    N: val & (size === 1 ? 0x80 : 0x8000),
+    Z: val === 0,
+    V: 0,
+  });
 
   return true;
 }
@@ -229,8 +210,8 @@ function branching<M extends "relative">(
   return true;
 }
 
-function st8<M extends "direct" | "indexed" | "extended">(
-  reg: Accumulator,
+function st<M extends "direct" | "indexed" | "extended">(
+  reg: Accumulator | Register,
   mode: M,
   cpu: Cpu,
   { writePending }: CpuInfo,
@@ -238,33 +219,17 @@ function st8<M extends "direct" | "indexed" | "extended">(
   addr: CpuAddressingData<M>,
   regs: Registers,
 ): boolean {
-  const val = regs[reg];
-  if (!writeValueToMemory(1, cpu, writePending, ticksOnState, addr, val)) return false;
+  const size = REGISTER_SIZE[reg];
 
-  // Clear V flag, set N if negative, Z if zero
-  cpu.registers.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.ZERO | ConditionCodes.NEGATIVE);
-  cpu.registers.cc |= val === 0 ? ConditionCodes.ZERO : 0;
-  cpu.registers.cc |= val & 0x80 ? ConditionCodes.NEGATIVE : 0;
-
-  return true;
-}
-function st16<M extends "direct" | "indexed" | "extended">(
-  reg: Register,
-  mode: M,
-  cpu: Cpu,
-  { writePending }: CpuInfo,
-  { ticksOnState, ctx }: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-): boolean {
   const val = regs[reg];
-  if (!writeValueToMemory(2, cpu, writePending, ticksOnState, addr, val)) return false;
+  if (!writeValueToMemory(size, cpu, writePending, ticksOnState, addr, val)) return false;
 
   updateConditionCodes(regs, {
-    N: val & 0x8000,
+    N: val & (size === 1 ? 0x80 : 0x8000),
     Z: val === 0,
     V: 0,
   });
+
   return true;
 }
 
@@ -404,10 +369,19 @@ addInstructions(
   (reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
 );
 
-// ld16 (ldx, ...)
+// ld8 (lda, ldb) and ld16 (ldd, lds, ldu, ldx, ldy)
 addInstructions(
   "ld{register}",
   [
+    [0x86, "A", "immediate", "2"],
+    [0x96, "A", "direct", "4"],
+    [0xa6, "A", "indexed", "4+"],
+    [0xb6, "A", "extended", "5"],
+    [0xc6, "B", "immediate", "2"],
+    [0xd6, "B", "direct", "4"],
+    [0xe6, "B", "indexed", "4+"],
+    [0xf6, "B", "extended", "5"],
+
     [0xcc, "D", "immediate", "3"],
     [0x10ce, "S", "immediate", "4"],
     [0xce, "U", "immediate", "3"],
@@ -433,25 +407,9 @@ addInstructions(
     [0x10be, "Y", "extended", "7"],
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    ld16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+    ld(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
-// ld8 (lda, ldb)
-addInstructions(
-  "ld{register}",
-  [
-    [0x86, "A", "immediate", "2"],
-    [0x96, "A", "direct", "4"],
-    [0xa6, "A", "indexed", "4+"],
-    [0xb6, "A", "extended", "5"],
-    [0xc6, "B", "immediate", "2"],
-    [0xd6, "B", "direct", "4"],
-    [0xe6, "B", "indexed", "4+"],
-    [0xf6, "B", "extended", "5"],
-  ],
-  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    ld8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
-);
-// st8 (sta, stb)
+// st8 (sta, stb) and st16 (std, sts, stu, stx, sty)
 addInstructions(
   "st{register}",
   [
@@ -461,14 +419,7 @@ addInstructions(
     [0xd7, "B", "direct", "4"],
     [0xe7, "B", "indexed", "4+"],
     [0xf7, "B", "extended", "5"],
-  ],
-  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    st8(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
-);
-// st16 (std, sts, stu, stx, sty)
-addInstructions(
-  "st{register}",
-  [
+
     [0xdd, "D", "direct", "5"],
     [0x10df, "S", "direct", "6"],
     [0xdf, "U", "direct", "5"],
@@ -488,7 +439,7 @@ addInstructions(
     [0x10bf, "Y", "extended", "7"],
   ],
   (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    st16(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+    st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
 );
 
 // add8 (adda, addb) and add16 (addd)
