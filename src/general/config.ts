@@ -20,6 +20,15 @@ export function parseNumber(val: string): number {
   return Number(val);
 }
 
+export function checkProperties(obj: { [key: string]: unknown }, properties: string[]): void {
+  for (const prop of properties) {
+    // Check if the property exists and is not null or empty
+    if (!(prop in obj && obj[prop] != null && obj[prop] !== "")) {
+      throw new Error(`Property ${prop} not found`);
+    }
+  }
+}
+
 // TODO: Parse arrays, and nested objects
 export type VerificationType = "number" | "string";
 export type VerificationProperty = {
