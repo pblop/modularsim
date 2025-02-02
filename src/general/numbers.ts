@@ -3,6 +3,10 @@ export function truncate(val: number, bits: number): number {
   return val & mask;
 }
 
+export function indexBit(val: number, index: number): boolean {
+  return !!(val & (1 << index));
+}
+
 export function isNegative(val: number, bits: number): boolean {
   // If the MSB is set, the number is negative.
   return !!(val & (1 << (bits - 1)));
