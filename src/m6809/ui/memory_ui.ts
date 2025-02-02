@@ -1,7 +1,7 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import { element } from "../../utils.js";
+import { element } from "../../general/html.js";
 
 type MemoryUIConfig = {
   start: number;

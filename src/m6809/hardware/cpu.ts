@@ -19,7 +19,7 @@ import {
   StateMachine,
 } from "../util/state_machine.js";
 import { intNToNumber, numberToIntN, signExtend, truncate } from "../../general/numbers.js";
-import { isNumber, parseNumber } from "../../utils.js";
+import { isNumber, parseNumber } from "../../general/config.js";
 
 type CpuConfig = {
   pc: number;

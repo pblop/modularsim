@@ -9,7 +9,7 @@ import {
   INSTRUCTIONS,
   type AddressingMode,
 } from "../util/instructions.js";
-import { element } from "../../utils.js";
+import { element } from "../../general/html.js";
 import { truncate, signExtend, numberToIntN, intNToNumber } from "../../general/numbers.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.

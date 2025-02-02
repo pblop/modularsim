@@ -1,7 +1,7 @@
 import type { IModule } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
-import { element } from "../../utils.js";
+import { element } from "../../general/html.js";
 
 type ScreenConfig = {
   address: number;
