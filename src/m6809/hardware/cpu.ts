@@ -156,19 +156,7 @@ class Cpu implements IModule {
   };
 
   reset = () => {
-    this.registers.dp = 0;
-    this.registers.cc = 0;
-    this.registers.D = 0;
-    this.registers.X = 0;
-    this.registers.Y = 0;
-    this.registers.U = 0;
-    this.registers.S = 0;
-    this.registers.pc = this.config.pc;
-    this.commitRegisters();
-
-    // this.printRegisters();
-    // this.stateMachine.forceTransition("fetch_opcode", { readPending: false, writePending: false }); // Start the CPU state machine.
-    this.stateMachine.setState("start");
+    this.stateMachine.setState("resetting");
   };
 
   printRegisters = () => {
@@ -593,6 +581,39 @@ class Cpu implements IModule {
     return "execute";
   };
 
+  enterResetting: OnEnterFn<"resetting"> = ({ readPending }) => {
+    if (readPending) return false;
+
+    // Fetch the reset vector.
+    this.queryMemoryRead(this.config.resetVector, 2);
+  };
+  exitResetting: OnExitFn<"resetting"> = ({ readPending }, { ticksOnState }) => {
+    // This state is a bit special because of it being the "first" one. It
+    // doesn't get entered into, so onExit actually gets called before onExit.
+    // Doing the reading here and doing it in onEnter are, thus, functionally
+    // equivalent (on the first cycle, both onExit and onEnter are called), so
+    // I'm doing it on onEnter to be consistent with the other states.
+    // That means, that the first time this state is entered, readPending will
+    // be false, but not because we've already read the reset vector, but because
+    // we haven't read anything yet (no read -> nothing pending).
+    if (ticksOnState === 0) return null;
+    if (readPending) return null;
+
+    // Clear all registers.
+    // Set pc to the value stored at the reset vector.
+    this.registers.dp = 0;
+    this.registers.cc = 0;
+    this.registers.D = 0;
+    this.registers.X = 0;
+    this.registers.Y = 0;
+    this.registers.U = 0;
+    this.registers.S = 0;
+    this.registers.pc = this.readInfo!.value;
+    this.commitRegisters();
+
+    return "fetch_opcode";
+  };
+
   /**
    * Notify other modules that the instruction has ended, and, as such, our
    * registers have been updated.
@@ -615,9 +636,9 @@ class Cpu implements IModule {
         onEnter: () => false,
         onExit: () => this.fail("CPU is not reset"),
       },
-      start: {
-        onEnter: () => false, // This is never called
-        onExit: () => "fetch_opcode",
+      resetting: {
+        onEnter: this.enterResetting,
+        onExit: this.exitResetting,
       },
       fetch_opcode: {
         onEnter: this.enterFetchOpcode,

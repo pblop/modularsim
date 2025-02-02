@@ -3,7 +3,7 @@ import type { ParsedIndexedPostbyte } from "./instructions.js";
 
 export type CpuState =
   | "unreset"
-  | "start"
+  | "resetting"
   | "fetch_opcode"
   | "immediate"
   | "indexed_postbyte"
@@ -17,7 +17,7 @@ export type CpuState =
 
 type StateContexts = {
   unreset: EmptyObject;
-  start: EmptyObject;
+  resetting: EmptyObject;
   fetch_opcode: { opcode?: number };
   immediate: EmptyObject;
   indexed_postbyte: EmptyObject;
