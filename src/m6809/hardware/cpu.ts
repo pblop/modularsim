@@ -156,6 +156,9 @@ class Cpu implements IModule {
   };
 
   reset = () => {
+    // Clear the read and write info from the previous run (if any).
+    this.readInfo = null;
+    this.writeInfo = null;
     this.stateMachine.setState("resetting");
   };
 
