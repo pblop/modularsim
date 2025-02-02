@@ -19,18 +19,11 @@ import {
   StateMachine,
 } from "../util/state_machine.js";
 import { intNToNumber, numberToIntN, signExtend, truncate } from "../../general/numbers.js";
-import { isNumber, parseNumber } from "../../general/config.js";
+import { isNumber, parseNumber, verify } from "../../general/config.js";
 
 type CpuConfig = {
-  pc: number;
+  resetVector: number;
 };
-
-function validate_cpu_config(config: Record<string, unknown>): CpuConfig {
-  if (!isNumber(config.pc)) throw new Error("[CPU] pc must be a number");
-  if (typeof config.pc !== "string") config.pc = parseNumber(config.pc as string);
-
-  return config as CpuConfig;
-}
 
 type CpuImmediateAddressingData = {
   mode: "immediate";
@@ -129,7 +122,9 @@ class Cpu implements IModule {
     eventTransceiver: TypedEventTransceiver,
   ) {
     this.id = id;
-    this.config = validate_cpu_config(config);
+    this.config = verify<CpuConfig>(config, {
+      resetVector: { type: "number", required: false, default: 0xfffe },
+    });
     this.et = eventTransceiver;
 
     this._registers = new Registers();
