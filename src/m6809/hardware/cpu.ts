@@ -215,7 +215,7 @@ class Cpu implements IModule {
 
     this.writeInfo.waiting = true;
 
-    const position = 8 * (this.writeInfo.bytes - this.writeInfo.bytesWritten);
+    const position = 8 * (this.writeInfo.bytes - this.writeInfo.bytesWritten - 1);
     const mask = 0xff << position;
     const nibble = (this.writeInfo.value & mask) >> position;
 
