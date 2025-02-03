@@ -1,17 +1,10 @@
 import type { IModule } from "../../types/module";
-import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
-import { element } from "../../general/html.js";
+import { verify } from "../../general/config.js";
 
 type StopConfig = {
   address: number;
 };
-
-function validateScreenConfig(config: Record<string, unknown>): StopConfig {
-  if (typeof config.address !== "number") throw new Error("[Stop] address must be a number");
-
-  return config as StopConfig;
-}
 
 class Stop implements IModule {
   id: string;
@@ -36,7 +29,12 @@ class Stop implements IModule {
     this.id = id;
     this.event_transceiver = eventTransceiver;
 
-    this.config = validateScreenConfig(config);
+    this.config = verify(config, {
+      address: {
+        type: "number",
+        required: true,
+      },
+    });
 
     console.log(`[${this.id}] Module initialized.`);
   }

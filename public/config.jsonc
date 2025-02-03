@@ -123,7 +123,7 @@
         "url": "./m6809/ui/screen_ui.js",
         "css": ["./m6809/ui/screen_ui.css"],
         "config": {
-          "address": 65280
+          "address": "0xFF00"
         }
       },
       {
@@ -131,7 +131,7 @@
         "type": "extra",
         "url": "./m6809/extra/stop.js",
         "config": {
-          "address": 65281
+          "address": "0xFF01"
         }
       },
       {
