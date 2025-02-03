@@ -161,12 +161,21 @@ type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   addressing: DecompiledAddressingInfo<T>;
   registerSize: number; // redundant
   size: number; // redundant
+
+  failed: false;
+};
+type FailedDecompilation = {
+  startAddress: number;
+  bytes: number[];
+  opcode: number;
+  failed: true;
+  reason: "opcode" | "indexed_postbyte";
 };
 export async function decompileInstruction(
   read: ReadFunction,
   registers: Registers,
   startAddress: number,
-): Promise<DecompiledInstruction | null> {
+): Promise<DecompiledInstruction | FailedDecompilation> {
   const opcodeBytes = [];
   const args = [];
   const bytes = [];
@@ -183,7 +192,14 @@ export async function decompileInstruction(
   bytes.push(...opcodeBytes);
 
   // Find the instruction
-  if (!INSTRUCTIONS[opcode]) return null;
+  if (!INSTRUCTIONS[opcode])
+    return {
+      startAddress,
+      bytes,
+      opcode,
+      failed: true,
+      reason: "opcode",
+    };
   const instruction = INSTRUCTIONS[opcode];
 
   const registerSize = REGISTER_SIZE[instruction.register];
@@ -216,7 +232,14 @@ export async function decompileInstruction(
       bytes.push(postbyte);
 
       const parsedPostbyte = parseIndexedPostbyte(postbyte);
-      if (!parsedPostbyte) return null;
+      if (!parsedPostbyte)
+        return {
+          startAddress,
+          bytes,
+          opcode,
+          failed: true,
+          reason: "indexed_postbyte",
+        };
 
       const idxResult = await disassIdxAdressing(
         read,
@@ -266,91 +289,99 @@ export async function decompileInstruction(
     size,
     addressing,
     bytes: bytes,
+    failed: false,
   };
 }
 
 export function generateInstructionElement(
-  decompiled: DecompiledInstruction,
+  decompiled: DecompiledInstruction | FailedDecompilation,
   formatAddress: (data: number) => string,
   rawElement: HTMLSpanElement,
   dataElement: HTMLSpanElement,
   extraElement: HTMLSpanElement,
 ): void {
-  const { registerSize, args, addressing } = decompiled;
-  const { mnemonic } = decompiled.instruction;
-  const { mode } = addressing;
-
-  const registerHexSize = registerSize * 2;
-
-  let data = mnemonic;
-  let extra = `${mode.slice(0, 3)}`;
-
-  switch (mode) {
-    case "immediate":
-      data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
-      break;
-    case "direct":
-      data += ` 0x${addressing.low}`;
-      extra += ` <${formatAddress(addressing.address)}>`;
-      break;
-    case "indexed": {
-      let idxStr = " ";
-
-      const { parsedPostbyte } = addressing;
-      // The offset.
-      switch (parsedPostbyte.action) {
-        case IndexedAction.Offset0:
-          idxStr += "";
-          break;
-        case IndexedAction.Offset5:
-        case IndexedAction.Offset8:
-        case IndexedAction.Offset16:
-        case IndexedAction.OffsetPC8:
-        case IndexedAction.OffsetPC16:
-          idxStr += "??";
-          break;
-        case IndexedAction.OffsetA:
-          idxStr += "A";
-          break;
-        case IndexedAction.OffsetB:
-          idxStr += "B";
-          break;
-        case IndexedAction.OffsetD:
-          idxStr += "D";
-          break;
-      }
-
-      idxStr += ",";
-
-      // The register.
-      if (parsedPostbyte.action === IndexedAction.PreDec1) idxStr += "-";
-      else if (parsedPostbyte.action === IndexedAction.PreDec2) idxStr += "--";
-
-      if (parsedPostbyte.register === "pc") idxStr += "PCR";
-      else idxStr += parsedPostbyte.register;
-
-      if (parsedPostbyte.action === IndexedAction.PostInc1) idxStr += "+";
-      else if (parsedPostbyte.action === IndexedAction.PostInc2) idxStr += "++";
-
-      if (parsedPostbyte.indirect) idxStr = `[${idxStr}]`;
-      data += idxStr;
-      break;
-    }
-    case "extended":
-      data += ` <${formatAddress(addressing.address)}>`;
-      break;
-    case "relative": {
-      // NOTE: Convert the relative address to a signed number for display.
-      const offset = intNToNumber(addressing.offset, 8);
-      data += ` pc${offset >= 0 ? "+" : ""}${offset}`;
-      extra += ` <${formatAddress(addressing.address)}>`;
-      break;
-    }
-  }
-
   rawElement.innerHTML = decompiled.bytes
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join(" ");
-  dataElement.innerText = data;
-  extraElement.innerText = extra;
+
+  if (decompiled.failed) {
+    dataElement.innerText = "??";
+    extraElement.innerText = "";
+    return;
+  } else {
+    const { registerSize, args, addressing } = decompiled;
+    const { mnemonic } = decompiled.instruction;
+    const { mode } = addressing;
+
+    const registerHexSize = registerSize * 2;
+
+    let data = mnemonic;
+    let extra = `${mode.slice(0, 3)}`;
+
+    switch (mode) {
+      case "immediate":
+        data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
+        break;
+      case "direct":
+        data += ` 0x${addressing.low}`;
+        extra += ` <${formatAddress(addressing.address)}>`;
+        break;
+      case "indexed": {
+        let idxStr = " ";
+
+        const { parsedPostbyte } = addressing;
+        // The offset.
+        switch (parsedPostbyte.action) {
+          case IndexedAction.Offset0:
+            idxStr += "";
+            break;
+          case IndexedAction.Offset5:
+          case IndexedAction.Offset8:
+          case IndexedAction.Offset16:
+          case IndexedAction.OffsetPC8:
+          case IndexedAction.OffsetPC16:
+            idxStr += "??";
+            break;
+          case IndexedAction.OffsetA:
+            idxStr += "A";
+            break;
+          case IndexedAction.OffsetB:
+            idxStr += "B";
+            break;
+          case IndexedAction.OffsetD:
+            idxStr += "D";
+            break;
+        }
+
+        idxStr += ",";
+
+        // The register.
+        if (parsedPostbyte.action === IndexedAction.PreDec1) idxStr += "-";
+        else if (parsedPostbyte.action === IndexedAction.PreDec2) idxStr += "--";
+
+        if (parsedPostbyte.register === "pc") idxStr += "PCR";
+        else idxStr += parsedPostbyte.register;
+
+        if (parsedPostbyte.action === IndexedAction.PostInc1) idxStr += "+";
+        else if (parsedPostbyte.action === IndexedAction.PostInc2) idxStr += "++";
+
+        if (parsedPostbyte.indirect) idxStr = `[${idxStr}]`;
+        data += idxStr;
+        break;
+      }
+      case "extended":
+        data += ` <${formatAddress(addressing.address)}>`;
+        break;
+      case "relative": {
+        // NOTE: Convert the relative address to a signed number for display.
+        const offset = intNToNumber(addressing.offset, 8);
+        data += ` pc${offset >= 0 ? "+" : ""}${offset}`;
+        extra += ` <${formatAddress(addressing.address)}>`;
+        break;
+      }
+    }
+
+    dataElement.innerText = data;
+    extraElement.innerText = extra;
+  }
 }

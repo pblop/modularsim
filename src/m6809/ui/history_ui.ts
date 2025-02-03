@@ -125,19 +125,15 @@ class HistoryUI implements IModule {
 
     const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
     (row.children[0] as HTMLSpanElement).innerText = this.formatAddress(currentAddress);
-    if (decompiled != null) {
-      generateInstructionElement(
-        decompiled,
-        this.formatAddress,
-        row.children[1] as HTMLSpanElement,
-        row.children[2] as HTMLSpanElement,
-        row.children[3] as HTMLSpanElement,
-      );
+    generateInstructionElement(
+      decompiled,
+      this.formatAddress,
+      row.children[1] as HTMLSpanElement,
+      row.children[2] as HTMLSpanElement,
+      row.children[3] as HTMLSpanElement,
+    );
 
-      currentAddress += decompiled.size;
-    } else {
-      (row.children[2] as HTMLSpanElement).innerText = "??";
-    }
+    currentAddress += decompiled.bytes.length;
 
     // Auto scroll to bottom if already on bottom. I haven't been able to achieve
     // this with CSS, so I'm doing it here.

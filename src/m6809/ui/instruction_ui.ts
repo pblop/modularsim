@@ -140,19 +140,14 @@ class InstructionUI implements IModule {
     children[0].innerText = this.formatAddress(address);
 
     row.classList.toggle("pc", isPC);
-    if (decompiled != null) {
-      generateInstructionElement(
-        decompiled,
-        this.formatAddress,
-        children[1],
-        children[2],
-        children[3],
-      );
-      return decompiled.size;
-    } else {
-      children[2].innerText = "??";
-      return 0;
-    }
+    generateInstructionElement(
+      decompiled,
+      this.formatAddress,
+      children[1],
+      children[2],
+      children[3],
+    );
+    return decompiled.bytes.length;
   };
 
   async populatePanel(): Promise<void> {
