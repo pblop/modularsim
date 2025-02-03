@@ -30,6 +30,7 @@ export interface EventMap {
   "ui:clock:start": [];
   "ui:clock:step_cycle": [];
   "ui:clock:step_instruction": [];
+  "ui:clock:fast_reset": [];
   "ui:memory:read": [address: number];
   "ui:memory:read:result": [address: number, data: number];
   "ui:memory:write": [address: number, data: number];

@@ -13,7 +13,7 @@ function verifyClockUIConfig(config: Record<string, unknown>): ClockUIConfig {
 }
 
 type ClockUIState = {
-  machineState: "running" | "instruction_run" | "paused" | "stopped";
+  machineState: "running" | "instruction_run" | "paused" | "stopped" | "fast_reset";
   lastCycleTime: number;
   cycles: number;
 };
@@ -35,13 +35,16 @@ class ClockUI implements IModule {
         "ui:clock:pause",
         "ui:clock:start",
         "ui:clock:step_instruction",
+        "ui:clock:fast_reset",
       ],
       required: {
         "clock:cycle_start": this.onCycleStart,
         "gui:panel_created": this.onGuiPanelCreated,
         "cpu:instruction_finish": this.onInstructionFinish,
       },
-      optional: {},
+      optional: {
+        "cpu:reset_finish": this.onResetFinish,
+      },
     };
   }
 
@@ -123,15 +126,27 @@ class ClockUI implements IModule {
         );
       }
 
-      main.appendChild(
-        element("button", {
-          textContent: "Reset",
-          onclick: () => {
-            this.event_transceiver.emit("signal:reset");
-            this.setState({ machineState: "paused", cycles: 0 });
-          },
-        }),
-      );
+      if (this.state.machineState === "paused" || this.state.machineState === "stopped") {
+        main.appendChild(
+          element("button", {
+            textContent: "Reset",
+            onclick: () => {
+              this.event_transceiver.emit("signal:reset");
+              this.setState({ machineState: "paused", cycles: 0 });
+            },
+          }),
+        );
+        main.appendChild(
+          element("button", {
+            textContent: "Fast reset",
+            onclick: () => {
+              this.event_transceiver.emit("signal:reset");
+              this.event_transceiver.emit("ui:clock:fast_reset");
+              this.setState({ machineState: "fast_reset", cycles: 0 });
+            },
+          }),
+        );
+      }
     }
 
     if (changes && "lastCycleTime" in changes) {
@@ -174,6 +189,10 @@ class ClockUI implements IModule {
 
   onInstructionFinish = (): void => {
     if (this.state.machineState !== "instruction_run") return;
+    this.setState({ machineState: "paused" });
+  };
+  onResetFinish = (): void => {
+    if (this.state.machineState !== "fast_reset") return;
     this.setState({ machineState: "paused" });
   };
 }

@@ -19,7 +19,7 @@ class Clock implements IModule {
 
   interval_id?: number;
 
-  stepInstruction: boolean;
+  mode: "normal" | "instruction" | "fast_reset";
   prevCycle: number;
 
   getEventDeclaration(): EventDeclaration {
@@ -33,7 +33,9 @@ class Clock implements IModule {
         "ui:clock:pause": this.onPauseRequested,
         "ui:clock:step_cycle": this.onStepCycleRequested,
         "ui:clock:step_instruction": this.onStepInstructionRequested,
+        "ui:clock:fast_reset": this.onFastResetRequested,
         "cpu:instruction_finish": this.onInstructionFinished,
+        "cpu:reset_finish": this.onResetFinished,
       },
     };
   }
@@ -47,7 +49,7 @@ class Clock implements IModule {
     this.config = validate_clock_config(config);
     this.event_transceiver = eventTransceiver;
 
-    this.stepInstruction = false;
+    this.mode = "normal";
     this.prevCycle = 0;
 
     console.log(`[${this.id}] Module initialized.`);
@@ -90,19 +92,29 @@ class Clock implements IModule {
   };
   onPauseRequested = (): void => {
     this.stopInterval();
-    this.stepInstruction = false;
+    this.mode = "normal";
   };
   onStepCycleRequested = (): void => {
     this.event_transceiver.emit("clock:cycle_start");
   };
   onStepInstructionRequested = (): void => {
-    this.stepInstruction = true;
+    this.mode = "instruction";
+    this.onStartRequested();
+  };
+  onFastResetRequested = (): void => {
+    this.mode = "fast_reset";
     this.onStartRequested();
   };
   onInstructionFinished = (): void => {
-    if (this.stepInstruction) {
+    if (this.mode === "instruction") {
       this.stopInterval();
-      this.stepInstruction = false;
+      this.mode = "normal";
+    }
+  };
+  onResetFinished = (): void => {
+    if (this.mode === "fast_reset") {
+      this.stopInterval();
+      this.mode = "normal";
     }
   };
 }
