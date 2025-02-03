@@ -272,9 +272,9 @@ export async function decompileInstruction(
 export function generateInstructionElement(
   decompiled: DecompiledInstruction,
   formatAddress: (data: number) => string,
-  rawElement: HTMLDivElement,
-  dataElement: HTMLDivElement,
-  extraElement: HTMLDivElement,
+  rawElement: HTMLSpanElement,
+  dataElement: HTMLSpanElement,
+  extraElement: HTMLSpanElement,
 ): void {
   const { registerSize, args, addressing } = decompiled;
   const { mnemonic } = decompiled.instruction;
