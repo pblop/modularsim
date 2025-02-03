@@ -3,13 +3,11 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.
 import type { Registers } from "../util/cpu_parts.js";
 import { element } from "../../general/html.js";
 import { decompileInstruction, generateInstructionElement } from "../util/decompile.js";
+import { verify } from "../../general/config.js";
 
-// biome-ignore lint/complexity/noBannedTypes: <explanation>
-type InstructionUIConfig = {};
-
-function validateMemoryUIConfig(config: Record<string, unknown>): InstructionUIConfig {
-  return config as InstructionUIConfig;
-}
+type InstructionUIConfig = {
+  lines: number;
+};
 
 class InstructionUI implements IModule {
   et: TypedEventTransceiver;
@@ -44,7 +42,12 @@ class InstructionUI implements IModule {
     this.id = id;
 
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
-    this.config = validateMemoryUIConfig(config);
+    this.config = verify(config, {
+      lines: {
+        type: "number",
+        default: 15,
+      },
+    });
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -77,10 +80,28 @@ class InstructionUI implements IModule {
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
 
-    // this.anchor = element("div", { properties: { className: "scroll-anchor" } });
-    // this.panel.appendChild(this.anchor);
+    for (let i = 0; i < this.config.lines; i++) {
+      this.panel.appendChild(
+        element(
+          "div",
+          { className: "row" },
+          element("span", {
+            className: "address",
+            innerText: "0000",
+          }),
+          element("span", { className: "raw", innerText: "..." }),
+          element("span", { className: "data", innerText: "..." }),
+          element("span", { className: "extra", innerText: "" }),
+        ),
+      );
+    }
   };
 
+  /**
+   * A callback for when the registers are updated.
+   * This only happens when an instruction has finished executing, so we can
+   * interpret the current value as the start of the an instruction.
+   */
   onRegistersUpdate = (registers: Registers): void => {
     if (!this.panel) return;
 
@@ -96,53 +117,52 @@ class InstructionUI implements IModule {
   clearPanel = (): void => {
     if (!this.panel) return;
 
-    // Clear the panel.
-    this.panel.innerHTML = "";
+    for (let i = 0; i < this.config.lines; i++) {
+      const children = Array.from(this.panel.children[i].children) as HTMLElement[];
+      children[1].innerText = "";
+      children[2].innerText = "";
+      children[3].innerText = "";
+    }
   };
 
   formatAddress(data: number): string {
     return data.toString(16).padStart(4, "0");
   }
 
+  // NOTE: This function requires the registers to be set.
+  populateRow = async (row: HTMLDivElement, address: number, isPC: boolean): Promise<number> => {
+    const children = Array.from(row.children) as HTMLSpanElement[];
+    const decompiled = await decompileInstruction(this.read, this.registers!, address);
+    children[0].innerText = this.formatAddress(address);
+
+    row.classList.toggle("pc", isPC);
+    if (decompiled != null) {
+      generateInstructionElement(
+        decompiled,
+        this.formatAddress,
+        children[1],
+        children[2],
+        children[3],
+      );
+      return decompiled.size;
+    } else {
+      children[2].innerText = "??";
+      return 0;
+    }
+  };
+
   async populatePanel(): Promise<void> {
     if (!this.panel || !this.registers) return;
 
     const startAddress = this.registers.pc;
     let currentAddress = startAddress;
-
-    const row = element(
-      "div",
-      { className: "row" },
-      element("span", {
-        className: "address",
-        innerText: "0000",
-      }),
-      element("span", { className: "raw", innerText: "..." }),
-      element("span", { className: "data", innerText: "..." }),
-      element("span", { className: "extra", innerText: "" }),
-    );
-
-    const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
-    (row.children[0] as HTMLDivElement).innerText = this.formatAddress(currentAddress);
-    if (decompiled != null) {
-      generateInstructionElement(
-        decompiled,
-        this.formatAddress,
-        row.children[1] as HTMLDivElement,
-        row.children[2] as HTMLDivElement,
-        row.children[3] as HTMLDivElement,
+    for (let i = 0; i < this.config.lines; i++) {
+      currentAddress += await this.populateRow(
+        this.panel.children[i] as HTMLDivElement,
+        currentAddress,
+        i === 0,
       );
-
-      currentAddress += decompiled.size;
-    } else {
-      (row.children[2] as HTMLDivElement).innerText = "??";
     }
-
-    // Auto scroll to bottom if already on bottom. I haven't been able to achieve
-    // this with CSS, so I'm doing it here.
-    const atBottom = this.panel.scrollHeight - this.panel.clientHeight <= this.panel.scrollTop + 1;
-    this.panel.appendChild(row);
-    if (atBottom) this.panel.scrollTop = this.panel.scrollHeight - this.panel.clientHeight;
   }
 }
 

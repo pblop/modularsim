@@ -31,6 +31,9 @@
     justify-content: space-between;
     align-items: center;
     
+    &.pc {
+      background-color: #f0f0f0;
+    }
 
     .address {
       /* I've decided that the addresses are going to be formatted as equal
