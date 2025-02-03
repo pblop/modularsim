@@ -7,7 +7,13 @@ import {
   INSTRUCTIONS,
   type AddressingMode,
 } from "../util/instructions.js";
-import { truncate, signExtend, numberToIntN, intNToNumber } from "../../general/numbers.js";
+import {
+  truncate,
+  signExtend,
+  numberToIntN,
+  intNToNumber,
+  decompose,
+} from "../../general/numbers.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.
 type ReadFunction = (address: number, bytes?: number) => Promise<number>;
@@ -133,7 +139,7 @@ export async function disassIdxAdressing(
 
 // biome-ignore format: this is easier to read if not biome-formatted
 type DecompiledAddressingInfo<T extends AddressingMode> = 
-  T extends "immediate" ? { mode: T } :
+  T extends "immediate" ? { mode: T, value: number } :
   T extends "direct" ? { mode: T, address: number, low: number } :
   T extends "indexed" ? { mode: "indexed"; address: number, postbyte: number; 
                           parsedPostbyte: ParsedIndexedPostbyte, result: DisassIdxAddressingResult } :
@@ -150,6 +156,7 @@ type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   size: number;
   registerSize: number;
   addressing: DecompiledAddressingInfo<T>;
+  bytes: number[];
 };
 export async function decompileInstruction(
   read: ReadFunction,
@@ -158,6 +165,8 @@ export async function decompileInstruction(
 ): Promise<DecompiledInstruction | null> {
   const opcodeBytes = [];
   const args = [];
+  const bytes = [];
+
   let size = 0;
   let addressing: DecompiledAddressingInfo<AddressingMode> | undefined;
 
@@ -167,6 +176,7 @@ export async function decompileInstruction(
     opcodeBytes.push(await read(startAddress + size++));
   }
   const opcode = opcodeBytes.reduce((acc, byte) => (acc << 8) | byte, 0);
+  bytes.push(...opcodeBytes);
 
   // Find the instruction
   if (!INSTRUCTIONS[opcode]) return null;
@@ -179,10 +189,12 @@ export async function decompileInstruction(
   switch (instruction.mode) {
     case "immediate": {
       address = "pc";
-      args.push(await read(startAddress + size, registerSize));
+      const value = await read(startAddress + size, registerSize);
+      args.push(value);
       size += registerSize;
 
-      addressing = { mode: "immediate" };
+      addressing = { mode: "immediate", value };
+      bytes.push(...decompose(value, registerSize));
       break;
     }
     case "direct": {
@@ -191,11 +203,13 @@ export async function decompileInstruction(
       args.push(address);
 
       addressing = { mode: "direct", address, low };
+      bytes.push(low);
       break;
     }
     case "indexed": {
       const postbyte = await read(startAddress + size++, 1);
       args.push(postbyte);
+      bytes.push(postbyte);
 
       const parsedPostbyte = parseIndexedPostbyte(postbyte);
       if (!parsedPostbyte) return null;
@@ -216,6 +230,7 @@ export async function decompileInstruction(
       address = await read(startAddress + size, 2);
       size += 2;
       args.push(address);
+      bytes.push(...decompose(address, 2));
 
       addressing = { mode: "extended", address };
       break;
@@ -226,6 +241,7 @@ export async function decompileInstruction(
       args.push(address);
 
       addressing = { mode: "relative", offset, address };
+      bytes.push(offset);
       break;
     }
     case "inherent": {
@@ -245,12 +261,14 @@ export async function decompileInstruction(
     registerSize,
     size,
     addressing,
+    bytes: bytes,
   };
 }
 
 export function generateInstructionElement(
   decompiled: DecompiledInstruction,
   formatAddress: (data: number) => string,
+  rawElement: HTMLDivElement,
   dataElement: HTMLDivElement,
   extraElement: HTMLDivElement,
 ): void {
@@ -326,6 +344,9 @@ export function generateInstructionElement(
     }
   }
 
+  rawElement.innerHTML = decompiled.bytes
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join(" ");
   dataElement.innerText = data;
   extraElement.innerText = extra;
 }

@@ -117,6 +117,7 @@ class InstructionUI implements IModule {
         className: "address",
         innerText: "0000",
       }),
+      element("span", { className: "raw", innerText: "..." }),
       element("span", { className: "data", innerText: "..." }),
       element("span", { className: "extra", innerText: "" }),
     );
@@ -129,11 +130,12 @@ class InstructionUI implements IModule {
         this.formatAddress,
         row.children[1] as HTMLDivElement,
         row.children[2] as HTMLDivElement,
+        row.children[3] as HTMLDivElement,
       );
 
       currentAddress += decompiled.size;
     } else {
-      (row.children[1] as HTMLDivElement).innerText = "??";
+      (row.children[2] as HTMLDivElement).innerText = "??";
     }
 
     // Auto scroll to bottom if already on bottom. I haven't been able to achieve

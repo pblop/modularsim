@@ -40,13 +40,13 @@
       padding-right: 1em;
     }
 
-    .raw {
-      width: 10em;
+    .data {
+      /* flex: 2; */
       padding-right: 1em;
     }
 
-    .data {
-      /* flex: 2; */
+    .raw {
+      width: 10em;
       padding-right: 1em;
     }
 

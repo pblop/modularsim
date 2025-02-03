@@ -28,6 +28,14 @@ export function twosComplement(val: number, bits: number): number {
   return truncate(~val + 1, bits);
 }
 
+export function decompose(val: number, bytes: number): number[] {
+  const result = [];
+  for (let i = 0; i < bytes; i++) {
+    result.push(truncate(val >> (i * 8), 8));
+  }
+  return result;
+}
+
 /**
  * Convert a JS Number to a signed integer of the given size.
  * @param num The Number to convert.
