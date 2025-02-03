@@ -75,7 +75,7 @@ class HistoryUI implements IModule {
     console.log(`[${this.id}] obtained GUI panel`);
 
     this.panel = panel;
-    this.panel.classList.add("instruction-ui");
+    this.panel.classList.add("history-ui");
 
     // this.anchor = element("div", { properties: { className: "scroll-anchor" } });
     // this.panel.appendChild(this.anchor);
