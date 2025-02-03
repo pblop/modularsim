@@ -62,6 +62,11 @@
               "column": "1 / span 3",
               "row": "8 / span 2"
             },
+            {
+              "id": "history_ui",
+              "column": "4 / span 3",
+              "row": "8 / span 2"
+            },
             // {
             //   "id": "ui2",
             //   "column": 1,
@@ -115,6 +120,13 @@
         "type": "ui",
         "url": "./m6809/ui/instruction_ui.js",
         "css": ["./m6809/ui/instruction_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "history_ui",
+        "type": "ui",
+        "url": "./m6809/ui/history_ui.js",
+        "css": ["./m6809/ui/history_ui.css"],
         "config": {}
       },
       {

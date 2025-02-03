@@ -11,7 +11,7 @@ function validateMemoryUIConfig(config: Record<string, unknown>): InstructionUIC
   return config as InstructionUIConfig;
 }
 
-class InstructionUI implements IModule {
+class HistoryUI implements IModule {
   et: TypedEventTransceiver;
   id: string;
 
@@ -144,4 +144,4 @@ class InstructionUI implements IModule {
   }
 }
 
-export default InstructionUI;
+export default HistoryUI;
