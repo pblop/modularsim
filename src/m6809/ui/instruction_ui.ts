@@ -26,7 +26,7 @@ class InstructionUI implements IModule {
         "ui:memory:read:result": null,
         "gui:panel_created": this.onGuiPanelCreated,
         "cpu:registers_update": this.onRegistersUpdate,
-        "signal:reset": this.clearPanel,
+        "signal:reset": this.onReset,
       },
       optional: {},
     };
@@ -114,15 +114,19 @@ class InstructionUI implements IModule {
     this.populatePanel();
   };
 
-  clearPanel = (): void => {
+  onReset = (): void => {
     if (!this.panel) return;
 
+    // Clear the panel.
     for (let i = 0; i < this.config.lines; i++) {
       const children = Array.from(this.panel.children[i].children) as HTMLElement[];
       children[1].innerText = "";
       children[2].innerText = "";
       children[3].innerText = "";
     }
+
+    // Clear the registers.
+    this.registers = undefined;
   };
 
   formatAddress(data: number): string {
