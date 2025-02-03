@@ -28,7 +28,7 @@ class HistoryUI implements IModule {
         "ui:memory:read:result": null,
         "gui:panel_created": this.onGuiPanelCreated,
         "cpu:registers_update": this.onRegistersUpdate,
-        "signal:reset": this.clearPanel,
+        "signal:reset": this.onReset,
       },
       optional: {},
     };
@@ -93,11 +93,12 @@ class HistoryUI implements IModule {
     this.populatePanel();
   };
 
-  clearPanel = (): void => {
+  onReset = (): void => {
     if (!this.panel) return;
 
     // Clear the panel.
     this.panel.innerHTML = "";
+    this.registers = undefined;
   };
 
   formatAddress(data: number): string {
