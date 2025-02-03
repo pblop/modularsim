@@ -150,13 +150,17 @@ type DecompiledAddressingInfo<T extends AddressingMode> =
 
 type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   startAddress: number;
-  opcode: number;
-  instruction: InstructionData<T>;
-  args: number[];
-  size: number;
-  registerSize: number;
-  addressing: DecompiledAddressingInfo<T>;
+
+  // The values in memory that make up the instruction.
   bytes: number[];
+  opcode: number;
+  args: number[];
+
+  // The values above but in a more readable format.
+  instruction: InstructionData<T>;
+  addressing: DecompiledAddressingInfo<T>;
+  registerSize: number; // redundant
+  size: number; // redundant
 };
 export async function decompileInstruction(
   read: ReadFunction,
