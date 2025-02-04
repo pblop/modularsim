@@ -87,7 +87,7 @@ class InstructionUI implements IModule {
           { className: "row" },
           element("span", {
             className: "address",
-            innerText: "0000",
+            innerText: "....",
           }),
           element("span", { className: "raw", innerText: "..." }),
           element("span", { className: "data", innerText: "..." }),
