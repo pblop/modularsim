@@ -80,7 +80,7 @@ class Gui implements IModule {
         const deployment_info_element = element("div", {
           className: "deployment-info",
           innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
-          title: `${info.message}\n\n${info.body}`.trimEnd(),
+          title: `${info.message}\n\n${info.body ?? ""}`.trimEnd(),
         });
         this.root_element.appendChild(deployment_info_element);
       })
