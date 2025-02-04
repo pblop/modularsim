@@ -112,7 +112,7 @@
         "type": "extra",
         "url": "./m6809/extra/loader.js",
         "config": {
-          "file": "./m6809/programs/sumar.bin"
+          "file": "./m6809/programs/hola.bin"
         }
       },
       {
