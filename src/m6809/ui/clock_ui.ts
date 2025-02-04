@@ -141,8 +141,8 @@ class ClockUI implements IModule {
             textContent: "Fast reset",
             onclick: () => {
               this.event_transceiver.emit("signal:reset");
-              this.event_transceiver.emit("ui:clock:fast_reset");
               this.setState({ machineState: "fast_reset", cycles: 0 });
+              this.event_transceiver.emit("ui:clock:fast_reset");
             },
           }),
         );
