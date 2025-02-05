@@ -193,8 +193,8 @@ class RegisterUI implements IModule {
         if (readAddress < 0) continue;
 
         const [_, val] = await this.et.emitAndWait(
-          "ui:memory:read",
           "ui:memory:read:result",
+          "ui:memory:read",
           readAddress,
         );
         data.push({ offset, val });

@@ -51,6 +51,11 @@ export type EventNames = keyof EventMap;
 export type EventParams<E extends EventNames> = EventMap[E];
 type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
 
+export type SubtickPriority = { order?: number };
+export type TickPriority =
+  | { index: number; indexOffset?: never }
+  | { index?: never; indexOffset: number }
+  | { index?: never; indexOffset?: never };
 /**
  * Priority object for listeners, with the following properties:
  * - order: The order within an index, lower is higher (default: 0)
@@ -60,45 +65,101 @@ type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
  * Only one of index or indexOffset should be provided, if both are provided,
  * index will be used.
  */
-export type ListenerPriority = {
-  order?: number;
-} & (
-  | { index: number; indexOffset?: never }
-  | { index?: never; indexOffset: number }
-  | { index?: never; indexOffset?: never }
-);
+export type ListenerPriority = SubtickPriority & TickPriority;
 
 // Typed event emitter interface.
 export interface TypedEventTransceiver {
+  /**
+   * Add a permanent listener for an event, that will be called every time the
+   * event is emitted.
+   * @param event The event name to listen for.
+   * @param listener The callback function to call when the event is emitted (
+   * the arguments to the callback function are the event parameters).
+   * @param subtickPriority The subtick priority of the listener. The tick
+   * priority is not customizable for permanent listeners (they are called every
+   * tick).
+   */
   on<E extends EventNames>(
     event: E,
     listener: EventCallback<E>,
     listenerPriority?: ListenerPriority,
   ): void;
+  /**
+   * Emit an event, calling all listeners for the event, in the order specified
+   * by their priority.
+   * @param event The event name to emit.
+   * @param args The event parameters.
+   */
   emit<E extends EventNames>(event: E, ...args: EventParams<E>): void;
 
+  /**
+   * Add a transient listener for an event, that will be called once.
+   * The exact moment it will be called depends on the tick priority (which
+   * event invocation it will be called in) and the subtick priority (which
+   * order it will be called in within the tick).
+   * @param event The event name to listen for.
+   * @param listener The callback function to call when the event is emitted (
+   * the arguments to the callback function are the event parameters).
+   * @param listenerPriority The tick and subtick priority of the listener, if
+   * not provided, the listener will be called in the next tick, in subtick
+   * order 0.
+   */
   once<E extends EventNames>(
     event: E,
     listener: EventCallback<E>,
     listenerPriority?: ListenerPriority,
   ): void;
+
+  /**
+   * Await an event, returning a promise that, when resolved, returns the event
+   * parameters.
+   * The promise will be resolved depending on the tick priority (which event
+   * invocation it will be called in) and the subtick priority (which order it
+   * will be called in within the tick).
+   * @param event The event name to wait for.
+   * @param listenerPriority The tick and subtick priority of the listener, if
+   * not provided, the listener will be called in the next available tick, in
+   * subtick order 0.
+   */
   wait<E extends EventNames>(
     event: E,
     listenerPriority?: ListenerPriority,
   ): Promise<EventParams<E>>;
+
   // TODO: add waitAny, waitAll?
-  // TODO: add once, implement it wrapping on
-  //       reimplement wait, wrapping once
-  // once<E extends EventNames>(event: E, listener: EventCallback<E>): void;
-  // wait<E extends EventNames>(event: E): Promise<EventParams<E>>;
   // Emits an event, and waits for another
   // Maybe also change the argument order??
   // TODO: add listenerPriority to emitAndWait as well
-  emitAndWait<E extends EventNames, F extends EventNames>(
+
+  /**
+   * Emit an event, and wait for another event to be emitted. The returned
+   * promise will be resolved with the parameters of the emitted event.
+   * The listener priority will be the next tick, in subtick order 0.
+   * @param listenedEvent The event name to wait for.
+   * @param emittedEvent The event name to emit.
+   * @param args The event parameters.
+   */
+  emitAndWait<L extends EventNames, E extends EventNames>(
+    listenedEvent: L,
     emittedEvent: E,
-    event: F,
     ...args: EventParams<E>
-  ): Promise<EventParams<F>>;
+  ): Promise<EventParams<L>>;
+  /**
+   * Emit an event, and wait for another event to be emitted. The returned
+   * promise will be resolved with the parameters of the emitted event.
+   * The listened event's priority can be customized through the listenerPriority
+   * parameter.
+   * @param listenedEvent The event name to wait for.
+   * @param listenerPriority The tick and subtick priority of the listened event.
+   * @param emittedEvent The event name to emit.
+   * @param args The event parameters.
+   */
+  emitAndWait<L extends EventNames, E extends EventNames>(
+    listenedEvent: L,
+    listenerPriority: ListenerPriority,
+    emittedEvent: E,
+    ...args: EventParams<E>
+  ): Promise<EventParams<L>>;
 }
 
 // The event declaration type, which specifies the events that a module provides,

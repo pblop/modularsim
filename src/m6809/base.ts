@@ -247,16 +247,28 @@ class M6809Simulator implements ISimulator {
       this.once(event, (...args: EventParams<E>) => resolve(args), listenerPriority);
     });
   }
-  /**
-   *
-   */
-  emitAndWait<E extends EventNames, F extends EventNames>(
-    emittedEvent: E,
-    event: F,
-    ...args: EventParams<E>
-  ): Promise<EventParams<F>> {
-    const promise = this.wait(event);
-    this.emit(emittedEvent, ...args);
+  emitAndWait<E extends EventNames, L extends EventNames>(
+    listenedEvent: L,
+    secondParam: E | ListenerPriority,
+    ...args: unknown[]
+  ): Promise<EventParams<L>> {
+    // This function has _two_ signatures, so we need to check the type of the
+    // second argument to know if we have a listenerPriority or not.
+    let listenerPriority: ListenerPriority | undefined;
+    let emittedEvent: E;
+    if (typeof secondParam === "object") {
+      // emitAndWait(listenedEvent, listenerPriority, emittedEvent, ...args)
+      listenerPriority = secondParam;
+      emittedEvent = args.shift() as E;
+    } else {
+      // emitAndWait(listenedEvent, emittedEvent, ...args)
+      emittedEvent = secondParam;
+    }
+
+    const promise = this.wait(listenedEvent, listenerPriority);
+    // We need to cast args to EventParams<E> because we have no way of telling
+    // TypeScript which of the two signatures we're using.
+    this.emit(emittedEvent, ...(args as EventParams<E>));
     return promise;
   }
 
@@ -330,16 +342,27 @@ class M6809Simulator implements ISimulator {
    * Add a new once event listener, and emits an event, but checks that the event
    * is declared in the module before.
    */
-  namedEmitAndWait<E extends EventNames, F extends EventNames>(
+  namedEmitAndWait<E extends EventNames, L extends EventNames>(
     caller: string,
-    emittedEvent: E,
-    event: F,
-    ...args: EventParams<E>
-  ): Promise<NonNullable<EventParams<F>>> {
-    this.namedEmitterCheck(caller, emittedEvent);
-    this.namedListenerCheck(caller, event);
+    listenedEvent: L,
+    thirdParam: E | ListenerPriority,
+    ...args: unknown[]
+  ): Promise<EventParams<L>> {
+    // Just as in emitAndWait, we need to check the type of the second (now third)
+    // argument to know if we have a listenerPriority or not.
+    let emittedEvent: E;
+    if (typeof thirdParam === "object") {
+      // emitAndWait(caller, listenedEvent, listenerPriority, emittedEvent, ...args)
+      emittedEvent = args.shift() as E;
+    } else {
+      // emitAndWait(caller, listenedEvent, emittedEvent, ...args)
+      emittedEvent = thirdParam;
+    }
 
-    return this.emitAndWait(emittedEvent, event, ...args);
+    this.namedEmitterCheck(caller, emittedEvent);
+    this.namedListenerCheck(caller, listenedEvent);
+
+    return this.emitAndWait(listenedEvent, emittedEvent, ...args);
   }
 }
 

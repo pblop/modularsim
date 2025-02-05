@@ -58,8 +58,8 @@ class HistoryUI implements IModule {
     for (let i = 0; i < bytes; i++) {
       // TODO: Maybe do some comparison that the read address is the correct one?
       const [_, data] = await this.et.emitAndWait(
-        "ui:memory:read",
         "ui:memory:read:result",
+        "ui:memory:read",
         address + i,
       );
       if (data == null) throw new Error(`[${this.id}] read an undefined byte!1!!`);
