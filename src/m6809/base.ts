@@ -13,7 +13,7 @@ import { PriorityQueue } from "../general/priority.js";
 
 type EventQueuePriority = {
   // The index of the tick when the event should be executed (starting on 1).
-  index: number;
+  tick: number;
   order: number;
 };
 type EventQueueElement = {
@@ -31,7 +31,7 @@ class EventQueue {
 
   constructor() {
     this.queue = new PriorityQueue(
-      (a, b) => a.priority.index - b.priority.index || a.priority.order - b.priority.order,
+      (a, b) => a.priority.tick - b.priority.tick || a.priority.order - b.priority.order,
     );
     this.ticks = 0;
   }
@@ -51,19 +51,19 @@ class EventQueue {
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this.queue.peek()!.priority.index > this.ticks;
+    return this.queue.peek()!.priority.tick > this.ticks;
   }
   dequeue() {
     return this.queue.dequeue()?.callback;
   }
   debugView() {
     const sorted = this.queue._heap.sort(
-      (a, b) => a.priority.index - b.priority.index || a.priority.order - b.priority.order,
+      (a, b) => a.priority.tick - b.priority.tick || a.priority.order - b.priority.order,
     );
     return sorted.reduce(
       // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       (acc: Map<string, EventCallback<any>[]>, el) => {
-        const str = `${el.priority.index}|${el.priority.order}`;
+        const str = `${el.priority.tick}|${el.priority.order}`;
         if (!acc.has(str)) acc.set(str, []);
         acc.get(str)!.push(el.callback);
         return acc;
@@ -72,7 +72,7 @@ class EventQueue {
     );
   }
 
-  incrementIndex() {
+  incrementTick() {
     this.ticks++;
   }
 }
@@ -183,7 +183,7 @@ class M6809Simulator implements ISimulator {
 
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
-    this.events[event].incrementIndex();
+    this.events[event].incrementTick();
 
     while (!this.events[event].hasFinishedIndex()) {
       const callback = this.events[event].dequeue();
@@ -227,14 +227,14 @@ class M6809Simulator implements ISimulator {
     // offset is given.
     const order = listenerPriority?.order ?? 0;
 
-    let index = queue.ticks + 1;
-    if (listenerPriority?.index) index = listenerPriority.index;
-    else if (listenerPriority?.indexOffset) {
-      if (listenerPriority.indexOffset < 0) throw new Error("Index offset must be positive");
-      index += listenerPriority.indexOffset;
+    let tick = queue.ticks + 1;
+    if (listenerPriority?.tick) tick = listenerPriority.tick;
+    else if (listenerPriority?.tickOffset) {
+      if (listenerPriority.tickOffset < 0) throw new Error("Index offset must be positive");
+      tick += listenerPriority.tickOffset;
     }
 
-    this.events[event].enqueue(callback, { index, order });
+    this.events[event].enqueue(callback, { tick, order });
   }
   /**
    * once but in promise.

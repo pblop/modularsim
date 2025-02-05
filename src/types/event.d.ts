@@ -53,17 +53,16 @@ type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
 
 export type SubtickPriority = { order?: number };
 export type TickPriority =
-  | { index: number; indexOffset?: never }
-  | { index?: never; indexOffset: number }
-  | { index?: never; indexOffset?: never };
+  | { tick: number; tickOffset?: never }
+  | { tick?: never; tickOffset: number }
+  | { tick?: never; tickOffset?: never };
 /**
  * Priority object for listeners, with the following properties:
- * - order: The order within an index, lower is higher (default: 0)
- * - index: The index of the listener in the list (default: next available index)
- * - indexOffset: The offset to apply to the next available index, must be
- *   positive (default: 0)
- * Only one of index or indexOffset should be provided, if both are provided,
- * index will be used.
+ * - order: The order within a tick, lower is higher (default: 0)
+ * - tick: The tick of the listener in the list (default: next available tick)
+ * - tickOffset: The offset to apply to the next tick, must be positive (default: 0)
+ * Only one of tick or tickOffset should be provided, if both are provided,
+ * tick will be used.
  */
 export type ListenerPriority = SubtickPriority & TickPriority;
 
