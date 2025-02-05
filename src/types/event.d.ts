@@ -163,11 +163,17 @@ export interface TypedEventTransceiver {
 
 // The event declaration type, which specifies the events that a module provides,
 // requires, and optionally requires.
+/**
+ * The event listeners are specified as an object, where the key is the event name,
+ * and the value is either:
+ * - an array containing the callback function and the subtick priority
+ * - the callback function for the event (interpreted as subtick priority 0)
+ */
+export type EventDeclarationListeners = {
+  [E in EventNames]?: [EventCallback<E>, SubtickPriority] | EventCallback<E> | null;
+};
 export type EventDeclaration = {
   provided: EventNames[];
-  // The required and optional events are specified as an object, where the key is
-  // the event name, and the value is the callback function for the event or an array
-  // containing the callback function and the order.
-  required: { [E in EventNames]?: [EventCallback<E>, number] | EventCallback<E> | null };
-  optional?: { [E in EventNames]?: [EventCallback<E>, number] | EventCallback<E> | null };
+  required: EventDeclarationListeners;
+  optional?: EventDeclarationListeners;
 };

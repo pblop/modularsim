@@ -7,12 +7,14 @@ import type {
   EventDeclaration,
   EventMap,
   ListenerPriority,
+  EventDeclarationListeners,
+  SubtickPriority,
 } from "../types/event.js";
 import type { ISimulator } from "../types/simulator.js";
 import { PriorityQueue } from "../general/priority.js";
 
 type EventQueuePriority = {
-  // The index of the tick when the event should be executed (starting on 1).
+  // The tick when the event should be executed (starting on 1).
   tick: number;
   order: number;
 };
@@ -150,26 +152,39 @@ class M6809Simulator implements ISimulator {
 
     // Add all the event listeners.
     for (const eventDeclaration of Object.values(this.event_declarations)) {
-      // We know that the event name is in the provided events (it's a valid
-      // event declaration), so we can cast it to EventNames.
-      // We know that the event is in the event declaration, so we can just
-      // call on (instead of onNamed).
-      for (const [name, callbackObject] of Object.entries(eventDeclaration.required)) {
-        if (callbackObject == null) continue;
-        if (typeof callbackObject === "function") {
-          this.on(name as EventNames, callbackObject as EventCallback<EventNames>);
-        } else {
-          const [callback, order] = callbackObject;
-          this.on(name as EventNames, callback as EventCallback<EventNames>, { order });
-        }
-      }
-      if (eventDeclaration.optional)
-        for (const [name, callback] of Object.entries(eventDeclaration.optional))
-          this.on(name as EventNames, callback as EventCallback<EventNames>);
+      this.addEDListeners(eventDeclaration.required);
+      if (eventDeclaration.optional) this.addEDListeners(eventDeclaration.optional);
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
     this.emit("system:load_finish");
+  }
+
+  /**
+   * Internal method to add event listeners from an (E)vent (D)eclaration to the
+   * event queue. No checks are performed, as the event declaration is assumed
+   * to be correct.
+   * @param listeners The event listeners to add.
+   */
+  addEDListeners<E extends EventNames>(listeners: EventDeclarationListeners) {
+    for (const [name, object] of Object.entries(listeners)) {
+      if (object == null) continue;
+
+      let subtickPriority: SubtickPriority | undefined;
+      let callback: EventCallback<E>;
+
+      // We know that the event name is in the provided events (it's a valid
+      // event declaration), so we can cast it safely.
+      if (typeof object === "function") {
+        callback = object as EventCallback<E>;
+      } else {
+        [callback, subtickPriority] = object as [EventCallback<E>, SubtickPriority];
+      }
+
+      // We know that the event is in the event declaration, and, thus, properly
+      // accounted for and checked, so we can just call on (instead of onNamed).
+      this.on(name as E, callback, subtickPriority);
+    }
   }
 
   /**
