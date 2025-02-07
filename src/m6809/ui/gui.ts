@@ -3,16 +3,46 @@ import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
 import { timeAgo } from "../../general/dates.js";
-import { verify } from "../../general/config.js";
+import { type ObjectSchema, verify } from "../../general/config.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
   column: string | number;
   row: string | number;
 };
-
+type GuiColors = {
+  background: string;
+  foreground: string;
+  text: string;
+  border: string;
+  highlight: string;
+};
 type GuiConfig = {
   panels: GuiPanelConfig[];
+  colors: {
+    dark: GuiColors;
+    light: GuiColors;
+    default: "dark" | "light";
+  };
+};
+
+const GUI_COLOR_SCHEMA: ObjectSchema = {
+  type: "object",
+  required: false,
+  default: {
+    background: "#ffffff",
+    foreground: "#000000",
+    text: "#000000",
+    border: "#000000",
+    highlight: "#cccccc",
+  },
+  properties: {
+    background: { type: "string", required: true },
+    foreground: { type: "string", required: true },
+    text: { type: "string", required: true },
+    border: { type: "string", required: true },
+    highlight: { type: "string", required: true },
+  },
 };
 
 class Gui implements IModule {
@@ -48,6 +78,29 @@ class Gui implements IModule {
     this.config = verify(
       config,
       {
+        colors: {
+          type: "object",
+          required: false,
+          default: {
+            light: {
+              background: "#ffffff",
+              foreground: "#000000",
+              text: "#000000",
+              border: "#000000",
+              highlight: "#cccccc",
+            },
+            default: "light",
+          },
+          properties: {
+            dark: GUI_COLOR_SCHEMA,
+            light: GUI_COLOR_SCHEMA,
+            default: {
+              type: "string",
+              default: "light",
+              enum: ["dark", "light"],
+            },
+          },
+        },
         panels: {
           type: "array",
           schema: {
@@ -60,7 +113,7 @@ class Gui implements IModule {
           },
         },
       },
-      this.id,
+      `[${this.id}] configuration error: `,
     );
 
     // Get the root element where the GUI will be rendered.
@@ -70,6 +123,11 @@ class Gui implements IModule {
     this.root_element = root_element;
 
     this.createDeploymentInfoElement();
+
+    const colors = this.config.colors[this.config.colors.default];
+    for (const [key, value] of Object.entries(colors)) {
+      root_element.style.setProperty(`--gui-color-${key}`, value);
+    }
 
     console.log(`[${this.id}] Module initialized.`);
   }
