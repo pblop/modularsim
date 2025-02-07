@@ -59,13 +59,20 @@ type VerificationSchema = PrimitiveSchema | ArraySchema | ObjectSchema;
 export type VerificationProperties = {
   [key: string]: VerificationSchema;
 };
+/**
+ * Verify that the given object has the expected properties and types, throwing
+ * an error if it doesn't.
+ * This function modifies the input object (pass by reference), and also
+ * returns the modified object.
+ * Default values are _not_ checked against the schema.
+ */
 export function verify<T>(
   obj: Record<string, unknown> | undefined,
   props: VerificationProperties,
   prepend = "validation error:",
 ): T {
   if (obj === undefined) throw new Error(`${prepend} main object is undefined`);
-  return verifyObject(obj, "", { type: "object", required: true, properties: props }) as T;
+  return verifyObject(obj, prepend, { type: "object", required: true, properties: props }) as T;
 }
 
 function verifyProperty(
@@ -142,7 +149,10 @@ function verifyObject(
     // Existence checks
     if (schema.required && obj[key] === undefined)
       throw new Error(`${fieldString} field "${key}" is required`);
-    if (schema.default !== undefined && obj[key] === undefined) obj[key] = schema.default;
+    if (schema.default !== undefined && obj[key] === undefined) {
+      obj[key] = schema.default;
+      return obj;
+    }
     if (obj[key] === undefined) continue;
 
     if (schema.type === "number" || schema.type === "string") {
