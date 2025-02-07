@@ -1,6 +1,4 @@
 .clock-ui {
-  background-color: lightgreen;
-
   .clock-extra {
     display: flex;
     flex-direction: row;

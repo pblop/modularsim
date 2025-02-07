@@ -32,7 +32,7 @@
     align-items: center;
 
     &:last-child {
-      background-color: #f0f0f0;
+      background-color: var(--gui-color-highlight);
     }
 
     .address {

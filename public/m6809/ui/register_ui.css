@@ -1,6 +1,4 @@
 .register-ui {
-  background-color: plum;
-
   .register-table {
     font-family: 'Courier New', Courier, monospace;
 
@@ -9,12 +7,12 @@
 
     .pointer-register {
       text-decoration: underline;
-      color: #0000ff;
+      color: var(--gui-color-text-blue);
       cursor: help;
     }
     .pointer-register-value {
       text-decoration: underline;
-      color: #0000ff;
+      color: var(--gui-color-text-blue);
       cursor: help;
     }
   }
