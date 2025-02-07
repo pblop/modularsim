@@ -29,10 +29,9 @@ export function checkProperties(obj: { [key: string]: unknown }, properties: str
   }
 }
 
-// TODO: Parse arrays, and nested objects
-export type VerificationType = "number" | "string";
-export type VerificationProperty = {
-  type: VerificationType;
+export type SchemaType = "number" | "string" | "array" | "object";
+export type PrimitiveSchema = {
+  type: "number" | "string";
   required?: boolean;
   default?: unknown;
   min?: number;
@@ -40,59 +39,124 @@ export type VerificationProperty = {
   pattern?: RegExp;
   enum?: unknown[];
 };
-export type VerificationSchema = {
-  [key: string]: VerificationProperty;
+/**
+ * Only supports array of same type
+ */
+export type ArraySchema = {
+  type: "array";
+  required?: boolean;
+  default?: unknown[];
+  schema: VerificationSchema;
+};
+export type ObjectSchema = {
+  type: "object";
+  required?: boolean;
+  default?: Record<string, unknown>;
+  properties: VerificationProperties;
+};
+type VerificationSchema = PrimitiveSchema | ArraySchema | ObjectSchema;
+
+export type VerificationProperties = {
+  [key: string]: VerificationSchema;
 };
 export function verify<T>(
-  obj: Record<string, unknown>,
-  schema: VerificationSchema,
-  prepend = "",
+  obj: Record<string, unknown> | undefined,
+  props: VerificationProperties,
+  prepend = "validation error:",
 ): T {
-  for (const [key, value] of Object.entries(schema)) {
-    // Existence checks
-    if (value.required && obj[key] === undefined)
-      throw new Error(`${prepend} field "${key}" is required`);
-    if (value.default !== undefined && obj[key] === undefined) obj[key] = value.default;
-    if (obj[key] === undefined) continue;
+  if (obj === undefined) throw new Error(`${prepend} main object is undefined`);
+  return verifyObject(obj, "", { type: "object", required: true, properties: props }) as T;
+}
 
-    // Type checks
-    if (value.type === "number") {
-      if (!isNumber(obj[key]))
-        throw new Error(
-          `${prepend} field "${key}" must be a number (or a string representation thereof)`,
-        );
-      if (typeof obj[key] === "string") obj[key] = parseNumber(obj[key] as string);
-    }
-    if (value.type === "string" && typeof obj[key] !== "string") {
-      throw new Error(`${prepend} field "${key}" must be a string`);
-    }
+function verifyProperty(
+  inValue: string | number,
+  fieldString: string,
+  schema: PrimitiveSchema,
+): string | number {
+  let value = inValue;
+  // Type checks
+  if (schema.type === "number") {
+    if (!isNumber(value))
+      throw new Error(`${fieldString} must be a number (or a string representation thereof)`);
+    if (typeof value === "string") value = parseNumber(value as string);
+  }
+  if (schema.type === "string" && typeof value !== "string") {
+    throw new Error(`${fieldString} must be a string`);
+  }
 
-    // Value checks
-    if (
-      value.min !== undefined &&
-      typeof obj[key] === "number" &&
-      (obj[key] as number) < value.min
-    ) {
-      throw new Error(`${prepend} field "${key}" must be greater than or equal to ${value.min}`);
-    }
-    if (
-      value.max !== undefined &&
-      typeof obj[key] === "number" &&
-      (obj[key] as number) > value.max
-    ) {
-      throw new Error(`${prepend} field "${key}" must be less than or equal to ${value.max}`);
-    }
-    if (
-      value.pattern !== undefined &&
-      typeof obj[key] === "string" &&
-      !value.pattern.test(obj[key] as string)
-    ) {
-      throw new Error(`${prepend} field "${key}" must match the pattern ${value.pattern}`);
-    }
-    if (value.enum !== undefined && !value.enum.includes(obj[key])) {
-      throw new Error(`${prepend} field "${key}" must be one of ${value.enum}`);
+  // Value checks
+  if (schema.min !== undefined && typeof value === "number" && (value as number) < schema.min) {
+    throw new Error(`${fieldString} must be greater than or equal to ${schema.min}`);
+  }
+  if (schema.max !== undefined && typeof value === "number" && (value as number) > schema.max) {
+    throw new Error(`${fieldString} must be less than or equal to ${schema.max}`);
+  }
+  if (
+    schema.pattern !== undefined &&
+    typeof value === "string" &&
+    !schema.pattern.test(value as string)
+  ) {
+    throw new Error(`${fieldString} must match the pattern ${schema.pattern}`);
+  }
+  if (schema.enum !== undefined && !schema.enum.includes(value)) {
+    throw new Error(`${fieldString} must be one of ${schema.enum}`);
+  }
+
+  return value;
+}
+/**
+ * NOTE: This function modifies the input object (pass by reference), and also
+ * returns the modified object.
+ */
+function verifyArray(value: unknown[], fieldString: string, schema: ArraySchema): unknown[] {
+  if (!Array.isArray(value)) throw new Error(`${fieldString} must be an array`);
+
+  for (let i = 0; i < value.length; i++) {
+    if (schema.schema.type === "number" || schema.schema.type === "string") {
+      value[i] = verifyProperty(value[i] as string | number, `${fieldString}[${i}]`, schema.schema);
+    } else if (schema.schema.type === "object") {
+      value[i] = verify(
+        value[i] as Record<string, unknown>,
+        schema.schema.properties,
+        `${fieldString}[${i}]`,
+      );
     }
   }
 
-  return obj as T;
+  return value;
+}
+
+/**
+ * NOTE: This function modifies the input object (pass by reference), and also
+ * returns the modified object.
+ */
+function verifyObject(
+  obj: Record<string, unknown>,
+  fieldString: string,
+  objectSchema: ObjectSchema,
+) {
+  if (typeof obj !== "object" || Array.isArray(obj))
+    throw new Error(`${fieldString} must be an object`);
+
+  for (const [key, schema] of Object.entries(objectSchema.properties)) {
+    // Existence checks
+    if (schema.required && obj[key] === undefined)
+      throw new Error(`${fieldString} field "${key}" is required`);
+    if (schema.default !== undefined && obj[key] === undefined) obj[key] = schema.default;
+    if (obj[key] === undefined) continue;
+
+    if (schema.type === "number" || schema.type === "string") {
+      obj[key] = verifyProperty(obj[key] as string | number, `${fieldString} field ${key}`, schema);
+    } else if (schema.type === "array") {
+      obj[key] = verifyArray(obj[key] as unknown[], `${fieldString} field ${key}`, schema);
+    } else if (schema.type === "object") {
+      obj[key] = verifyObject(
+        obj[key] as Record<string, unknown>,
+        `${fieldString} field ${key}`,
+        schema,
+      );
+    }
+  }
+
+  return obj;
 }

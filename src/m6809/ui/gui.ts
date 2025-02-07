@@ -3,6 +3,7 @@ import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
 import { timeAgo } from "../../general/dates.js";
+import { verify } from "../../general/config.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
@@ -13,21 +14,6 @@ type GuiPanelConfig = {
 type GuiConfig = {
   panels: GuiPanelConfig[];
 };
-
-function validate_gui_panel_config(config: Record<string, unknown>): GuiPanelConfig {
-  if (typeof config.id !== "string") throw new Error("[GUI] panel id must be a string");
-  if (typeof config.column !== "string" && typeof config.column !== "number")
-    throw new Error("[GUI] panel column must be a string or number");
-  if (typeof config.row !== "string" && typeof config.row !== "number")
-    throw new Error("[GUI] panel row must be a string or number");
-  return config as GuiPanelConfig;
-}
-function validate_gui_config(config: Record<string, unknown>): GuiConfig {
-  if (!Array.isArray(config.panels)) throw new Error("[GUI] panels must be an array");
-  config.panels = config.panels.map((panel) => validate_gui_panel_config(panel));
-
-  return config as GuiConfig;
-}
 
 class Gui implements IModule {
   event_transceiver: TypedEventTransceiver;
@@ -59,7 +45,23 @@ class Gui implements IModule {
     // Verify that configuration is ok.
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
 
-    this.config = validate_gui_config(config);
+    this.config = verify(
+      config,
+      {
+        panels: {
+          type: "array",
+          schema: {
+            type: "object",
+            properties: {
+              id: { type: "string", required: true },
+              column: { type: "string" },
+              row: { type: "string" },
+            },
+          },
+        },
+      },
+      this.id,
+    );
 
     // Get the root element where the GUI will be rendered.
     const root_element = document.getElementById("root");
