@@ -33,7 +33,13 @@ html, body {
 
 /* TODO: check the max-width is correct. Maybe there's another better unit */
 @media (max-width: 459px) {
+  .gui-root {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
   .gui-panel {
     grid-column: 1 / span 1 !important;
+    grid-row: initial !important;
+    min-height: 2vh;
   }
 }

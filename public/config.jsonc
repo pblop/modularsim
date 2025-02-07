@@ -45,27 +45,27 @@
             {
               "id": "register_ui",
               "column": "1 / span 3",
-              "row": "1"
+              "row": "1 / span 2"
             },
             {
               "id": "instruction_ui",
               "column": "1 / span 3",
-              "row": "2 / span 6"
+              "row": "3 / span 6"
             },
             {
               "id": "main_memory_ui",
               "column": "4 / span 3",
-              "row": "2 / span 6"
+              "row": "3 / span 6"
             },
             {
               "id": "screen_ui",
               "column": "1 / span 3",
-              "row": "8 / span 2"
+              "row": "9 / span 2"
             },
             {
               "id": "history_ui",
               "column": "4 / span 3",
-              "row": "8 / span 2"
+              "row": "9 / span 2"
             },
             // {
             //   "id": "ui2",
