@@ -3,11 +3,20 @@ html, body {
   width: 100vw;
 }
 
+input,button,textarea,select {
+  background-color: var(--gui-color-background);
+  border: 1px solid var(--gui-color-border);
+  color: var(--gui-color-text)
+}
+
 .gui-root {
   display: grid;
   height: 100vh;
   width: 100vw;
   padding: 1rem;
+
+  background-color: var(--gui-color-background);
+  color: var(--gui-color-text);
 
   grid-gap: 1rem;
   grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
@@ -27,7 +36,7 @@ html, body {
 
 .gui-panel {
   overflow: auto;
-  border: 1px solid #000;
+  border: 1px solid var(--gui-color-border);
   border-radius: 5px;
 }
 
@@ -42,4 +51,8 @@ html, body {
     grid-row: initial !important;
     min-height: 2vh;
   }
+}
+
+@media (prefers-color-scheme: dark) {
+  
 }

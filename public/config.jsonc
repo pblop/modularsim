@@ -39,25 +39,8 @@
         "id": "gui",
         "type": "gui",
         "url": "./m6809/ui/gui.js",
-        "css": ["./m6809/ui/reset.css", "./m6809/ui/gui.css"],
+        "css": ["./m6809/ui/reset.css", "./m6809/ui/gui.css", "./config-colors.css"],
         "config": {
-          "colors": {
-            "dark": {
-              "background": "#1e1e1e",
-              "foreground": "#d4d4d4",
-              "highlight": "#4e4e4e",
-              "border": "#4e4e4e",
-              "text": "#d4d4d4"
-            },
-            "light": {
-              "background": "#f0f0f0",
-              "foreground": "#1e1e1e",
-              "highlight": "#d4d4d4",
-              "border": "#d4d4d4",
-              "text": "#1e1e1e"
-            },
-            "default": "dark"
-          },
           "panels": [
             {
               "id": "register_ui",
