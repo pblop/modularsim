@@ -45,6 +45,7 @@ export enum IndexedAction {
   PreDec2,
   OffsetPC8,
   OffsetPC16,
+  ExtendedIndirect,
 }
 export type ParsedIndexedPostbyte<A extends IndexedAction = IndexedAction> = {
   action: A;
@@ -83,6 +84,7 @@ export function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | 
       0b0011: IndexedAction.PreDec2,
       0b1100: IndexedAction.OffsetPC8,
       0b1101: IndexedAction.OffsetPC16,
+      0b1111: IndexedAction.ExtendedIndirect,
     }[rest];
   }
 

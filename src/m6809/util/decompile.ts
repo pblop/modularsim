@@ -35,7 +35,7 @@ export async function disassIdxAdressing(
   const { action, register, indirect, rest } = parsedPostbyte;
   let bytesReadOffPC = 0;
 
-  const baseAddress: number = registers[register];
+  let baseAddress: number = registers[register];
   let offset: number; // A signed 16-bit offset
   switch (action) {
     case IndexedAction.Offset0:
@@ -74,6 +74,11 @@ export async function disassIdxAdressing(
       break;
     case IndexedAction.PreDec2:
       offset = numberToIntN(-2, 16);
+      break;
+    case IndexedAction.ExtendedIndirect:
+      baseAddress = await read(pc, 2);
+      bytesReadOffPC += 2;
+      offset = 0;
       break;
   }
 

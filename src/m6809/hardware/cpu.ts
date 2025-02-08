@@ -392,6 +392,7 @@ class Cpu implements IModule {
         [IndexedAction.PostInc2]: 4,
         [IndexedAction.PreDec2]: 4,
         [IndexedAction.OffsetPC16]: 6,
+        [IndexedAction.ExtendedIndirect]: 3,
         [IndexedAction.OffsetPC8]: 2,
       }[this.addressing!.postbyte.action];
 
@@ -459,6 +460,13 @@ class Cpu implements IModule {
           ctx.offset = this.readInfo!.value << 8;
           this.queryMemoryRead("pc", 1);
         } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
+        break;
+      case IndexedAction.ExtendedIndirect: // 2 DR, 1 DC
+        if (ctx.remainingTicks === 3) this.queryMemoryRead("pc", 2);
+        else if (ctx.remainingTicks === 2) {
+          ctx.baseAddress = this.readInfo!.value;
+          ctx.offset = 0;
+        }
         break;
       case IndexedAction.OffsetPC8: // 1 DR, 2 DC
         // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
