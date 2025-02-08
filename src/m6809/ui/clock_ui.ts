@@ -2,6 +2,7 @@ import type { IModule } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
 import { element } from "../../general/html.js";
+import { createLanguageStrings } from "../../general/lang.js";
 
 type ClockUIConfig = {
   frequency: number;
@@ -18,6 +19,25 @@ type ClockUIState = {
   cycles: number;
 };
 
+const ClockUIStrings = createLanguageStrings({
+  en: {
+    reset: "Reset",
+    pause: "Pause",
+    continue: "Continue",
+    stepCycle: "Step (1 cycle)",
+    stepInstruction: "Step (1 instruction)",
+    fastReset: "Fast reset",
+  },
+  es: {
+    reset: "Reset",
+    pause: "Pausar",
+    continue: "Continuar",
+    stepCycle: "Paso (1 ciclo)",
+    stepInstruction: "Paso (1 instrucción)",
+    fastReset: "Reset rápido",
+  },
+});
+
 class ClockUI implements IModule {
   id: string;
   event_transceiver: TypedEventTransceiver;
@@ -26,6 +46,9 @@ class ClockUI implements IModule {
 
   panel?: HTMLElement;
   state: ClockUIState;
+
+  language!: string;
+  localeStrings!: typeof ClockUIStrings.en;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -67,6 +90,11 @@ class ClockUI implements IModule {
     console.log(`[${this.id}] Module initialized.`);
   }
 
+  setLanguage(language: string): void {
+    this.language = language;
+    this.localeStrings = ClockUIStrings[this.language] || ClockUIStrings.en;
+  }
+
   onCycleStart = (): void => {
     console.log(`[${this.id}] Clock cycle started`);
     this.setState({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
@@ -97,7 +125,7 @@ class ClockUI implements IModule {
             },
             element("span", {
               className: "clock-icon pause",
-              title: "Pause",
+              title: this.localeStrings.pause,
             }),
           ),
         );
@@ -115,7 +143,7 @@ class ClockUI implements IModule {
             },
             element("span", {
               className: "clock-icon continue",
-              title: "Continue",
+              title: this.localeStrings.continue,
             }),
           ),
         );
@@ -129,7 +157,7 @@ class ClockUI implements IModule {
             },
             element("span", {
               className: "clock-icon step-cycle",
-              title: "Step (cycle)",
+              title: this.localeStrings.stepCycle,
             }),
           ),
         );
@@ -144,7 +172,7 @@ class ClockUI implements IModule {
             },
             element("span", {
               className: "clock-icon step-instruction",
-              title: "Step (instruction)",
+              title: this.localeStrings.stepInstruction,
             }),
           ),
         );
@@ -162,7 +190,7 @@ class ClockUI implements IModule {
             },
             element("span", {
               className: "clock-icon reset",
-              title: "Reset",
+              title: this.localeStrings.reset,
             }),
           ),
         );
@@ -178,7 +206,7 @@ class ClockUI implements IModule {
             },
             element("span", {
               className: "clock-icon fast-reset",
-              title: "Fast reset",
+              title: this.localeStrings.fastReset,
             }),
           ),
         );
@@ -201,12 +229,14 @@ class ClockUI implements IModule {
     }
   }
 
-  onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
+  onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
     if (panel_id !== this.id) return;
     this.panel = panel;
 
     this.panel.classList.add("clock-ui");
     this.panel.style.setProperty("--clock-frequency", `${this.config.frequency}`);
+
+    this.setLanguage(language);
 
     this.panel.appendChild(element("div", { className: "clock-main" }));
     this.panel.appendChild(
