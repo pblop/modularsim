@@ -7,7 +7,7 @@ export interface EventMap {
   "memory:write:result": [address: number, data: number];
 
   // GUI events.
-  "gui:panel_created": [id: string, panel: HTMLElement];
+  "gui:panel_created": [id: string, panel: HTMLElement, language: string];
 
   // System syncronisation events. These act as a barrier.
   "system:load_finish": [];

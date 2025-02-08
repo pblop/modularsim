@@ -12,11 +12,13 @@ type GuiPanelConfig = {
 };
 type GuiConfig = {
   panels: GuiPanelConfig[];
+  language?: string;
 };
 
 class Gui implements IModule {
   event_transceiver: TypedEventTransceiver;
   config: GuiConfig;
+  language: string;
   id: string;
 
   root_element: HTMLElement;
@@ -58,9 +60,20 @@ class Gui implements IModule {
             },
           },
         },
+        language: { type: "string", required: false },
       },
       `[${this.id}] configuration error: `,
     );
+
+    // Set the language to be used in the GUI.
+    if (this.config.language) {
+      // If the language is provided in the configuration, use it.
+      this.language = this.config.language;
+    } else {
+      // Otherwise, use the browser's language.
+      this.language = navigator.language;
+      if (this.language.length > 2) this.language = this.language.slice(0, 2);
+    }
 
     // Get the root element where the GUI will be rendered.
     const root_element = document.getElementById("root");
@@ -70,7 +83,7 @@ class Gui implements IModule {
 
     this.createDeploymentInfoElement();
 
-    console.log(`[${this.id}] Module initialized.`);
+    console.log(`[${this.id}] Module initialized with language ${this.language}.`);
   }
 
   createDeploymentInfoElement() {
@@ -106,7 +119,7 @@ class Gui implements IModule {
       this.root_element.appendChild(panel_element);
 
       // Notify other modules that the panel has been created
-      this.event_transceiver.emit("gui:panel_created", panel.id, panel_element);
+      this.event_transceiver.emit("gui:panel_created", panel.id, panel_element, this.language);
     }
   };
 }
