@@ -34,7 +34,7 @@ input,button,textarea,select {
   }
 
   .contrast-color {
-    background-color: var(--current-bg);
+    background-color: var(--current-bg, var(--gui-color-background));
 
     /* Contrast Color, https://lea.verou.me/blog/2024/contrast-color/ */
     /* Fallback for browsers that don't support RCS */

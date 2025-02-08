@@ -6,8 +6,6 @@
     text-align: center;
     width: 100%;
 
-    --current-bg: var(--gui-color-background);
-
     --cr: var(--gui-color-blue-background);
     --cw: var(--gui-color-red-background);
     --cp: var(--gui-color-yellow-background);
