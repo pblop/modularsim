@@ -245,7 +245,7 @@ class ClockUI implements IModule {
         {
           className: "clock-extra",
         },
-        element("div", { className: "clock-marker" }),
+        element("div", { className: "clock-marker clock-icon heartbeat" }),
         element(
           "div",
           { className: "clock-cycle-counter-container" },

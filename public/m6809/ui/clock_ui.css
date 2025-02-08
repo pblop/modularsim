@@ -9,7 +9,7 @@
   .clock-icon {
     height: 1lh;
     width: 1lh;
-    background: var(--gui-color-text) center / contain no-repeat;
+    background: var(--icon-color, var(--gui-color-text)) center / contain no-repeat;
     -webkit-mask-image: var(--icon);
     mask-image: var(--icon);
     -webkit-mask-size: contain;
@@ -38,6 +38,10 @@
     --icon: url("icons/stopwatch.svg");
     display: inline-block;
   }
+  .clock-icon.heartbeat {
+    --icon: url("icons/heart.svg");
+    --icon-color: var(--gui-color-red-background);
+  }
 
   .clock-extra {
     display: flex;
@@ -51,13 +55,11 @@
     .clock-marker {
       height: 1lh; 
       width: 1lh;
-      border-radius: 4px;
       display: inline-block;
       margin: 0.25em;
+      visibility: hidden;
     }
     .clock-marker.clock-animation {
-      background-color: red;
-
       visibility: visible;
       opacity: 1;
       animation-name: fadeOut;
