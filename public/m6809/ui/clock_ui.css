@@ -1,4 +1,36 @@
 .clock-ui {
+  button {
+    margin: 0.25em;
+    border: 0px;
+    border-radius: 4px;
+  }
+  .clock-icon {
+    height: 1lh;
+    background: var(--gui-color-text) center / contain no-repeat;
+    width: 1lh;
+    -webkit-mask-image: var(--icon);
+    mask-image: var(--icon);
+    display: block;
+  }
+  .clock-icon.reset {
+    --icon: url("icons/reload.svg")
+  }
+  .clock-icon.fast-reset {
+    --icon: url("icons/refresh-dot.svg")
+  }
+  .clock-icon.pause {
+    --icon: url("icons/player-pause.svg")
+  }
+  .clock-icon.continue{
+    --icon: url("icons/player-play.svg")
+  }
+  .clock-icon.step-cycle {
+    --icon: url("icons/arrow-right-circle.svg")
+  }
+  .clock-icon.step-instruction {
+    --icon: url("icons/player-skip-forward.svg")
+  }
+
   .clock-extra {
     display: flex;
     flex-direction: row;
@@ -29,7 +61,6 @@
       margin-right: 0.5em;
     }
   }
-  
 }
 
 @keyframes fadeOut {

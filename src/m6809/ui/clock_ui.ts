@@ -87,64 +87,100 @@ class ClockUI implements IModule {
 
       if (this.state.machineState === "running" || this.state.machineState === "instruction_run") {
         main.appendChild(
-          element("button", {
-            textContent: "Pause",
-            onclick: () => {
-              this.event_transceiver.emit("ui:clock:pause");
-              this.setState({ machineState: "paused" });
+          element(
+            "button",
+            {
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:pause");
+                this.setState({ machineState: "paused" });
+              },
             },
-          }),
+            element("span", {
+              className: "clock-icon pause",
+              title: "Pause",
+            }),
+          ),
         );
       }
 
       if (this.state.machineState === "paused") {
         main.appendChild(
-          element("button", {
-            textContent: "Continue",
-            onclick: () => {
-              this.event_transceiver.emit("ui:clock:start");
-              this.setState({ machineState: "running" });
+          element(
+            "button",
+            {
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:start");
+                this.setState({ machineState: "running" });
+              },
             },
-          }),
+            element("span", {
+              className: "clock-icon continue",
+              title: "Continue",
+            }),
+          ),
         );
         main.appendChild(
-          element("button", {
-            textContent: "Step (cycle)",
-            onclick: () => {
-              this.event_transceiver.emit("ui:clock:step_cycle");
+          element(
+            "button",
+            {
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:step_cycle");
+              },
             },
-          }),
+            element("span", {
+              className: "clock-icon step-cycle",
+              title: "Step (cycle)",
+            }),
+          ),
         );
         main.appendChild(
-          element("button", {
-            textContent: "Step (instruction)",
-            onclick: () => {
-              this.event_transceiver.emit("ui:clock:step_instruction");
-              this.setState({ machineState: "instruction_run" });
+          element(
+            "button",
+            {
+              onclick: () => {
+                this.event_transceiver.emit("ui:clock:step_instruction");
+                this.setState({ machineState: "instruction_run" });
+              },
             },
-          }),
+            element("span", {
+              className: "clock-icon step-instruction",
+              title: "Step (instruction)",
+            }),
+          ),
         );
       }
 
       if (this.state.machineState === "paused" || this.state.machineState === "stopped") {
         main.appendChild(
-          element("button", {
-            textContent: "Reset",
-            onclick: () => {
-              this.event_transceiver.emit("signal:reset");
-              this.setState({ machineState: "paused", cycles: 0 });
+          element(
+            "button",
+            {
+              onclick: () => {
+                this.event_transceiver.emit("signal:reset");
+                this.setState({ machineState: "paused", cycles: 0 });
+              },
             },
-          }),
+            element("span", {
+              className: "clock-icon reset",
+              title: "Reset",
+            }),
+          ),
         );
         main.appendChild(
-          element("button", {
-            textContent: "Fast reset",
-            onclick: () => {
-              this.event_transceiver.emit("signal:reset");
-              this.setState({ machineState: "fast_reset", cycles: 0 });
-              this.event_transceiver.emit("ui:clock:fast_reset");
+          element(
+            "button",
+            {
+              onclick: () => {
+                this.event_transceiver.emit("signal:reset");
+                this.setState({ machineState: "fast_reset", cycles: 0 });
+                this.event_transceiver.emit("ui:clock:fast_reset");
+              },
             },
-          }),
+            element("span", {
+              className: "clock-icon fast-reset",
+              title: "Fast reset",
+            }),
+          ),
         );
       }
     }

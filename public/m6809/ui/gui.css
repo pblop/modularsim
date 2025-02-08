@@ -9,6 +9,10 @@ input,button,textarea,select {
   color: var(--gui-color-text)
 }
 
+button:hover {
+  background-color: var(--gui-color-highlight);
+}
+
 .gui-root {
   display: grid;
   height: 100vh;
