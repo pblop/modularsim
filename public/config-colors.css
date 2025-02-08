@@ -5,6 +5,11 @@
   --gui-color-border: #4e4e4e;
   --gui-color-text: #d4d4d4;
   --gui-color-text-blue: #7777ff;
+
+  --gui-color-red-background: hsl(351, 100%, 56%);
+  --gui-color-green-background: hsl(120, 74%, 27%);
+  --gui-color-blue-background: hsl(195, 53%, 49%);
+  --gui-color-yellow-background: hsl(60, 100%, 64%);
 }
 @media (prefers-color-scheme: light) {
   .gui-root {
@@ -14,5 +19,10 @@
     --gui-color-border: #d4d4d4;
     --gui-color-text: #111111;
     --gui-color-text-blue: #0000ff;
+
+    --gui-color-red-background: hsl(351, 100%, 86%);
+    --gui-color-green-background: #90ee90;
+    --gui-color-blue-background: #add8e6;
+    --gui-color-yellow-background: #ffffe0;
   }
 }

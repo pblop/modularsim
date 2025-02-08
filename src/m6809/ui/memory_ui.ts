@@ -196,7 +196,7 @@ class MemoryUI implements IModule {
       for (let j = i; j < i + 16 && j < this.config.start + this.config.size; j++) {
         row.appendChild(
           element("td", {
-            className: `byte-${j}`,
+            className: `byte-${j} contrast-color`,
             textContent: this.formatMemoryData(0),
           }),
         );

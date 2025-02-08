@@ -1,29 +1,41 @@
 .memory-ui {
+
+
   .memory-table {
     font-family: 'Courier New', Courier, monospace;
     text-align: center;
     width: 100%;
 
+    --current-bg: var(--gui-color-background);
+
+    --cr: var(--gui-color-blue-background);
+    --cw: var(--gui-color-red-background);
+    --cp: var(--gui-color-yellow-background);
+    --crw: color-mix(in srgb, var(--cr), var(--cw));
+    --crp: color-mix(in srgb, var(--cr), var(--cp));
+    --cpw: color-mix(in srgb, var(--cp), var(--cw));
+    --crwp: color-mix(in srgb, var(--crw), var(--cp));
+
     .read-highlight {
-      background-color: lightblue;
+      --current-bg: var(--cr);
     }
     .pc-highlight {
-      background-color: lightyellow;
+      --current-bg: var(--cp);
     }
     .write-highlight {
-      background-color: red;
+      --current-bg: var(--cw);
     }
     .read-highlight.pc-highlight {
-      background-color: lightgreen;
+      --current-bg: var(--crp);
     }
     .read-highlight.write-highlight {
-      background-color: purple;
+      --current-bg: var(--crw);
     }
     .pc-highlight.write-highlight {
-      background-color: orange;
+      --current-bg: var(--cpw);
     }
     .read-highlight.pc-highlight.write-highlight {
-      background-color: whitesmoke;
+      --current-bg: var(--crwp);
     }
   }
   .memory-grid {

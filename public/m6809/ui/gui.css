@@ -32,6 +32,29 @@ input,button,textarea,select {
     font-weight: 500;
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   }
+
+  .contrast-color {
+    background-color: var(--current-bg);
+
+    /* Contrast Color, https://lea.verou.me/blog/2024/contrast-color/ */
+    /* Fallback for browsers that don't support RCS */
+    color: white;
+    text-shadow: 0 0 .05em black, 0 0 .05em black, 0 0 .05em black, 0 0 .05em black;
+
+    @supports (color: oklch(from red l c h)) {
+      --l: clamp(0, (l / 0.623 - 1) * -infinity, 1);
+      color: oklch(from var(--current-bg) var(--l) 0 h);
+      text-shadow: none;
+    }
+
+    /* contrast-color is a future CSS function, this is a fall-forward */
+    /* biome-ignore lint/correctness/noUnknownFunction: <above> */
+    @supports (color: contrast-color(red)) {
+      /* biome-ignore lint/correctness/noUnknownFunction: <above> */
+      color: contrast-color(var(--current-bg));
+      text-shadow: none;
+    }
+  }
 }
 
 .gui-panel {
@@ -51,8 +74,4 @@ input,button,textarea,select {
     grid-row: initial !important;
     min-height: 2vh;
   }
-}
-
-@media (prefers-color-scheme: dark) {
-  
 }
