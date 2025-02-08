@@ -392,7 +392,7 @@ class Cpu implements IModule {
         [IndexedAction.PostInc2]: 4,
         [IndexedAction.PreDec2]: 4,
         [IndexedAction.OffsetPC16]: 6,
-        [IndexedAction.OffsetPC8]: 3,
+        [IndexedAction.OffsetPC8]: 2,
       }[this.addressing!.postbyte.action];
 
       ctx.baseAddress = this.registers[this.addressing.postbyte.register];
