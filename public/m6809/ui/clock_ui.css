@@ -1,4 +1,6 @@
 .clock-ui {
+  font-family: 'Courier New', Courier, monospace;
+
   button {
     margin: 0.25em;
     border: 0px;
@@ -6,10 +8,12 @@
   }
   .clock-icon {
     height: 1lh;
-    background: var(--gui-color-text) center / contain no-repeat;
     width: 1lh;
+    background: var(--gui-color-text) center / contain no-repeat;
     -webkit-mask-image: var(--icon);
     mask-image: var(--icon);
+    -webkit-mask-size: contain;
+    mask-size: contain;
     display: block;
   }
   .clock-icon.reset {
@@ -30,20 +34,26 @@
   .clock-icon.step-instruction {
     --icon: url("icons/player-skip-forward.svg")
   }
+  .clock-icon.cycle-counter {
+    --icon: url("icons/stopwatch.svg");
+    display: inline-block;
+  }
 
   .clock-extra {
     display: flex;
     flex-direction: row;
     justify-content: center;
-    align-items: baseline;
-    gap: 1em;
+    align-items: center;
 
-    height: fit-content;
-    width: fit-content;
-    
+    height: 1lh;
+    width: 100%;
+
     .clock-marker {
-      height: 2ex;
-      width: 2ex;
+      height: 1lh; 
+      width: 1lh;
+      border-radius: 4px;
+      display: inline-block;
+      margin: 0.25em;
     }
     .clock-marker.clock-animation {
       background-color: red;
@@ -56,9 +66,21 @@
       animation-fill-mode: forwards;
     }
 
-    .clock-cycles {
-      margin-left: auto;
-      margin-right: 0.5em;
+    .clock-cycle-counter-container {
+      height: 1lh;
+      margin-right: 0;
+      margin-left:auto;
+    }
+
+    .clock-cycle-counter {
+      height: 1lh;
+      /* This cannot be the correct way to do this right?? 😭😭😭😭 */
+      transform: translateY(calc(-0.5em + 0.5px));
+      min-width: 1em;
+      text-align: left;
+      display: inline-block;
+      text-align: center;
+      margin-right: 1em;
     }
   }
 }

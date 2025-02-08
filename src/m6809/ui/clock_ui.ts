@@ -223,7 +223,7 @@ class ClockUI implements IModule {
       marker.style.animation = "";
     }
     if (changes && "cycles" in changes) {
-      const cycles = this.panel.querySelector(".clock-cycles") as HTMLElement;
+      const cycles = this.panel.querySelector(".clock-cycle-counter") as HTMLElement;
       if (cycles == null) return; // This should never happen.
       cycles.textContent = `${this.state.cycles}`;
     }
@@ -246,7 +246,12 @@ class ClockUI implements IModule {
           className: "clock-extra",
         },
         element("div", { className: "clock-marker" }),
-        element("span", { className: "clock-cycles" }),
+        element(
+          "div",
+          { className: "clock-cycle-counter-container" },
+          element("div", { className: "clock-icon cycle-counter" }),
+          element("div", { className: "clock-cycle-counter", textContent: "0" }),
+        ),
       ),
     );
 
