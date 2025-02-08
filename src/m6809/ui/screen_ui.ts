@@ -2,10 +2,20 @@ import type { IModule } from "../../types/module";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
 import { element } from "../../general/html.js";
 import { verify } from "../../general/config.js";
+import { createLanguageStrings } from "../../general/lang.js";
 
 type ScreenConfig = {
   address: number;
 };
+
+const ScreenUIStrings = createLanguageStrings({
+  en: {
+    title: "Screen",
+  },
+  es: {
+    title: "Pantalla",
+  },
+});
 
 class ScreenUI implements IModule {
   id: string;
@@ -15,6 +25,9 @@ class ScreenUI implements IModule {
   panel?: HTMLElement;
 
   textElement?: HTMLElement;
+
+  language!: string;
+  localeStrings!: typeof ScreenUIStrings.en;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -46,6 +59,11 @@ class ScreenUI implements IModule {
     console.log(`[${this.id}] Module initialized.`);
   }
 
+  setLanguage(language: string): void {
+    this.language = language;
+    this.localeStrings = ScreenUIStrings[this.language] || ScreenUIStrings.en;
+  }
+
   onReset = (): void => {
     if (!this.textElement) return;
     this.textElement.textContent = "";
@@ -58,13 +76,14 @@ class ScreenUI implements IModule {
     this.textElement.textContent += String.fromCharCode(data);
   };
 
-  onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
+  onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
     if (panel_id !== this.id) return;
     this.panel = panel;
 
     this.panel.classList.add("screen-ui");
+    this.setLanguage(language);
 
-    this.panel.appendChild(element("h2", { textContent: "Screen" }));
+    this.panel.appendChild(element("h2", { textContent: this.localeStrings.title }));
 
     this.textElement = element("pre", { textContent: "" });
 

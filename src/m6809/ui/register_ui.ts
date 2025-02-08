@@ -3,6 +3,7 @@ import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { isNumber, parseNumber } from "../../general/config.js";
 import { element } from "../../general/html.js";
+import { createLanguageStrings } from "../../general/lang.js";
 
 type RegisterInfoConfig = {
   bits: number;
@@ -80,6 +81,17 @@ function indexOfLsb(mask: number): number {
   return count;
 }
 
+const RegisterUIStrings = createLanguageStrings({
+  en: {
+    pointerRegister: "Pointer register",
+    unknown: "unk.",
+  },
+  es: {
+    pointerRegister: "Registro apuntador",
+    unknown: "desc.",
+  },
+});
+
 class RegisterUI implements IModule {
   et: TypedEventTransceiver;
   id: string;
@@ -89,6 +101,9 @@ class RegisterUI implements IModule {
 
   panel?: HTMLElement;
   registerTable?: HTMLTableElement;
+
+  language!: string;
+  localeStrings!: typeof RegisterUIStrings.en;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -117,7 +132,14 @@ class RegisterUI implements IModule {
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
     this.config = validateRegisterUIConfig(config);
 
+    this.setLanguage("en");
+
     console.log(`[${this.id}] Initializing module.`);
+  }
+
+  setLanguage(language: string): void {
+    this.language = language;
+    this.localeStrings = RegisterUIStrings[this.language] || RegisterUIStrings.en;
   }
 
   onRegisterUpdate = (register: string, value: number): void => {
@@ -167,12 +189,14 @@ class RegisterUI implements IModule {
     return data.toString(16).padStart(numBytes * 2, "0");
   }
 
-  onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
+  onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
     if (this.id !== panel_id) return;
     console.log(`[${this.id}] obtained GUI panel`);
 
     this.panel = panel;
     this.panel.classList.add("register-ui");
+
+    this.setLanguage(language);
 
     this.createRegisterUI();
   };
@@ -229,7 +253,7 @@ class RegisterUI implements IModule {
           element("th", {
             textContent: name,
             className: `${pointer ? "pointer-register" : ""}`,
-            title: pointer ? "Pointer register" : undefined,
+            title: pointer ? this.localeStrings.pointerRegister : undefined,
           }),
         ),
       ),
@@ -239,7 +263,7 @@ class RegisterUI implements IModule {
         ...Object.keys(this.config.registers).map((name) =>
           element("td", {
             className: `register-${name} ${this.config.registers[name].pointer ? "pointer-register-value" : ""}`,
-            textContent: "unk.",
+            textContent: this.localeStrings.unknown,
             onmouseenter: this.config.registers[name].pointer
               ? this.generateTooltipFunction(name)
               : undefined,

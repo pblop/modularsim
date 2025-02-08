@@ -2,6 +2,7 @@ import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
+import { createLanguageStrings } from "../../general/lang.js";
 
 type MemoryUIConfig = {
   start: number;
@@ -15,6 +16,21 @@ function validateMemoryUIConfig(config: Record<string, unknown>): MemoryUIConfig
   return config as MemoryUIConfig;
 }
 
+const MemoryUIStrings = createLanguageStrings({
+  en: {
+    address: "Memory address",
+    value: "Value",
+    write: "Write",
+    read: "Read",
+  },
+  es: {
+    address: "Dirección de memoria",
+    value: "Valor",
+    write: "Escribir",
+    read: "Leer",
+  },
+});
+
 class MemoryUI implements IModule {
   event_transceiver: TypedEventTransceiver;
   id: string;
@@ -27,6 +43,9 @@ class MemoryUI implements IModule {
   lastMemoryRead?: number;
   lastMemoryWrite?: number;
   pc?: number;
+
+  language!: string;
+  localeStrings!: typeof MemoryUIStrings.en;
 
   getEventDeclaration(): EventDeclaration {
     return {
@@ -57,16 +76,25 @@ class MemoryUI implements IModule {
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
     this.config = validateMemoryUIConfig(config);
 
+    // Set the default language.
+    this.setLanguage("en");
+
     console.log(`[${this.id}] Memory Initializing module.`);
   }
 
-  onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
+  setLanguage(language: string): void {
+    this.language = language;
+    this.localeStrings = MemoryUIStrings[this.language] || MemoryUIStrings.en;
+  }
+
+  onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
     if (this.id !== panel_id) return;
     console.log(`[${this.id}] obtained GUI panel`);
 
     this.panel = panel;
     this.panel.classList.add("memory-ui");
 
+    this.setLanguage(language);
     this.createMemoryUI();
   };
 
@@ -152,10 +180,10 @@ class MemoryUI implements IModule {
   createMemoryUI(): void {
     if (!this.panel) return;
 
-    const addrinput = element("input", { type: "text", placeholder: "Memory address" });
-    const valinput = element("input", { type: "text", placeholder: "Value" });
+    const addrinput = element("input", { type: "text", placeholder: this.localeStrings.address });
+    const valinput = element("input", { type: "text", placeholder: this.localeStrings.value });
     const writebutton = element("button", {
-      textContent: "Write",
+      textContent: this.localeStrings.write,
       onclick: () => {
         const address = Number.parseInt(addrinput.value, 16);
         const data = Number.parseInt(valinput.value, 16);
@@ -165,7 +193,7 @@ class MemoryUI implements IModule {
       },
     });
     const readbutton = element("button", {
-      textContent: "Read",
+      textContent: this.localeStrings.read,
       onclick: () => {
         const address = Number.parseInt(addrinput.value, 16);
         if (Number.isNaN(address)) return;
