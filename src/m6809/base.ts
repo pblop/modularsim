@@ -128,6 +128,7 @@ class M6809Simulator implements ISimulator {
       // automatically filled.
       const module = new Module(moduleId, module_config.config, {
         emit: this.permissionsWrapper(moduleId, ["emit"], this.emit),
+        broadcast: this.permissionsWrapper(moduleId, ["emit"], this.broadcast),
         on: this.permissionsWrapper(moduleId, ["listen"], this.on),
         once: this.permissionsWrapper(moduleId, ["listen"], this.once),
         wait: this.permissionsWrapper(moduleId, ["listen"], this.wait),
@@ -221,6 +222,9 @@ class M6809Simulator implements ISimulator {
       }
       callback(context, ...args);
     }
+  }
+  broadcast<E extends EventNames>(caller: ModuleID, event: E, ...args: EventParams<E>): void {
+    this.emit(caller, event, [], ...args);
   }
 
   /**

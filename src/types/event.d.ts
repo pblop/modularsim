@@ -113,6 +113,15 @@ export interface TypedEventTransceiver {
   emit<E extends EventNames>(event: E, receivers: ModuleID[], ...args: EventParams<E>): void;
 
   /**
+   * Emit an event, calling all listeners for the event, in the order specified
+   * by their priority.
+   * @param event The event name to emit.
+   * @param emitter The ID of the emitter of the event.
+   * @param args The event parameters.
+   */
+  broadcast<E extends EventNames>(event: E, ...args: EventParams<E>): void;
+
+  /**
    * Add a transient listener for an event, that will be called once.
    * The exact moment it will be called depends on the tick priority (which
    * event invocation it will be called in) and the subtick priority (which
