@@ -1,9 +1,10 @@
 import type { SimulatorConfig } from "../types/config.js";
 import type { ModuleConstructor } from "../types/module.js";
-import type { TypedEventTransceiver } from "../types/event.js";
+import type {} from "../types/event.js";
 
-// The simulator is a TypedEventTransceiver just for debugging purposes.
-export interface ISimulator extends TypedEventTransceiver {}
+// Empty for now, but will (probably) be expanded later.
+// biome-ignore lint/suspicious/noEmptyInterface: <above>
+export interface ISimulator {}
 
 export type SimulatorConstructor = {
   new (config: SimulatorConfig, modules: ModuleConstructor[]): ISimulator;

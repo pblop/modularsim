@@ -49,24 +49,42 @@ export interface EventMap {
 //export type EventParams<E extends EventNames> = E extends keyof EventMap ? EventMap[E] : any[];
 export type EventNames = keyof EventMap;
 export type EventParams<E extends EventNames> = EventMap[E];
-type EventCallback<E extends EventNames> = (...args: EventParams<E>) => void;
 
-export type SubtickPriority = { order?: number };
-export type TickPriority =
-  | { tick: number; tickOffset?: never }
-  | { tick?: never; tickOffset: number }
-  | { tick?: never; tickOffset?: never };
 /**
- * Priority object for listeners, with the following properties:
+ * Contextual data about the event, with the following properties:
+ * - emitter: The ID of the emitter of the event.
+ * - receivers: The ID of the receiver(s) of the event, or an empty array if the
+ * event is broadcasted.
+ * - tick: The tick of the event.
+ */
+export type EventContext = { emitter: string; receivers: string[]; tick: number };
+export type EventCallbackArgs<E extends EventNames> = [
+  context: EventContext,
+  ...args: EventParams<E>,
+];
+type EventCallback<E extends EventNames> = (...args: EventCallbackArgs<E>) => void;
+
+type ModuleID = string | "*";
+/**
+ * Subtick priority for listeners, with the following properties:
  * - order: The order within a tick, lower is higher (default: 0)
+ */
+export type SubtickPriority = { order?: number };
+/**
+ * Tick priority for listeners, with the following properties:
  * - tick: The tick of the listener in the list (default: next available tick)
  * - tickOffset: The offset to apply to the next tick, must be positive (default: 0)
  * Only one of tick or tickOffset should be provided, if both are provided,
  * tick will be used.
  */
+export type TickPriority =
+  | { tick: number; tickOffset?: never }
+  | { tick?: never; tickOffset: number }
+  | { tick?: never; tickOffset?: never };
 export type ListenerPriority = SubtickPriority & TickPriority;
 
 // Typed event emitter interface.
+// Rename to: MessageOrchestrator
 export interface TypedEventTransceiver {
   /**
    * Add a permanent listener for an event, that will be called every time the
@@ -87,9 +105,12 @@ export interface TypedEventTransceiver {
    * Emit an event, calling all listeners for the event, in the order specified
    * by their priority.
    * @param event The event name to emit.
+   * @param emitter The ID of the emitter of the event.
+   * @param receivers The ID of the receiver(s) of the event, or an empty array
+   * if the event is broadcasted.
    * @param args The event parameters.
    */
-  emit<E extends EventNames>(event: E, ...args: EventParams<E>): void;
+  emit<E extends EventNames>(event: E, receivers: ModuleID[], ...args: EventParams<E>): void;
 
   /**
    * Add a transient listener for an event, that will be called once.
@@ -136,13 +157,17 @@ export interface TypedEventTransceiver {
    * The listener priority will be the next tick, in subtick order 0.
    * @param listenedEvent The event name to wait for.
    * @param emittedEvent The event name to emit.
+   * @param receivers The ID of the receiver(s) of the event, or an empty array
+   * if the event is broadcasted.
    * @param args The event parameters.
    */
   emitAndWait<L extends EventNames, E extends EventNames>(
     listenedEvent: L,
     emittedEvent: E,
+    receivers: ModuleID[],
     ...args: EventParams<E>
-  ): Promise<EventParams<L>>;
+  ): Promise<EventCallbackArgs<L>>;
+
   /**
    * Emit an event, and wait for another event to be emitted. The returned
    * promise will be resolved with the parameters of the emitted event.
@@ -150,6 +175,8 @@ export interface TypedEventTransceiver {
    * parameter.
    * @param listenedEvent The event name to wait for.
    * @param listenerPriority The tick and subtick priority of the listened event.
+   * @param receivers The ID of the receiver(s) of the event, or an empty array
+   * if the event is broadcasted.
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
    */
@@ -157,8 +184,9 @@ export interface TypedEventTransceiver {
     listenedEvent: L,
     listenerPriority: ListenerPriority,
     emittedEvent: E,
+    receivers: ModuleID[],
     ...args: EventParams<E>
-  ): Promise<EventParams<L>>;
+  ): Promise<EventCallbackArgs<L>>;
 }
 
 // The event declaration type, which specifies the events that a module provides,

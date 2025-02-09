@@ -9,6 +9,9 @@ import type {
   ListenerPriority,
   EventDeclarationListeners,
   SubtickPriority,
+  EventContext,
+  ModuleID,
+  EventCallbackArgs,
 } from "../types/event.js";
 import type { ISimulator } from "../types/simulator.js";
 import { PriorityQueue } from "../general/priority.js";
@@ -119,16 +122,16 @@ class M6809Simulator implements ISimulator {
       // config.
       const Module = modules[i];
 
-      // We create an anonymous object with the emit and on methods, but instead
-      // of calling this class' methods, call the namedEmit and namedOn methods.
-      // This way, the module can only emit and listen to the events it has
-      // declared.
+      // We create a transceiver for the module, with the methods it can use,
+      // and bind it to its module id. This way, the module can only emit and
+      // listen to the events it has declared, and the sender field is
+      // automatically filled.
       const module = new Module(moduleId, module_config.config, {
-        emit: (...args) => this.namedEmit(moduleId, ...args),
-        on: (...args) => this.namedOn(moduleId, ...args),
-        once: (...args) => this.namedOnce(moduleId, ...args),
-        wait: (...args) => this.namedWait(moduleId, ...args),
-        emitAndWait: (...args) => this.namedEmitAndWait(moduleId, ...args),
+        emit: this.permissionsWrapper(moduleId, ["emit"], this.emit),
+        on: this.permissionsWrapper(moduleId, ["listen"], this.on),
+        once: this.permissionsWrapper(moduleId, ["listen"], this.once),
+        wait: this.permissionsWrapper(moduleId, ["listen"], this.wait),
+        emitAndWait: this.permissionsWrapper(moduleId, ["emit", "listen"], this.emitAndWait),
       });
 
       const eventDeclaration = module.getEventDeclaration();
@@ -157,7 +160,7 @@ class M6809Simulator implements ISimulator {
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
-    this.emit("system:load_finish");
+    this.emit("*", "system:load_finish", []);
   }
 
   /**
@@ -190,7 +193,12 @@ class M6809Simulator implements ISimulator {
   /**
    * Emit an event.
    */
-  emit<E extends EventNames>(event: E, ...args: EventParams<E>) {
+  emit<E extends EventNames>(
+    caller: ModuleID,
+    event: E,
+    receivers: ModuleID[],
+    ...args: EventParams<E>
+  ) {
     console.debug(`[${this.constructor.name}] Emitting event ${event}(${args.join(", ")})`);
 
     // If there are no listeners for this event, do nothing.
@@ -200,29 +208,37 @@ class M6809Simulator implements ISimulator {
     // new listeners will be added to the index following this one).
     this.events[event].incrementTick();
 
+    const context: EventContext = {
+      emitter: caller,
+      receivers,
+      tick: this.events[event].ticks,
+    };
+
     while (!this.events[event].hasFinishedIndex()) {
       const callback = this.events[event].dequeue();
       if (!callback) {
         throw new Error("[MC6809] callback for listener is undefined");
       }
-      callback(...args);
+      callback(context, ...args);
     }
   }
+
   /**
    * Add a new event listener.
    * **NOTE: Don't forget to correctly bind the function to the class instance
    *       when calling this method.**
    */
   on<E extends EventNames>(
+    caller: ModuleID,
     event: E,
     callback: EventCallback<E>,
     listenerPriority?: ListenerPriority,
   ): void {
-    const wrappedCallback = (...args: EventParams<E>) => {
+    const wrappedCallback = (...args: EventCallbackArgs<E>) => {
       callback(...args);
-      this.once(event, wrappedCallback, listenerPriority);
+      this.once(caller, event, wrappedCallback, listenerPriority);
     };
-    this.once(event, wrappedCallback, listenerPriority);
+    this.once(caller, event, wrappedCallback, listenerPriority);
   }
   /**
    * Add a new event listener that only gets called once.
@@ -230,6 +246,7 @@ class M6809Simulator implements ISimulator {
    *       when calling this method.**
    */
   once<E extends EventNames>(
+    caller: ModuleID,
     event: E,
     callback: EventCallback<E>,
     listenerPriority?: ListenerPriority,
@@ -255,46 +272,72 @@ class M6809Simulator implements ISimulator {
    * once but in promise.
    */
   wait<E extends EventNames>(
+    caller: ModuleID,
     event: E,
     listenerPriority?: ListenerPriority,
-  ): Promise<EventParams<E>> {
+  ): Promise<EventCallbackArgs<E>> {
     return new Promise((resolve, reject) => {
-      this.once(event, (...args: EventParams<E>) => resolve(args), listenerPriority);
+      this.once(caller, event, (...args: EventCallbackArgs<E>) => resolve(args), listenerPriority);
     });
   }
+
   emitAndWait<E extends EventNames, L extends EventNames>(
+    caller: ModuleID,
     listenedEvent: L,
     secondParam: E | ListenerPriority,
+    thirdParam: ModuleID[] | E,
     ...args: unknown[]
-  ): Promise<EventParams<L>> {
+  ): Promise<EventCallbackArgs<L>> {
     // This function has _two_ signatures, so we need to check the type of the
     // second argument to know if we have a listenerPriority or not.
     let listenerPriority: ListenerPriority | undefined;
+    let receivers: ModuleID[];
     let emittedEvent: E;
     if (typeof secondParam === "object") {
-      // emitAndWait(listenedEvent, listenerPriority, emittedEvent, ...args)
+      // emitAndWait(listenedEvent, listenerPriority, emittedEvent, receivers, ...args)
       listenerPriority = secondParam;
-      emittedEvent = args.shift() as E;
+      emittedEvent = thirdParam as E;
+      receivers = args.shift() as ModuleID[];
     } else {
-      // emitAndWait(listenedEvent, emittedEvent, ...args)
+      // emitAndWait(listenedEvent, emittedEvent, receivers, ...args)
       emittedEvent = secondParam;
+      receivers = thirdParam as ModuleID[];
     }
 
-    const promise = this.wait(listenedEvent, listenerPriority);
+    const promise = this.wait(caller, listenedEvent, listenerPriority);
     // We need to cast args to EventParams<E> because we have no way of telling
     // TypeScript which of the two signatures we're using.
-    this.emit(emittedEvent, ...(args as EventParams<E>));
+    this.emit(caller, emittedEvent, receivers, ...(args as EventParams<E>));
     return promise;
   }
 
-  namedEmitterCheck(caller: string, event: EventNames): void {
+  /**
+   * A helper function to check that the caller can emit and/or listen to an
+   * event, and then call the function.
+   * It uses any as a type for the arguments because the functions passed can
+   * have many shapes, and we can't know them all.
+   */
+  permissionsWrapper(
+    caller: string,
+    actions: ("listen" | "emit")[],
+    // biome-ignore lint/suspicious/noExplicitAny:
+    fun: (caller: string, event: EventNames, ...args: any[]) => any,
+  ) {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    return (event: EventNames, ...args: any[]) => {
+      if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
+      if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
+      return fun(caller, event, ...args);
+    };
+  }
+  permissionsCheckEmit(caller: string, event: EventNames): void {
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
     const eventDeclaration = this.event_declarations[caller];
     if (!eventDeclaration.provided.includes(event))
       throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
-  namedListenerCheck(caller: string, event: EventNames): void {
+  permissionsCheckListen(caller: string, event: EventNames): void {
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
     const eventDeclaration = this.event_declarations[caller];
@@ -303,81 +346,6 @@ class M6809Simulator implements ISimulator {
       (!eventDeclaration.optional || !(event in eventDeclaration.optional))
     )
       throw new Error(`[${caller}] Cannot listen to event ${event}.`);
-  }
-
-  /**
-   * Add a new event listener, but check that the event is declared in the module.
-   * **NOTE: Don't forget to correctly bind the function to the class instance
-   *       when calling this method.**
-   */
-  namedOn<E extends EventNames>(
-    caller: string,
-    event: E,
-    callback: EventCallback<E>,
-    listenerPriority?: ListenerPriority,
-  ): void {
-    this.namedListenerCheck(caller, event);
-    this.on(event, callback, listenerPriority);
-  }
-  /**
-   * once, but check that the event is declared in the module.
-   * **NOTE: Don't forget to correctly bind the function to the class instance
-   *       when calling this method.**
-   */
-  namedOnce<E extends EventNames>(
-    caller: string,
-    event: E,
-    callback: EventCallback<E>,
-    listenerPriority?: ListenerPriority,
-  ): void {
-    this.namedListenerCheck(caller, event);
-    this.once(event, callback, listenerPriority);
-  }
-  /**
-   * wait, but check that the event is declared in the module.
-   * **NOTE: Don't forget to correctly bind the function to the class instance
-   *       when calling this method.**
-   */
-  namedWait<E extends EventNames>(
-    caller: string,
-    event: E,
-    listenerPriority?: ListenerPriority,
-  ): Promise<EventParams<E>> {
-    this.namedListenerCheck(caller, event);
-    return this.wait(event, listenerPriority);
-  }
-  /**
-   * Emit an event, but check that the event is declared in the module.
-   */
-  namedEmit<E extends EventNames>(caller: string, event: E, ...args: EventParams<E>): void {
-    this.namedEmitterCheck(caller, event);
-    this.emit(event, ...args);
-  }
-  /**
-   * Add a new once event listener, and emits an event, but checks that the event
-   * is declared in the module before.
-   */
-  namedEmitAndWait<E extends EventNames, L extends EventNames>(
-    caller: string,
-    listenedEvent: L,
-    thirdParam: E | ListenerPriority,
-    ...args: unknown[]
-  ): Promise<EventParams<L>> {
-    // Just as in emitAndWait, we need to check the type of the second (now third)
-    // argument to know if we have a listenerPriority or not.
-    let emittedEvent: E;
-    if (typeof thirdParam === "object") {
-      // emitAndWait(caller, listenedEvent, listenerPriority, emittedEvent, ...args)
-      emittedEvent = args.shift() as E;
-    } else {
-      // emitAndWait(caller, listenedEvent, emittedEvent, ...args)
-      emittedEvent = thirdParam;
-    }
-
-    this.namedEmitterCheck(caller, emittedEvent);
-    this.namedListenerCheck(caller, listenedEvent);
-
-    return this.emitAndWait(listenedEvent, emittedEvent, ...args);
   }
 }
 
