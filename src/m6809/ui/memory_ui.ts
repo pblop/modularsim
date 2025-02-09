@@ -57,6 +57,7 @@ class MemoryUI implements IModule {
         "memory:write:result": this.onMemoryWriteResult,
         "ui:memory:write:result": this.onMemoryWriteResult,
         "ui:memory:bulk:write:result": this.onMemoryBulkWriteResult,
+        "signal:reset": this.onReset,
       },
       optional: {
         "cpu:register_update": this.onRegisterUpdate,
@@ -175,6 +176,23 @@ class MemoryUI implements IModule {
     if (!cell) return;
 
     cell.textContent = this.formatMemoryData(data);
+  };
+  onReset = (): void => {
+    if (!this.panel) return;
+    if (!this.memoryTable) return;
+
+    if (this.pc !== undefined) {
+      const lastCell = this.panel.querySelector(`.byte-${this.pc}`);
+      if (lastCell) lastCell.classList.remove("pc-highlight");
+    }
+    if (this.lastMemoryRead !== undefined) {
+      const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryRead}`);
+      if (lastCell) lastCell.classList.remove("read-highlight");
+    }
+    if (this.lastMemoryWrite !== undefined) {
+      const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryWrite}`);
+      if (lastCell) lastCell.classList.remove("write-highlight");
+    }
   };
 
   createMemoryUI(): void {
