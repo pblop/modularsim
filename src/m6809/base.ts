@@ -34,8 +34,11 @@ type EventQueueElement = {
 class EventQueue {
   queue: PriorityQueue<EventQueueElement>;
   // The number of times the event has happened since the start of the simulation, starting on 1.
-  // Since we have directed messages, the ticks are not global, but per module.
-  ticks: Record<ModuleID, number> = {};
+  // Since we have directed messages, we have global ticks (for all modules) and
+  // the additional, per-module, ticks.
+  // The ticks for each module are globalTicks + perModuleTicks[module].
+  perModuleTicks: Record<ModuleID, number> = {};
+  globalTicks = 0;
 
   cmp = (a: EventQueueElement, b: EventQueueElement) =>
     this._distanceToNextTick(a) - this._distanceToNextTick(b) ||
@@ -46,11 +49,14 @@ class EventQueue {
   }
 
   _distanceToNextTick(e: EventQueueElement) {
-    return e.priority.tick - this.ticks[e.module];
+    return e.priority.tick - this.ticks(e.module);
+  }
+  ticks(module: ModuleID) {
+    return this.globalTicks + (this.perModuleTicks[module] ?? 0);
   }
 
   enqueue(module: ModuleID, callback: AnyEventCallback, priority: EventQueuePriority) {
-    this.ticks[module] ??= 0;
+    this.perModuleTicks[module] ??= 0;
     this.queue.enqueue({ module, callback, priority });
   }
   size() {
@@ -70,25 +76,24 @@ class EventQueue {
     const element = this.queue.dequeue();
     if (!element) return;
 
-    return [element.module, element.callback, this.ticks[element.module]];
+    return [element.module, element.callback, this.perModuleTicks[element.module]];
   }
   debugView() {
     const sorted = this.queue._heap.sort(this.cmp);
     return sorted.reduce((acc: Map<string, AnyEventCallback[]>, el) => {
-      const str = `${el.priority.tick}|${el.priority.order}`;
+      const str = `${el.priority.tick}|${el.priority.order}(${el.module})`;
       if (!acc.has(str)) acc.set(str, []);
       acc.get(str)!.push(el.callback);
       return acc;
     }, new Map());
   }
 
-  incrementTick(inModules: ModuleID[]) {
-    let modules = inModules;
-    // No receivers means all receivers, so we increment all ticks.
+  incrementTick(modules: ModuleID[]) {
     if (modules.length === 0) {
-      modules = Object.keys(this.ticks);
+      this.globalTicks++;
+    } else {
+      for (const module of modules) this.perModuleTicks[module]++;
     }
-    for (const module of modules) this.ticks[module]++;
   }
 }
 
@@ -272,7 +277,7 @@ class M6809Simulator implements ISimulator {
     // offset is given.
     const order = listenerPriority?.order ?? 0;
 
-    let tick = queue.ticks[caller] + 1;
+    let tick = queue.ticks(caller) + 1;
     if (listenerPriority?.tick) tick = listenerPriority.tick;
     else if (listenerPriority?.tickOffset) {
       if (listenerPriority.tickOffset < 0) throw new Error("Index offset must be positive");
