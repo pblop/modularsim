@@ -331,19 +331,19 @@ class M6809Simulator implements ISimulator {
    * have many shapes, and we can't know them all.
    * It's probably possible to type this better, but it's not worth the effort.
    */
-  permissionsWrapper(
+  permissionsWrapper = (
     caller: string,
     actions: ("listen" | "emit")[],
     // biome-ignore lint/suspicious/noExplicitAny: <above>
     fun: (caller: ModuleID, event: EventNames, ...args: any) => any,
-  ) {
+  ) => {
     // biome-ignore lint/suspicious/noExplicitAny: <above>
     return (event: EventNames, ...args: any) => {
       if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
       if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
-      return fun(caller, event, ...args);
+      return fun.bind(this)(caller, event, ...args);
     };
-  }
+  };
   permissionsCheckEmit(caller: string, event: EventNames): void {
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
