@@ -341,13 +341,37 @@ class M6809Simulator implements ISimulator {
     actions: ("listen" | "emit")[],
     // biome-ignore lint/suspicious/noExplicitAny: <above>
     fun: (caller: ModuleID, event: EventNames, ...args: any) => any,
-  ) => {
-    // biome-ignore lint/suspicious/noExplicitAny: <above>
-    return (event: EventNames, ...args: any) => {
-      if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
-      if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
-      return fun.bind(this)(caller, event, ...args);
-    };
+  ): // biome-ignore lint/suspicious/noExplicitAny: <above>
+  ((event: EventNames, ...args: any) => any) => {
+    if (actions.length === 0) {
+      return fun.bind(this);
+    } else if (actions.length === 1) {
+      // biome-ignore lint/suspicious/noExplicitAny: <above>
+      return (event: EventNames, ...args: any) => {
+        if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
+        if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
+        return fun.bind(this)(caller, event, ...args);
+      };
+    } else {
+      // This is a special case, as we need to get the name of the event being
+      // emitted and listened to.
+      // biome-ignore lint/suspicious/noExplicitAny: <above>
+      return (listenedEvent: EventNames, ...args: any) => {
+        if (actions.includes("listen")) this.permissionsCheckListen(caller, listenedEvent);
+
+        let emittedEvent: EventNames;
+        // We're looking to match the signature of emitAndWait, so we need to
+        // check the type of the second argument.
+        if (typeof args[0] === "object") {
+          emittedEvent = args[1];
+        } else {
+          emittedEvent = args[0];
+        }
+
+        if (actions.includes("emit")) this.permissionsCheckEmit(caller, emittedEvent);
+        return fun.bind(this)(caller, listenedEvent, ...args);
+      };
+    }
   };
   permissionsCheckEmit(caller: string, event: EventNames): void {
     if (!this.event_declarations[caller])
