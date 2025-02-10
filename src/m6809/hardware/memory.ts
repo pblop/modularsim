@@ -1,9 +1,6 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
-import type {
-  EventDeclaration,
-  TypedEventTransceiver,
-} from "../../types/event.js";
+import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 
 type MemoryType = "ram" | "rom";
 type MemoryConfig = {
@@ -85,19 +82,19 @@ class Memory implements IModule {
     console.log(`[${this.id}] Initialized ${type} memory at ${start} with size ${size}`);
   }
 
-  onUiMemoryRead = (address: number): void => {
+  onUiMemoryRead = (address: number, ctx: EventContext): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    this.event_transceiver.broadcast("ui:memory:read:result", address, data);
+    this.event_transceiver.emit("ui:memory:read:result", [ctx.emitter], address, data);
   };
-  onUiMemoryWrite = (address: number, data: number): void => {
+  onUiMemoryWrite = (address: number, data: number, ctx: EventContext): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     this.memory[address - this.start] = data;
-    this.event_transceiver.broadcast("ui:memory:write:result", address, data);
+    this.event_transceiver.emit("ui:memory:write:result", [ctx.emitter], address, data);
   };
   onUiMemoryBulkWrite = (data: Uint8Array): void => {
     if (data.length > this.memory.length) {
