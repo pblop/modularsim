@@ -21,29 +21,37 @@ type EventQueuePriority = {
   tick: number;
   order: number;
 };
+// Any is used here because the event names can be dynamic (while developing
+// the app, all events are known, but because of the extensibility of the
+// architecture, it's better to allow any string as an event name).
+// biome-ignore lint/suspicious/noExplicitAny: see above
+type AnyEventCallback = EventCallback<any>;
 type EventQueueElement = {
-  // Any is used here because the event names can be dynamic (while developing
-  // the app, all events are known, but because of the extensibility of the
-  // architecture, it's better to allow any string as an event name).
-  // biome-ignore lint/suspicious/noExplicitAny: see above
-  callback: EventCallback<any>;
+  module: ModuleID;
+  callback: AnyEventCallback;
   priority: EventQueuePriority;
 };
 class EventQueue {
   queue: PriorityQueue<EventQueueElement>;
-  // The number of ticks that have passed since the start of the simulation (1 is the first tick).
-  ticks: number;
+  // The number of times the event has happened since the start of the simulation, starting on 1.
+  // Since we have directed messages, the ticks are not global, but per module.
+  ticks: Record<ModuleID, number> = {};
+
+  cmp = (a: EventQueueElement, b: EventQueueElement) =>
+    this._distanceToNextTick(a) - this._distanceToNextTick(b) ||
+    a.priority.order - b.priority.order;
 
   constructor() {
-    this.queue = new PriorityQueue(
-      (a, b) => a.priority.tick - b.priority.tick || a.priority.order - b.priority.order,
-    );
-    this.ticks = 0;
+    this.queue = new PriorityQueue(this.cmp);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: see above
-  enqueue(callback: EventCallback<any>, priority: EventQueuePriority) {
-    this.queue.enqueue({ callback, priority });
+  _distanceToNextTick(e: EventQueueElement) {
+    return e.priority.tick - this.ticks[e.module];
+  }
+
+  enqueue(module: ModuleID, callback: AnyEventCallback, priority: EventQueuePriority) {
+    this.ticks[module] ??= 0;
+    this.queue.enqueue({ module, callback, priority });
   }
   size() {
     return this.queue.size();
@@ -56,29 +64,31 @@ class EventQueue {
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this.queue.peek()!.priority.tick > this.ticks;
+    return this._distanceToNextTick(this.queue.peek()!) > 0;
   }
-  dequeue() {
-    return this.queue.dequeue()?.callback;
+  dequeue(): [ModuleID, AnyEventCallback, number] | undefined {
+    const element = this.queue.dequeue();
+    if (!element) return;
+
+    return [element.module, element.callback, this.ticks[element.module]];
   }
   debugView() {
-    const sorted = this.queue._heap.sort(
-      (a, b) => a.priority.tick - b.priority.tick || a.priority.order - b.priority.order,
-    );
-    return sorted.reduce(
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-      (acc: Map<string, EventCallback<any>[]>, el) => {
-        const str = `${el.priority.tick}|${el.priority.order}`;
-        if (!acc.has(str)) acc.set(str, []);
-        acc.get(str)!.push(el.callback);
-        return acc;
-      },
-      new Map(),
-    );
+    const sorted = this.queue._heap.sort(this.cmp);
+    return sorted.reduce((acc: Map<string, AnyEventCallback[]>, el) => {
+      const str = `${el.priority.tick}|${el.priority.order}`;
+      if (!acc.has(str)) acc.set(str, []);
+      acc.get(str)!.push(el.callback);
+      return acc;
+    }, new Map());
   }
 
-  incrementTick() {
-    this.ticks++;
+  incrementTick(inModules: ModuleID[]) {
+    let modules = inModules;
+    // No receivers means all receivers, so we increment all ticks.
+    if (modules.length === 0) {
+      modules = Object.keys(this.ticks);
+    }
+    for (const module of modules) this.ticks[module]++;
   }
 }
 
@@ -207,16 +217,15 @@ class M6809Simulator implements ISimulator {
 
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
-    this.events[event].incrementTick();
-
-    const context: EventContext = {
-      emitter: caller,
-      receivers,
-      tick: this.events[event].ticks,
-    };
+    this.events[event].incrementTick(receivers);
 
     while (!this.events[event].hasFinishedIndex()) {
-      const callback = this.events[event].dequeue();
+      const [module, callback, tick] = this.events[event].dequeue()!;
+      const context: EventContext = {
+        emitter: caller,
+        receivers,
+        tick,
+      };
       if (!callback) {
         throw new Error("[MC6809] callback for listener is undefined");
       }
@@ -263,14 +272,14 @@ class M6809Simulator implements ISimulator {
     // offset is given.
     const order = listenerPriority?.order ?? 0;
 
-    let tick = queue.ticks + 1;
+    let tick = queue.ticks[caller] + 1;
     if (listenerPriority?.tick) tick = listenerPriority.tick;
     else if (listenerPriority?.tickOffset) {
       if (listenerPriority.tickOffset < 0) throw new Error("Index offset must be positive");
       tick += listenerPriority.tickOffset;
     }
 
-    this.events[event].enqueue(callback, { tick, order });
+    this.events[event].enqueue(caller, callback, { tick, order });
   }
   /**
    * once but in promise.
