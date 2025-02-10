@@ -32,7 +32,7 @@ type EventQueueElement = {
   priority: EventQueuePriority;
 };
 class EventQueue {
-  queue: PriorityQueue<EventQueueElement>;
+  queue: EventQueueElement[];
   // The number of times the event has happened since the start of the simulation, starting on 1.
   // Since we have directed messages, we have global ticks (for all modules) and
   // the additional, per-module, ticks.
@@ -45,7 +45,7 @@ class EventQueue {
     a.priority.order - b.priority.order;
 
   constructor() {
-    this.queue = new PriorityQueue(this.cmp);
+    this.queue = [];
   }
 
   _distanceToNextTick(e: EventQueueElement) {
@@ -57,29 +57,30 @@ class EventQueue {
 
   enqueue(module: ModuleID, callback: AnyEventCallback, priority: EventQueuePriority) {
     this.perModuleTicks[module] ??= 0;
-    this.queue.enqueue({ module, callback, priority });
+    this.queue.push({ module, callback, priority });
+    this.queue.sort(this.cmp); // probably not needed
   }
   size() {
-    return this.queue.size();
+    return this.queue.length;
   }
   isEmpty() {
-    return this.queue.isEmpty();
+    return this.queue.length === 0;
   }
   hasFinishedIndex() {
-    if (this.queue.isEmpty()) return true;
+    if (this.isEmpty()) return true;
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this._distanceToNextTick(this.queue.peek()!) > 0;
+    return this._distanceToNextTick(this.queue[0]) > 0;
   }
   dequeue(): [ModuleID, AnyEventCallback, number] | undefined {
-    const element = this.queue.dequeue();
+    const element = this.queue.shift();
     if (!element) return;
 
     return [element.module, element.callback, this.perModuleTicks[element.module]];
   }
   debugView() {
-    const sorted = this.queue._heap.sort(this.cmp);
+    const sorted = this.queue.sort(this.cmp);
     return sorted.reduce((acc: Map<string, AnyEventCallback[]>, el) => {
       const str = `${el.priority.tick}|${el.priority.order}(${el.module})`;
       if (!acc.has(str)) acc.set(str, []);
@@ -94,6 +95,7 @@ class EventQueue {
     } else {
       for (const module of modules) this.perModuleTicks[module]++;
     }
+    this.queue.sort(this.cmp);
   }
 }
 
@@ -215,7 +217,9 @@ class M6809Simulator implements ISimulator {
     receivers: ModuleID[],
     ...args: EventParams<E>
   ) {
-    console.debug(`[${this.constructor.name}] Emitting event ${event}(${args.join(", ")})`);
+    console.debug(
+      `[${this.constructor.name}] Emitting event ${event}(${args.join(", ")}) (${caller}) -> [${receivers.join(", ")}]`,
+    );
 
     // If there are no listeners for this event, do nothing.
     if (!this.events[event]) return;
@@ -322,7 +326,9 @@ class M6809Simulator implements ISimulator {
       receivers = thirdParam as ModuleID[];
     }
 
+    debugger;
     const promise = this.wait(caller, listenedEvent, listenerPriority);
+    // debugger;
     // We need to cast args to EventParams<E> because we have no way of telling
     // TypeScript which of the two signatures we're using.
     this.emit(caller, emittedEvent, receivers, ...(args as EventParams<E>));
