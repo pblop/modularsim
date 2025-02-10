@@ -341,8 +341,8 @@ class M6809Simulator implements ISimulator {
     actions: ("listen" | "emit")[],
     // biome-ignore lint/suspicious/noExplicitAny: <above>
     fun: (caller: ModuleID, event: EventNames, ...args: any) => any,
-  ): // biome-ignore lint/suspicious/noExplicitAny: <above>
-  ((event: EventNames, ...args: any) => any) => {
+    // biome-ignore lint/suspicious/noExplicitAny: <above>
+  ): ((event: EventNames, ...args: any) => any) => {
     if (actions.length === 0) {
       return fun.bind(this);
     } else if (actions.length === 1) {
