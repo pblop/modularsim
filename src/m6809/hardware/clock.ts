@@ -61,7 +61,7 @@ class Clock implements IModule {
     this.prevCycle = now;
 
     // The function that will be called every clock cycle.
-    this.event_transceiver.emit("clock:cycle_start");
+    this.event_transceiver.broadcast("clock:cycle_start");
   };
 
   stopInterval(): void {
@@ -95,7 +95,7 @@ class Clock implements IModule {
     this.mode = "normal";
   };
   onStepCycleRequested = (): void => {
-    this.event_transceiver.emit("clock:cycle_start");
+    this.event_transceiver.broadcast("clock:cycle_start");
   };
   onStepInstructionRequested = (): void => {
     this.mode = "instruction";

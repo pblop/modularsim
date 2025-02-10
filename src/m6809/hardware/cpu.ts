@@ -138,7 +138,7 @@ class Cpu implements IModule {
     return new Proxy<Registers>(this._registers, {
       set: (target, prop, value) => {
         if (prop === "pc") {
-          this.et.emit("cpu:register_update", "pc", value);
+          this.et.broadcast("cpu:register_update", "pc", value);
         }
         target[prop as keyof Registers] = value;
         return true;
@@ -151,9 +151,9 @@ class Cpu implements IModule {
     // so we don't need to filter them out.
     const registers = Object.entries(this._registers);
     for (const [key, value] of registers) {
-      this.et.emit("cpu:register_update", key, value);
+      this.et.broadcast("cpu:register_update", key, value);
     }
-    this.et.emit("cpu:registers_update", this._registers.copy());
+    this.et.broadcast("cpu:registers_update", this._registers.copy());
   };
 
   reset = () => {
@@ -186,7 +186,7 @@ class Cpu implements IModule {
     if (!this.readInfo || this.readInfo.raw.length === this.readInfo.bytes) return;
 
     this.readInfo.waiting = true;
-    this.et.emit("memory:read", this.readInfo.address + this.readInfo.raw.length);
+    this.et.broadcast("memory:read", this.readInfo.address + this.readInfo.raw.length);
   };
   onMemoryReadResult = (address: number, data: number) => {
     if (!this.readInfo) return;
@@ -219,9 +219,9 @@ class Cpu implements IModule {
     const mask = 0xff << position;
     const nibble = (this.writeInfo.value & mask) >> position;
 
-    this.et.emit("memory:write", this.writeInfo.address + this.writeInfo.bytesWritten, nibble);
+    this.et.broadcast("memory:write", this.writeInfo.address + this.writeInfo.bytesWritten, nibble);
   };
-  onMemoryWriteResult = (address: number, _: number) => {
+  onMemoryWriteResult = (address: number, __: number) => {
     if (!this.writeInfo) return;
 
     // If the address is different, this is another module's write, or a stale
@@ -633,7 +633,7 @@ class Cpu implements IModule {
     this.registers.pc = this.readInfo!.value;
     this.commitRegisters();
 
-    this.et.emit("cpu:reset_finish");
+    this.et.broadcast("cpu:reset_finish");
     return "fetch_opcode";
   };
 
@@ -646,7 +646,7 @@ class Cpu implements IModule {
     // NOTE: Could be a good idea to modify this to also emit the instruction
     // that was executed, so other modules can react to it.
     this.commitRegisters();
-    this.et.emit("cpu:instruction_finish");
+    this.et.broadcast("cpu:instruction_finish");
 
     this.opcode = undefined;
     this.instruction = undefined;
@@ -700,7 +700,7 @@ class Cpu implements IModule {
         onExit: this.exitExecute,
       },
       fail: {
-        onEnter: () => this.et.emit("cpu:fail"),
+        onEnter: () => this.et.broadcast("cpu:fail"),
         onExit: () => null,
       },
     },

@@ -23,12 +23,12 @@ class Controller {
     this.simulator = simulator;
 
     // Debug, testing.
-    simulator.on("memory:read:result", (address, data) => {
-      console.info(
-        "Controller",
-        `Memory read at 0x${address.toString(16)} returned 0x${data.toString(16)}`,
-      );
-    });
+    // simulator.on("memory:read:result", (ctx, address, data) => {
+    //   console.info(
+    //     "Controller",
+    //     `Memory read at 0x${address.toString(16)} returned 0x${data.toString(16)}`,
+    //   );
+    // });
   }
 
   getConfigURL(): string {

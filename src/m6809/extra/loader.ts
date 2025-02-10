@@ -47,7 +47,7 @@ class Loader implements IModule {
       .then((r) => r.arrayBuffer())
       .then((buffer) => new Uint8Array(buffer))
       .then((bytes) => {
-        this.evt.emit("ui:memory:bulk:write", bytes);
+        this.evt.broadcast("ui:memory:bulk:write", bytes);
       });
   };
 }

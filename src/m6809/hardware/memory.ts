@@ -1,6 +1,9 @@
 import type { IModule } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type {
+  EventDeclaration,
+  TypedEventTransceiver,
+} from "../../types/event.js";
 
 type MemoryType = "ram" | "rom";
 type MemoryConfig = {
@@ -87,14 +90,14 @@ class Memory implements IModule {
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    this.event_transceiver.emit("ui:memory:read:result", address, data);
+    this.event_transceiver.broadcast("ui:memory:read:result", address, data);
   };
   onUiMemoryWrite = (address: number, data: number): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     this.memory[address - this.start] = data;
-    this.event_transceiver.emit("ui:memory:write:result", address, data);
+    this.event_transceiver.broadcast("ui:memory:write:result", address, data);
   };
   onUiMemoryBulkWrite = (data: Uint8Array): void => {
     if (data.length > this.memory.length) {
@@ -102,7 +105,7 @@ class Memory implements IModule {
     }
 
     this.memory.set(data);
-    this.event_transceiver.emit("ui:memory:bulk:write:result", data);
+    this.event_transceiver.broadcast("ui:memory:bulk:write:result", data);
   };
   onMemoryRead = (address: number) => {
     // If the address is out of bounds, do nothing.
@@ -112,7 +115,7 @@ class Memory implements IModule {
     this.event_transceiver.once(
       "clock:cycle_start",
       () => {
-        this.event_transceiver.emit("memory:read:result", address, data);
+        this.event_transceiver.broadcast("memory:read:result", address, data);
       },
       { order: -1 },
     );
@@ -126,7 +129,7 @@ class Memory implements IModule {
     this.event_transceiver.once(
       "clock:cycle_start",
       () => {
-        this.event_transceiver.emit("memory:write:result", address, data);
+        this.event_transceiver.broadcast("memory:write:result", address, data);
       },
       { order: -1 },
     );

@@ -119,7 +119,7 @@ class Gui implements IModule {
       this.root_element.appendChild(panel_element);
 
       // Notify other modules that the panel has been created
-      this.event_transceiver.emit("gui:panel_created", panel.id, panel_element, this.language);
+      this.event_transceiver.broadcast("gui:panel_created", panel.id, panel_element, this.language);
     }
   };
 }

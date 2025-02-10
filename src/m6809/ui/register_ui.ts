@@ -219,6 +219,7 @@ class RegisterUI implements IModule {
         const [_, val] = await this.et.emitAndWait(
           "ui:memory:read:result",
           "ui:memory:read",
+          [],
           readAddress,
         );
         data.push({ offset, val });

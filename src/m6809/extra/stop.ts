@@ -42,7 +42,7 @@ class Stop implements IModule {
   onMemoryWrite = (address: number, data: number): void => {
     if (address !== this.config.address) return;
 
-    this.event_transceiver.emit("ui:clock:pause");
+    this.event_transceiver.broadcast("ui:clock:pause");
   };
 }
 
