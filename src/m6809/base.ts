@@ -329,15 +329,16 @@ class M6809Simulator implements ISimulator {
    * event, and then call the function.
    * It uses any as a type for the arguments because the functions passed can
    * have many shapes, and we can't know them all.
+   * It's probably possible to type this better, but it's not worth the effort.
    */
   permissionsWrapper(
     caller: string,
     actions: ("listen" | "emit")[],
-    // biome-ignore lint/suspicious/noExplicitAny:
-    fun: (caller: string, event: EventNames, ...args: any[]) => any,
+    // biome-ignore lint/suspicious/noExplicitAny: <above>
+    fun: (caller: ModuleID, event: EventNames, ...args: any) => any,
   ) {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    return (event: EventNames, ...args: any[]) => {
+    // biome-ignore lint/suspicious/noExplicitAny: <above>
+    return (event: EventNames, ...args: any) => {
       if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
       if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
       return fun(caller, event, ...args);
