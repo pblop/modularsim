@@ -245,7 +245,7 @@ class M6809Simulator implements ISimulator {
     caller: ModuleID,
     event: E,
     callback: EventCallback<E>,
-    listenerPriority?: ListenerPriority,
+    listenerPriority?: SubtickPriority,
   ): void {
     const wrappedCallback = (...args: EventCallbackArgs<E>) => {
       callback(...args);
