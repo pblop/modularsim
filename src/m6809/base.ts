@@ -165,9 +165,9 @@ class M6809Simulator implements ISimulator {
     }
 
     // Add all the event listeners.
-    for (const eventDeclaration of Object.values(this.event_declarations)) {
-      this.addEDListeners(eventDeclaration.required);
-      if (eventDeclaration.optional) this.addEDListeners(eventDeclaration.optional);
+    for (const [module, eventDeclaration] of Object.entries(this.event_declarations)) {
+      this.addEDListeners(module, eventDeclaration.required);
+      if (eventDeclaration.optional) this.addEDListeners(module, eventDeclaration.optional);
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
@@ -180,7 +180,7 @@ class M6809Simulator implements ISimulator {
    * to be correct.
    * @param listeners The event listeners to add.
    */
-  addEDListeners<E extends EventNames>(listeners: EventDeclarationListeners) {
+  addEDListeners<E extends EventNames>(module: ModuleID, listeners: EventDeclarationListeners) {
     for (const [name, object] of Object.entries(listeners)) {
       if (object == null) continue;
 
@@ -197,7 +197,7 @@ class M6809Simulator implements ISimulator {
 
       // We know that the event is in the event declaration, and, thus, properly
       // accounted for and checked, so we can just call on (instead of onNamed).
-      this.on(name as E, callback, subtickPriority);
+      this.on(module, name as E, callback, subtickPriority);
     }
   }
 
@@ -229,7 +229,7 @@ class M6809Simulator implements ISimulator {
       if (!callback) {
         throw new Error("[MC6809] callback for listener is undefined");
       }
-      callback(context, ...args);
+      callback(...args, context);
     }
   }
   broadcast<E extends EventNames>(caller: ModuleID, event: E, ...args: EventParams<E>): void {
@@ -279,7 +279,7 @@ class M6809Simulator implements ISimulator {
       tick += listenerPriority.tickOffset;
     }
 
-    this.events[event].enqueue(caller, callback, { tick, order });
+    this.events[event].enqueue(caller, callback as AnyEventCallback, { tick, order });
   }
   /**
    * once but in promise.

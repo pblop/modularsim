@@ -59,8 +59,8 @@ export type EventParams<E extends EventNames> = EventMap[E];
  */
 export type EventContext = { emitter: string; receivers: string[]; tick: number };
 export type EventCallbackArgs<E extends EventNames> = [
-  context: EventContext,
   ...args: EventParams<E>,
+  context: EventContext,
 ];
 type EventCallback<E extends EventNames> = (...args: EventCallbackArgs<E>) => void;
 
