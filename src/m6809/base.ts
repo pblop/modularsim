@@ -348,15 +348,15 @@ class M6809Simulator implements ISimulator {
     caller: string,
     actions: ("listen" | "emit")[],
     // biome-ignore lint/suspicious/noExplicitAny: <above>
-    fun: (caller: ModuleID, event: EventBaseName, ...args: any) => any,
+    fun: (caller: ModuleID, event: EventName, ...args: any) => any,
     // biome-ignore lint/suspicious/noExplicitAny: <above>
-  ): ((event: EventBaseName, ...args: any) => any) => {
+  ): ((event: EventName, ...args: any) => any) => {
     if (actions.length === 0) {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
-      return (event: EventBaseName, ...args: any) => fun.bind(this)(caller, event, ...args);
+      return (event: EventName, ...args: any) => fun.bind(this)(caller, event, ...args);
     } else if (actions.length === 1) {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
-      return (event: EventBaseName, ...args: any) => {
+      return (event: EventName, ...args: any) => {
         if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
         if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
         return fun.bind(this)(caller, event, ...args);
@@ -365,10 +365,10 @@ class M6809Simulator implements ISimulator {
       // This is a special case, as we need to get the name of the event being
       // emitted and listened to.
       // biome-ignore lint/suspicious/noExplicitAny: <above>
-      return (listenedEvent: EventBaseName, ...args: any) => {
+      return (listenedEvent: EventName, ...args: any) => {
         if (actions.includes("listen")) this.permissionsCheckListen(caller, listenedEvent);
 
-        let emittedEvent: EventBaseName;
+        let emittedEvent: EventName;
         // We're looking to match the signature of emitAndWait, so we need to
         // check the type of the second argument.
         if (typeof args[0] === "object") {
@@ -383,14 +383,16 @@ class M6809Simulator implements ISimulator {
     }
   };
 
-  permissionsCheckEmit(caller: string, event: EventBaseName): void {
+  permissionsCheckEmit(caller: string, event: EventName): void {
+    const [base, group] = separateEventName(event);
+
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
     const eventDeclaration = this.event_declarations[caller];
-    if (!eventDeclaration.provided.includes(event))
+    if (!eventDeclaration.provided.includes(base))
       throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
-  permissionsCheckListen(caller: string, event: EventBaseName): void {
+  permissionsCheckListen(caller: string, event: EventName): void {
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
     const eventDeclaration = this.event_declarations[caller];
