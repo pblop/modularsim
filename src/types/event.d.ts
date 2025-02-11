@@ -106,20 +106,9 @@ export interface TypedEventTransceiver {
    * by their priority.
    * @param event The event name to emit.
    * @param emitter The ID of the emitter of the event.
-   * @param receivers The ID of the receiver(s) of the event, or an empty array
-   * if the event is broadcasted.
    * @param args The event parameters.
    */
-  emit<E extends EventBaseName>(event: E, receivers: ModuleID[], ...args: EventParams<E>): void;
-
-  /**
-   * Emit an event, calling all listeners for the event, in the order specified
-   * by their priority.
-   * @param event The event name to emit.
-   * @param emitter The ID of the emitter of the event.
-   * @param args The event parameters.
-   */
-  broadcast<E extends EventBaseName>(event: E, ...args: EventParams<E>): void;
+  emit<E extends EventBaseName>(event: E, ...args: EventParams<E>): void;
 
   /**
    * Add a transient listener for an event, that will be called once.
@@ -166,14 +155,11 @@ export interface TypedEventTransceiver {
    * The listener priority will be the next tick, in subtick order 0.
    * @param listenedEvent The event name to wait for.
    * @param emittedEvent The event name to emit.
-   * @param receivers The ID of the receiver(s) of the event, or an empty array
-   * if the event is broadcasted.
    * @param args The event parameters.
    */
   emitAndWait<L extends EventBaseName, E extends EventBaseName>(
     listenedEvent: L,
     emittedEvent: E,
-    receivers: ModuleID[],
     ...args: EventParams<E>
   ): Promise<EventCallbackArgs<L>>;
 
@@ -184,8 +170,6 @@ export interface TypedEventTransceiver {
    * parameter.
    * @param listenedEvent The event name to wait for.
    * @param listenerPriority The tick and subtick priority of the listened event.
-   * @param receivers The ID of the receiver(s) of the event, or an empty array
-   * if the event is broadcasted.
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
    */
@@ -193,7 +177,6 @@ export interface TypedEventTransceiver {
     listenedEvent: L,
     listenerPriority: ListenerPriority,
     emittedEvent: E,
-    receivers: ModuleID[],
     ...args: EventParams<E>
   ): Promise<EventCallbackArgs<L>>;
 }
