@@ -126,13 +126,11 @@ class M6809Simulator implements ISimulator {
       // and bind it to its module id. This way, the module can only emit and
       // listen to the events it has declared, and the sender field is
       // automatically filled.
-      const module = new Module(moduleId, module_config.config, {
-        emit: this.permissionsWrapper(moduleId, ["emit"], this.emit),
-        on: this.permissionsWrapper(moduleId, ["listen"], this.on),
-        once: this.permissionsWrapper(moduleId, ["listen"], this.once),
-        wait: this.permissionsWrapper(moduleId, ["listen"], this.wait),
-        emitAndWait: this.permissionsWrapper(moduleId, ["emit", "listen"], this.emitAndWait),
-      });
+      const module = new Module(
+        moduleId,
+        module_config.config,
+        this.asTransceiver({ module: moduleId }),
+      );
 
       const eventDeclaration = module.getEventDeclaration();
       required_events.push(...Object.keys(eventDeclaration.required));
@@ -311,6 +309,15 @@ class M6809Simulator implements ISimulator {
     return promise;
   }
 
+  asTransceiver({
+    module,
+    secure,
+  }: { module?: ModuleID; secure?: boolean }): TypedEventTransceiver {
+    module = module ?? "*";
+
+    if (secure) return this.asSecureTransceiver(module);
+    return this.asInsecureTransceiver(module);
+  }
   asSecureTransceiver(module: ModuleID): TypedEventTransceiver {
     return {
       emit: this.permissionsWrapper(module, ["emit"], this.emit),
