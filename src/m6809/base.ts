@@ -13,6 +13,7 @@ import type {
   EventCallbackArgs,
   EventBaseName,
   EventName,
+  TypedEventTransceiver,
 } from "../types/event.js";
 import type { ISimulator } from "../types/simulator.js";
 import { PriorityQueue } from "../general/priority.js";
@@ -310,6 +311,25 @@ class M6809Simulator implements ISimulator {
     return promise;
   }
 
+  asSecureTransceiver(module: ModuleID): TypedEventTransceiver {
+    return {
+      emit: this.permissionsWrapper(module, ["emit"], this.emit),
+      on: this.permissionsWrapper(module, ["listen"], this.on),
+      once: this.permissionsWrapper(module, ["listen"], this.once),
+      wait: this.permissionsWrapper(module, ["listen"], this.wait),
+      emitAndWait: this.permissionsWrapper(module, ["emit", "listen"], this.emitAndWait),
+    };
+  }
+  asInsecureTransceiver(module: ModuleID = "*"): TypedEventTransceiver {
+    return {
+      emit: this.permissionsWrapper(module, [], this.emit),
+      on: this.permissionsWrapper(module, [], this.on),
+      once: this.permissionsWrapper(module, [], this.once),
+      wait: this.permissionsWrapper(module, [], this.wait),
+      emitAndWait: this.permissionsWrapper(module, [], this.emitAndWait),
+    };
+  }
+
   /**
    * A helper function to check that the caller can emit and/or listen to an
    * event, and then call the function.
@@ -325,7 +345,8 @@ class M6809Simulator implements ISimulator {
     // biome-ignore lint/suspicious/noExplicitAny: <above>
   ): ((event: EventBaseName, ...args: any) => any) => {
     if (actions.length === 0) {
-      return fun.bind(this);
+      // biome-ignore lint/suspicious/noExplicitAny: <above>
+      return (event: EventBaseName, ...args: any) => fun.bind(this)(caller, event, ...args);
     } else if (actions.length === 1) {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
       return (event: EventBaseName, ...args: any) => {
@@ -354,6 +375,7 @@ class M6809Simulator implements ISimulator {
       };
     }
   };
+
   permissionsCheckEmit(caller: string, event: EventBaseName): void {
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
