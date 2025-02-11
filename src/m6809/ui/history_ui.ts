@@ -60,7 +60,6 @@ class HistoryUI implements IModule {
       const [_, data] = await this.et.emitAndWait(
         "ui:memory:read:result",
         "ui:memory:read",
-        [],
         address + i,
       );
       if (data == null) throw new Error(`[${this.id}] read an undefined byte!1!!`);

@@ -119,7 +119,7 @@ class ClockUI implements IModule {
             "button",
             {
               onclick: () => {
-                this.event_transceiver.broadcast("ui:clock:pause");
+                this.event_transceiver.emit("ui:clock:pause");
                 this.setState({ machineState: "paused" });
               },
             },
@@ -137,7 +137,7 @@ class ClockUI implements IModule {
             "button",
             {
               onclick: () => {
-                this.event_transceiver.broadcast("ui:clock:start");
+                this.event_transceiver.emit("ui:clock:start");
                 this.setState({ machineState: "running" });
               },
             },
@@ -152,7 +152,7 @@ class ClockUI implements IModule {
             "button",
             {
               onclick: () => {
-                this.event_transceiver.broadcast("ui:clock:step_cycle");
+                this.event_transceiver.emit("ui:clock:step_cycle");
               },
             },
             element("span", {
@@ -166,7 +166,7 @@ class ClockUI implements IModule {
             "button",
             {
               onclick: () => {
-                this.event_transceiver.broadcast("ui:clock:step_instruction");
+                this.event_transceiver.emit("ui:clock:step_instruction");
                 this.setState({ machineState: "instruction_run" });
               },
             },
@@ -184,7 +184,7 @@ class ClockUI implements IModule {
             "button",
             {
               onclick: () => {
-                this.event_transceiver.broadcast("signal:reset");
+                this.event_transceiver.emit("signal:reset");
                 this.setState({ machineState: "paused", cycles: 0 });
               },
             },
@@ -199,9 +199,9 @@ class ClockUI implements IModule {
             "button",
             {
               onclick: () => {
-                this.event_transceiver.broadcast("signal:reset");
+                this.event_transceiver.emit("signal:reset");
                 this.setState({ machineState: "fast_reset", cycles: 0 });
-                this.event_transceiver.broadcast("ui:clock:fast_reset");
+                this.event_transceiver.emit("ui:clock:fast_reset");
               },
             },
             element("span", {

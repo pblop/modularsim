@@ -207,7 +207,7 @@ class MemoryUI implements IModule {
         const data = Number.parseInt(valinput.value, 16);
         if (Number.isNaN(address)) return;
         if (Number.isNaN(data)) return;
-        this.event_transceiver.broadcast("ui:memory:write", address, data);
+        this.event_transceiver.emit("ui:memory:write", address, data);
       },
     });
     const readbutton = element("button", {
@@ -215,7 +215,7 @@ class MemoryUI implements IModule {
       onclick: () => {
         const address = Number.parseInt(addrinput.value, 16);
         if (Number.isNaN(address)) return;
-        this.event_transceiver.broadcast("ui:memory:read", address);
+        this.event_transceiver.emit("ui:memory:read", address);
       },
     });
 
