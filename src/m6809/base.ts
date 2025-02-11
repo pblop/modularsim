@@ -67,7 +67,7 @@ class EventQueue {
     return [el.callback, el.priority.tick];
   }
   debugView() {
-    const sorted = this.queue._heap.toSorted(this.cmp);
+    const sorted = this.queue._heap.slice().sort(this.cmp);
     return sorted.reduce((acc: Map<string, AnyEventCallback[]>, el) => {
       const str = `${el.priority.tick}|${el.priority.order}`;
       if (!acc.has(str)) acc.set(str, []);
