@@ -633,7 +633,7 @@ class Cpu implements IModule {
     this.registers.pc = this.readInfo!.value;
     this.commitRegisters();
 
-    this.et.broadcast("cpu:reset_finish");
+    this.et.emit("cpu:reset_finish");
     return "fetch_opcode";
   };
 
