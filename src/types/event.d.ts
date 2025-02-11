@@ -47,22 +47,22 @@ export interface EventMap {
 // for now.
 //type EventNames = keyof EventMap | string;
 //export type EventParams<E extends EventNames> = E extends keyof EventMap ? EventMap[E] : any[];
-export type EventNames = keyof EventMap;
-export type EventParams<E extends EventNames> = EventMap[E];
+export type EventBaseName = keyof EventMap;
+export type EventGroup = string;
+export type EventName<E extends EventBaseName> = E | `${E}/${EventGroup}`;
+export type EventParams<E extends EventBaseName> = EventMap[E];
 
 /**
  * Contextual data about the event, with the following properties:
  * - emitter: The ID of the emitter of the event.
- * - receivers: The ID of the receiver(s) of the event, or an empty array if the
- * event is broadcasted.
  * - tick: The tick of the event.
  */
-export type EventContext = { emitter: string; receivers: string[]; tick: number };
-export type EventCallbackArgs<E extends EventNames> = [
+export type EventContext = { emitter: string; tick: number };
+export type EventCallbackArgs<E extends EventBaseName> = [
   ...args: EventParams<E>,
   context: EventContext,
 ];
-type EventCallback<E extends EventNames> = (...args: EventCallbackArgs<E>) => void;
+type EventCallback<E extends EventBaseName> = (...args: EventCallbackArgs<E>) => void;
 
 type ModuleID = string | "*";
 /**
@@ -96,7 +96,7 @@ export interface TypedEventTransceiver {
    * priority is not customizable for permanent listeners (they are called every
    * tick).
    */
-  on<E extends EventNames>(
+  on<E extends EventBaseName>(
     event: E,
     listener: EventCallback<E>,
     listenerPriority?: ListenerPriority,
@@ -110,7 +110,7 @@ export interface TypedEventTransceiver {
    * if the event is broadcasted.
    * @param args The event parameters.
    */
-  emit<E extends EventNames>(event: E, receivers: ModuleID[], ...args: EventParams<E>): void;
+  emit<E extends EventBaseName>(event: E, receivers: ModuleID[], ...args: EventParams<E>): void;
 
   /**
    * Emit an event, calling all listeners for the event, in the order specified
@@ -119,7 +119,7 @@ export interface TypedEventTransceiver {
    * @param emitter The ID of the emitter of the event.
    * @param args The event parameters.
    */
-  broadcast<E extends EventNames>(event: E, ...args: EventParams<E>): void;
+  broadcast<E extends EventBaseName>(event: E, ...args: EventParams<E>): void;
 
   /**
    * Add a transient listener for an event, that will be called once.
@@ -133,7 +133,7 @@ export interface TypedEventTransceiver {
    * not provided, the listener will be called in the next tick, in subtick
    * order 0.
    */
-  once<E extends EventNames>(
+  once<E extends EventBaseName>(
     event: E,
     listener: EventCallback<E>,
     listenerPriority?: ListenerPriority,
@@ -150,7 +150,7 @@ export interface TypedEventTransceiver {
    * not provided, the listener will be called in the next available tick, in
    * subtick order 0.
    */
-  wait<E extends EventNames>(
+  wait<E extends EventBaseName>(
     event: E,
     listenerPriority?: ListenerPriority,
   ): Promise<EventParams<E>>;
@@ -170,7 +170,7 @@ export interface TypedEventTransceiver {
    * if the event is broadcasted.
    * @param args The event parameters.
    */
-  emitAndWait<L extends EventNames, E extends EventNames>(
+  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
     listenedEvent: L,
     emittedEvent: E,
     receivers: ModuleID[],
@@ -189,7 +189,7 @@ export interface TypedEventTransceiver {
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
    */
-  emitAndWait<L extends EventNames, E extends EventNames>(
+  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
     listenedEvent: L,
     listenerPriority: ListenerPriority,
     emittedEvent: E,
@@ -206,11 +206,11 @@ export interface TypedEventTransceiver {
  * - an array containing the callback function and the subtick priority
  * - the callback function for the event (interpreted as subtick priority 0)
  */
-export type EventDeclarationListeners = {
-  [E in EventNames]?: [EventCallback<E>, SubtickPriority] | EventCallback<E> | null;
+export type EventDeclarationListeners<B extends EventBaseName = EventBaseName> = {
+  [E in EventName<B>]?: [EventCallback<B>, SubtickPriority] | EventCallback<B> | null;
 };
 export type EventDeclaration = {
-  provided: EventNames[];
+  provided: EventBaseName[];
   required: EventDeclarationListeners;
   optional?: EventDeclarationListeners;
 };
