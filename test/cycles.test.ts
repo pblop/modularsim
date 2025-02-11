@@ -7,35 +7,36 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
   return (memory: Uint8Array) => {
     return new Promise((resolve, reject) => {
       const simulator = generateCpuOnlySimulator();
+      const et = simulator.asInsecureTransceiver("test");
       let cycles = 0;
       let finished = false;
 
-      simulator.on("memory:read", (address: number) => {
-        simulator.emit("memory:read:result", address, memory[address]);
+      et.on("memory:read", (address: number) => {
+        et.emit("memory:read:result", address, memory[address]);
       });
-      simulator.on("memory:write", (address: number, data: number) => {
+      et.on("memory:write", (address: number, data: number) => {
         if (address === 0xff01) {
           console.log("Finished");
           finished = true;
           resolve(cycles);
         } else {
           memory[address] = data;
-          simulator.emit("memory:write:result", address, data);
+          et.emit("memory:write:result", address, data);
         }
       });
-      simulator.on("cpu:fail", () => {
+      et.on("cpu:fail", () => {
         finished = true;
         reject();
       });
-      simulator.on("cpu:reset_finish", () => {
+      et.on("cpu:reset_finish", () => {
         // The cycle that finishes the reset is already the first IF cycle,
         // so the "actual" cycles start at 1 once the reset finishes.
         cycles = 1;
       });
-      simulator.emit("signal:reset");
+      et.emit("signal:reset");
       while (!finished) {
         cycles++;
-        simulator.emit("clock:cycle_start");
+        et.emit("clock:cycle_start");
       }
     });
   };
