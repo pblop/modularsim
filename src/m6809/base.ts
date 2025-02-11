@@ -154,8 +154,8 @@ class M6809Simulator implements ISimulator {
 
     // Add all the event listeners.
     for (const [module, eventDeclaration] of Object.entries(this.event_declarations)) {
-      this.addEDListeners(eventDeclaration.required);
-      if (eventDeclaration.optional) this.addEDListeners(eventDeclaration.optional);
+      this.addEDListeners(module, eventDeclaration.required);
+      if (eventDeclaration.optional) this.addEDListeners(module, eventDeclaration.optional);
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
@@ -169,6 +169,7 @@ class M6809Simulator implements ISimulator {
    * @param listeners The event listeners to add.
    */
   addEDListeners<B extends EventBaseName, E extends EventName<B>>(
+    module: ModuleID,
     listeners: EventDeclarationListeners,
   ) {
     for (const [name, object] of Object.entries(listeners)) {
@@ -187,7 +188,7 @@ class M6809Simulator implements ISimulator {
 
       // We know that the event is in the event declaration, and, thus, properly
       // accounted for and checked, so we can just call on (instead of onNamed).
-      this.on(name as E, callback, subtickPriority);
+      this.on(module, name as E, callback, subtickPriority);
     }
   }
 
@@ -230,15 +231,16 @@ class M6809Simulator implements ISimulator {
    *       when calling this method.**
    */
   on<B extends EventBaseName, E extends EventName<B>>(
+    caller: ModuleID,
     event: E,
     callback: EventCallback<B>,
     subtickPriority?: SubtickPriority,
   ): void {
     const wrappedCallback = (...args: EventCallbackArgs<B>) => {
       callback(...args);
-      this.once(event, wrappedCallback, subtickPriority);
+      this.once(caller, event, wrappedCallback, subtickPriority);
     };
-    this.once(event, wrappedCallback, subtickPriority);
+    this.once(caller, event, wrappedCallback, subtickPriority);
   }
   /**
    * Add a new event listener that only gets called once.
@@ -246,6 +248,7 @@ class M6809Simulator implements ISimulator {
    *       when calling this method.**
    */
   once<B extends EventBaseName, E extends EventName<B>>(
+    caller: ModuleID,
     event: E,
     callback: EventCallback<B>,
     listenerPriority?: ListenerPriority,
@@ -271,11 +274,12 @@ class M6809Simulator implements ISimulator {
    * once but in promise.
    */
   wait<E extends EventBaseName>(
+    caller: ModuleID,
     event: E,
     listenerPriority?: ListenerPriority,
   ): Promise<EventCallbackArgs<E>> {
     return new Promise((resolve, reject) => {
-      this.once(event, (...args: EventCallbackArgs<E>) => resolve(args), listenerPriority);
+      this.once(caller, event, (...args: EventCallbackArgs<E>) => resolve(args), listenerPriority);
     });
   }
 
@@ -298,7 +302,7 @@ class M6809Simulator implements ISimulator {
       emittedEvent = secondParam;
     }
 
-    const promise = this.wait(listenedEvent, listenerPriority);
+    const promise = this.wait(caller, listenedEvent, listenerPriority);
     // debugger;
     // We need to cast args to EventParams<E> because we have no way of telling
     // TypeScript which of the two signatures we're using.
