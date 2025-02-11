@@ -49,8 +49,8 @@ export interface EventMap {
 //export type EventParams<E extends EventNames> = E extends keyof EventMap ? EventMap[E] : any[];
 export type EventBaseName = keyof EventMap;
 export type EventGroup = string;
-export type EventName<E extends EventBaseName> = E | `${E}/${EventGroup}`;
-export type EventParams<E extends EventBaseName> = EventMap[E];
+export type EventName<B extends EventBaseName = EventBaseName> = B | `${B}/${EventGroup}`;
+export type EventParams<B extends EventBaseName> = EventMap[B];
 
 /**
  * Contextual data about the event, with the following properties:
@@ -58,11 +58,11 @@ export type EventParams<E extends EventBaseName> = EventMap[E];
  * - tick: The tick of the event.
  */
 export type EventContext = { emitter: string; tick: number };
-export type EventCallbackArgs<E extends EventBaseName> = [
-  ...args: EventParams<E>,
+export type EventCallbackArgs<B extends EventBaseName> = [
+  ...args: EventParams<B>,
   context: EventContext,
 ];
-type EventCallback<E extends EventBaseName> = (...args: EventCallbackArgs<E>) => void;
+type EventCallback<B extends EventBaseName> = (...args: EventCallbackArgs<B>) => void;
 
 type ModuleID = string | "*";
 /**
@@ -181,6 +181,7 @@ export interface TypedEventTransceiver {
   ): Promise<EventCallbackArgs<L>>;
 }
 
+type BaseEventOf<E> = E extends EventName<infer Base> ? Base : never;
 // The event declaration type, which specifies the events that a module provides,
 // requires, and optionally requires.
 /**
@@ -189,8 +190,11 @@ export interface TypedEventTransceiver {
  * - an array containing the callback function and the subtick priority
  * - the callback function for the event (interpreted as subtick priority 0)
  */
-export type EventDeclarationListeners<B extends EventBaseName = EventBaseName> = {
-  [E in EventName<B>]?: [EventCallback<B>, SubtickPriority] | EventCallback<B> | null;
+export type EventDeclarationListeners = {
+  [E in EventName]?:
+    | [EventCallback<BaseEventOf<E>>, SubtickPriority]
+    | EventCallback<BaseEventOf<E>>
+    | null;
 };
 export type EventDeclaration = {
   provided: EventBaseName[];
