@@ -27,75 +27,55 @@ type EventQueuePriority = {
 // biome-ignore lint/suspicious/noExplicitAny: see above
 type AnyEventCallback = EventCallback<any>;
 type EventQueueElement = {
-  module: ModuleID;
   callback: AnyEventCallback;
   priority: EventQueuePriority;
 };
 class EventQueue {
-  queue: EventQueueElement[];
+  queue: PriorityQueue<EventQueueElement>;
   // The number of times the event has happened since the start of the simulation, starting on 1.
-  // Since we have directed messages, we have global ticks (for all modules) and
-  // the additional, per-module, ticks.
-  // The ticks for each module are globalTicks + perModuleTicks[module].
-  perModuleTicks: Record<ModuleID, number> = {};
-  globalTicks = 0;
+  ticks = 0;
 
   cmp = (a: EventQueueElement, b: EventQueueElement) =>
-    this._distanceToNextTick(a) - this._distanceToNextTick(b) ||
-    a.priority.order - b.priority.order;
+    a.priority.tick - b.priority.tick || a.priority.order - b.priority.order;
 
   constructor() {
-    this.queue = [];
+    this.queue = new PriorityQueue(this.cmp);
   }
 
-  _distanceToNextTick(e: EventQueueElement) {
-    return e.priority.tick - this.ticks(e.module);
-  }
-  ticks(module: ModuleID) {
-    return this.globalTicks + (this.perModuleTicks[module] ?? 0);
-  }
-
-  enqueue(module: ModuleID, callback: AnyEventCallback, priority: EventQueuePriority) {
-    this.perModuleTicks[module] ??= 0;
-    this.queue.push({ module, callback, priority });
-    this.queue.sort(this.cmp); // probably not needed
+  enqueue(callback: AnyEventCallback, priority: EventQueuePriority) {
+    this.queue.enqueue({ callback, priority });
   }
   size() {
-    return this.queue.length;
+    return this.queue.size();
   }
   isEmpty() {
-    return this.queue.length === 0;
+    return this.queue.isEmpty();
   }
   hasFinishedIndex() {
     if (this.isEmpty()) return true;
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this._distanceToNextTick(this.queue[0]) > 0;
+    return this.queue.peek()!.priority.tick > this.ticks;
   }
-  dequeue(): [ModuleID, AnyEventCallback, number] | undefined {
-    const element = this.queue.shift();
-    if (!element) return;
+  dequeue(): [AnyEventCallback, number] | undefined {
+    const el = this.queue.dequeue();
+    if (!el) return undefined;
 
-    return [element.module, element.callback, this.perModuleTicks[element.module]];
+    return [el.callback, el.priority.tick];
   }
   debugView() {
-    const sorted = this.queue.sort(this.cmp);
+    const sorted = this.queue._heap.toSorted(this.cmp);
     return sorted.reduce((acc: Map<string, AnyEventCallback[]>, el) => {
-      const str = `${el.priority.tick}|${el.priority.order}(${el.module})`;
+      const str = `${el.priority.tick}|${el.priority.order}`;
       if (!acc.has(str)) acc.set(str, []);
       acc.get(str)!.push(el.callback);
       return acc;
     }, new Map());
   }
 
-  incrementTick(modules: ModuleID[]) {
-    if (modules.length === 0) {
-      this.globalTicks++;
-    } else {
-      for (const module of modules) this.perModuleTicks[module]++;
-    }
-    this.queue.sort(this.cmp);
+  incrementTick() {
+    this.ticks++;
   }
 }
 
