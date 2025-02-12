@@ -35,8 +35,8 @@ export interface EventMap {
   "ui:memory:read:result": [address: number, data: number];
   "ui:memory:write": [address: number, data: number];
   "ui:memory:write:result": [address: number, data: number];
-  "ui:memory:bulk:write": [data: Uint8Array];
-  "ui:memory:bulk:write:result": [data: Uint8Array];
+  "ui:memory:bulk:write": [address: number, data: Uint8Array];
+  "ui:memory:bulk:write:result": [address: number, data: Uint8Array];
   // Add more events here.
 }
 
@@ -108,7 +108,7 @@ export interface TypedEventTransceiver {
    * @param emitter The ID of the emitter of the event.
    * @param args The event parameters.
    */
-  emit<E extends EventBaseName>(event: E, ...args: EventParams<E>): void;
+  emit<B extends EventBaseName, E extends EventName<B>>(event: E, ...args: EventParams<B>): void;
 
   /**
    * Add a transient listener for an event, that will be called once.
@@ -122,9 +122,9 @@ export interface TypedEventTransceiver {
    * not provided, the listener will be called in the next tick, in subtick
    * order 0.
    */
-  once<E extends EventBaseName>(
+  once<B extends EventBaseName, E extends EventName<B>>(
     event: E,
-    listener: EventCallback<E>,
+    listener: EventCallback<B>,
     listenerPriority?: ListenerPriority,
   ): void;
 
@@ -139,7 +139,7 @@ export interface TypedEventTransceiver {
    * not provided, the listener will be called in the next available tick, in
    * subtick order 0.
    */
-  wait<E extends EventBaseName>(
+  wait<B extends EventBaseName, E extends EventName<B>>(
     event: E,
     listenerPriority?: ListenerPriority,
   ): Promise<EventParams<E>>;
@@ -157,11 +157,16 @@ export interface TypedEventTransceiver {
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
    */
-  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
-    listenedEvent: L,
-    emittedEvent: E,
-    ...args: EventParams<E>
-  ): Promise<EventCallbackArgs<L>>;
+  emitAndWait<
+    BListen extends EventBaseName,
+    BEmit extends EventBaseName,
+    Listen extends EventName<BListen>,
+    Emit extends EventName<BEmit>,
+  >(
+    listenedEvent: Listen,
+    emittedEvent: Emit,
+    ...args: EventParams<BEmit>
+  ): Promise<EventCallbackArgs<BListen>>;
 
   /**
    * Emit an event, and wait for another event to be emitted. The returned
