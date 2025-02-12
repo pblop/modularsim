@@ -33,7 +33,7 @@ type EventQueueElement = {
   callback: AnyEventCallback;
   priority: EventQueuePriority;
 };
-class EventQueue {
+class ClockQueue {
   queue: PriorityQueue<EventQueueElement>;
   // The number of times the event has happened since the start of the simulation, starting on 1.
   ticks = 0;
@@ -82,6 +82,9 @@ class EventQueue {
   }
 }
 
+type SubscribersType = {
+  [B in EventBaseName as B | `${B}/${string}`]?: EventCallback<B>[];
+};
 // NOTA: Ahora mismo estoy utilizando un método init para cargar los módulos y
 // preparar el simulador. Veo otras opciones:
 // - Crear un método estático para cargar los módulos, y una vez cargados,
@@ -92,12 +95,18 @@ class M6809Simulator implements ISimulator {
   modules: Record<string, IModule> = {};
   event_declarations: Record<string, EventDeclaration> = {};
 
-  events: Record<string, EventQueue> = {};
+  // Any is used here because the event names can be dynamic (while developing
+  // the app, all events are known, but because of the extensibility of the
+  // architecture, it's better to allow any string as an event name).
+  // biome-ignore lint/suspicious/noExplicitAny: see above
+  subscribers: Record<string, EventCallback<any>[]> = {};
+  queue: ClockQueue;
 
   constructor(config: SimulatorConfig, modules: ModuleConstructor[]) {
     console.log("Initializing M6809 simulator");
 
-    this.events = {};
+    this.subscribers = {};
+    this.queue = new ClockQueue();
 
     // Check that the config has the required fields.
     if (!config.modules) throw new Error("No modules defined");
@@ -161,6 +170,24 @@ class M6809Simulator implements ISimulator {
     this.emit("*", "system:load_finish");
   }
 
+  performCycle() {
+    // We're emitting an event, so we increment the index of the event queue (all the
+    // new listeners will be added to the index following this one).
+    this.queue.incrementTick();
+
+    while (!this.queue.hasFinishedIndex()) {
+      const [callback, tick] = this.subscribers[event].dequeue()!;
+      const context: EventContext = {
+        emitter: caller,
+        cycle: this.queue.tick,
+      };
+      if (!callback) {
+        throw new Error("[MC6809] callback for listener is undefined");
+      }
+      callback(...args, context);
+    }
+  }
+
   /**
    * Internal method to add event listeners from an (E)vent (D)eclaration to the
    * event queue. No checks are performed, as the event declaration is assumed
@@ -194,33 +221,23 @@ class M6809Simulator implements ISimulator {
   /**
    * Emit an event.
    */
-  emit<B extends EventBaseName, E extends EventName<B>>(
-    caller: ModuleID,
-    event: E,
-    ...args: EventParams<B>
-  ) {
-    const [base, group] = separateEventName(event);
-    console.debug(
-      `[${this.constructor.name}] Emitting event ${base}(${args.join(", ")}) (${caller}) -> ${group}`,
-    );
+  emit<B extends EventBaseName>(caller: string, event: EventName<B>, ...args: EventParams<B>) {
+    const subscribers = this.subscribers[event] as EventCallback<B>[] | undefined;
 
-    // If there are no listeners for this event, do nothing.
-    if (!this.events[event]) return;
+    if (!subscribers) return;
 
-    // We're emitting an event, so we increment the index of the event queue (all the
-    // new listeners will be added to the index following this one).
-    this.events[event].incrementTick();
+    const context: EventContext = {
+      emitter: caller,
+      cycle: this.queue.ticks,
+    };
 
-    while (!this.events[event].hasFinishedIndex()) {
-      const [callback, tick] = this.events[event].dequeue()!;
-      const context: EventContext = {
-        emitter: caller,
-        tick,
-      };
-      if (!callback) {
-        throw new Error("[MC6809] callback for listener is undefined");
-      }
-      callback(...args, context);
+    // We copy the array to prevent issues when the callback modifies the array
+    // - if the callback is ephemeral, it will be removed.
+    // - the callback can add new listeners, and we don't want to:
+    //   - call them in this iteration
+    //   - iterate wrong because of the new elements
+    for (const listener of subscribers.slice()) {
+      listener(...args, context);
     }
   }
 
@@ -229,83 +246,60 @@ class M6809Simulator implements ISimulator {
    * **NOTE: Don't forget to correctly bind the function to the class instance
    *       when calling this method.**
    */
-  on<B extends EventBaseName, E extends EventName<B>>(
+  on<B extends EventBaseName>(
     caller: ModuleID,
-    event: E,
+    event: EventName<B>,
     callback: EventCallback<B>,
-    subtickPriority?: SubtickPriority,
   ): void {
-    const wrappedCallback = (...args: EventCallbackArgs<B>) => {
-      callback(...args);
-      this.once(caller, event, wrappedCallback, subtickPriority);
-    };
-    this.once(caller, event, wrappedCallback, subtickPriority);
+    if (!this.subscribers[event]) this.subscribers[event] = [];
+    this.subscribers[event].push(callback);
   }
   /**
    * Add a new event listener that only gets called once.
    * **NOTE: Don't forget to correctly bind the function to the class instance
    *       when calling this method.**
    */
-  once<B extends EventBaseName, E extends EventName<B>>(
+  once<B extends EventBaseName>(
     caller: ModuleID,
-    event: E,
+    event: EventName<B>,
     callback: EventCallback<B>,
-    listenerPriority?: ListenerPriority,
   ): void {
-    if (!this.events[event]) this.events[event] = new EventQueue();
+    if (!this.subscribers[event]) this.subscribers[event] = [];
 
-    const queue = this.events[event];
-
-    // Set defaults for order and index, and calculate the latter in case an
-    // offset is given.
-    const order = listenerPriority?.order ?? 0;
-
-    let tick = queue.ticks + 1;
-    if (listenerPriority?.tick) tick = listenerPriority.tick;
-    else if (listenerPriority?.tickOffset) {
-      if (listenerPriority.tickOffset < 0) throw new Error("Index offset must be positive");
-      tick += listenerPriority.tickOffset;
-    }
-
-    this.events[event].enqueue(callback as AnyEventCallback, { tick, order });
+    const wrappedCallback: EventCallback<B> = (...args: EventCallbackArgs<B>) => {
+      // This quickly raised alarm bells in my head, because it looks like there could
+      // be a read-write race condition here.
+      // - I get the event list
+      // - somebody appends
+      // - I filter from my event list
+      // ... and now the other append is nowhere to be seen.
+      // But after looking around, and making some tests, it seems like the JavaScript event
+      // loop being single-threaded prevents this specific kind of race condition! Go JS!
+      this.subscribers[event] = this.subscribers[event].filter((x) => x !== wrappedCallback);
+      return callback(...args);
+    };
+    this.subscribers[event].unshift(wrappedCallback);
   }
   /**
    * once but in promise.
    */
   wait<E extends EventBaseName>(
     caller: ModuleID,
-    event: E,
-    listenerPriority?: ListenerPriority,
+    event: EventName<E>,
   ): Promise<EventCallbackArgs<E>> {
     return new Promise((resolve, reject) => {
-      this.once(caller, event, (...args: EventCallbackArgs<E>) => resolve(args), listenerPriority);
+      this.once(caller, event, (...args: EventCallbackArgs<E>) => resolve(args));
     });
   }
 
-  emitAndWait<E extends EventBaseName, L extends EventBaseName>(
+  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
     caller: ModuleID,
-    listenedEvent: L,
-    secondParam: E | ListenerPriority,
-    ...args: unknown[]
+    listened: EventName<L>,
+    emitted: EventName<E>,
+    ...args: EventParams<E>
   ): Promise<EventCallbackArgs<L>> {
-    // This function has _two_ signatures, so we need to check the type of the
-    // second argument to know if we have a listenerPriority or not.
-    let listenerPriority: ListenerPriority | undefined;
-    let emittedEvent: E;
-    if (typeof secondParam === "object") {
-      // emitAndWait(listenedEvent, listenerPriority, emittedEvent, ...args)
-      listenerPriority = secondParam;
-      emittedEvent = args.shift() as E;
-    } else {
-      // emitAndWait(listenedEvent, emittedEvent, ...args)
-      emittedEvent = secondParam;
-    }
-
-    const promise = this.wait(caller, listenedEvent, listenerPriority);
-    // debugger;
-    // We need to cast args to EventParams<E> because we have no way of telling
-    // TypeScript which of the two signatures we're using.
-    this.emit(caller, emittedEvent, ...(args as EventParams<E>));
+    const promise = this.wait(caller, listened);
+    this.emit(caller, emitted, ...args);
     return promise;
   }
 
@@ -365,20 +359,10 @@ class M6809Simulator implements ISimulator {
       // This is a special case, as we need to get the name of the event being
       // emitted and listened to.
       // biome-ignore lint/suspicious/noExplicitAny: <above>
-      return (listenedEvent: EventName, ...args: any) => {
-        if (actions.includes("listen")) this.permissionsCheckListen(caller, listenedEvent);
-
-        let emittedEvent: EventName;
-        // We're looking to match the signature of emitAndWait, so we need to
-        // check the type of the second argument.
-        if (typeof args[0] === "object") {
-          emittedEvent = args[1];
-        } else {
-          emittedEvent = args[0];
-        }
-
-        if (actions.includes("emit")) this.permissionsCheckEmit(caller, emittedEvent);
-        return fun.bind(this)(caller, listenedEvent, ...args);
+      return (listened: EventName, emitted: EventName, ...args: any) => {
+        if (actions.includes("listen")) this.permissionsCheckListen(caller, listened);
+        if (actions.includes("emit")) this.permissionsCheckEmit(caller, emitted);
+        return fun.bind(this)(caller, listened, emitted, ...args);
       };
     }
   };
@@ -393,12 +377,14 @@ class M6809Simulator implements ISimulator {
       throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
   permissionsCheckListen(caller: string, event: EventName): void {
+    const [base, group] = separateEventName(event);
+
     if (!this.event_declarations[caller])
       throw new Error(`[${caller}] Module has no event declaration`);
     const eventDeclaration = this.event_declarations[caller];
     if (
-      !(event in eventDeclaration.required) &&
-      (!eventDeclaration.optional || !(event in eventDeclaration.optional))
+      !(base in eventDeclaration.required) &&
+      (!eventDeclaration.optional || !(base in eventDeclaration.optional))
     )
       throw new Error(`[${caller}] Cannot listen to event ${event}.`);
   }

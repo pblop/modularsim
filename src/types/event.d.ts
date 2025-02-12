@@ -55,9 +55,9 @@ export type EventParams<B extends EventBaseName> = EventMap[B];
 /**
  * Contextual data about the event, with the following properties:
  * - emitter: The ID of the emitter of the event.
- * - tick: The tick of the event.
+ * - cycle: The cycle of the event.
  */
-export type EventContext = { emitter: string; tick: number };
+export type EventContext = { emitter: string; cycle: number };
 export type EventCallbackArgs<B extends EventBaseName> = [
   ...args: EventParams<B>,
   context: EventContext,
@@ -66,22 +66,22 @@ type EventCallback<B extends EventBaseName> = (...args: EventCallbackArgs<B>) =>
 
 type ModuleID = string | "*";
 /**
- * Subtick priority for listeners, with the following properties:
- * - order: The order within a tick, lower is higher (default: 0)
+ * Subcycle priority for listeners, with the following properties:
+ * - order: The order within a cycle, lower is higher (default: 0)
  */
-export type SubtickPriority = { order?: number };
+export type SubcyclePriority = { order?: number };
 /**
- * Tick priority for listeners, with the following properties:
- * - tick: The tick of the listener in the list (default: next available tick)
- * - tickOffset: The offset to apply to the next tick, must be positive (default: 0)
- * Only one of tick or tickOffset should be provided, if both are provided,
- * tick will be used.
+ * Cycle priority for listeners, with the following properties:
+ * - cycle: The cycle of the listener in the list (default: next available cycle)
+ * - cycleOffset: The offset to apply to the next cycle, must be positive (default: 0)
+ * Only one of cycle or cycleOffset should be provided, if both are provided,
+ * cycle will be used.
  */
-export type TickPriority =
-  | { tick: number; tickOffset?: never }
-  | { tick?: never; tickOffset: number }
-  | { tick?: never; tickOffset?: never };
-export type ListenerPriority = SubtickPriority & TickPriority;
+export type CyclePriority =
+  | { cycle: number; cycleOffset?: never }
+  | { cycle?: never; cycleOffset: number }
+  | { cycle?: never; cycleOffset?: never };
+export type ListenerPriority = SubcyclePriority & CyclePriority;
 
 // Typed event emitter interface.
 // Rename to: MessageOrchestrator
@@ -92,15 +92,8 @@ export interface TypedEventTransceiver {
    * @param event The event name to listen for.
    * @param listener The callback function to call when the event is emitted (
    * the arguments to the callback function are the event parameters).
-   * @param subtickPriority The subtick priority of the listener. The tick
-   * priority is not customizable for permanent listeners (they are called every
-   * tick).
    */
-  on<E extends EventBaseName>(
-    event: E,
-    listener: EventCallback<E>,
-    listenerPriority?: ListenerPriority,
-  ): void;
+  on<E extends EventBaseName>(event: E, listener: EventCallback<E>): void;
   /**
    * Emit an event, calling all listeners for the event, in the order specified
    * by their priority.
@@ -112,37 +105,24 @@ export interface TypedEventTransceiver {
 
   /**
    * Add a transient listener for an event, that will be called once.
-   * The exact moment it will be called depends on the tick priority (which
-   * event invocation it will be called in) and the subtick priority (which
-   * order it will be called in within the tick).
+   * The exact moment it will be called depends on the cycle priority (which
+   * event invocation it will be called in) and the subcycle priority (which
+   * order it will be called in within the cycle).
    * @param event The event name to listen for.
    * @param listener The callback function to call when the event is emitted (
    * the arguments to the callback function are the event parameters).
-   * @param listenerPriority The tick and subtick priority of the listener, if
-   * not provided, the listener will be called in the next tick, in subtick
-   * order 0.
    */
-  once<B extends EventBaseName, E extends EventName<B>>(
-    event: E,
-    listener: EventCallback<B>,
-    listenerPriority?: ListenerPriority,
-  ): void;
+  once<B extends EventBaseName, E extends EventName<B>>(event: E, listener: EventCallback<B>): void;
 
   /**
    * Await an event, returning a promise that, when resolved, returns the event
    * parameters.
-   * The promise will be resolved depending on the tick priority (which event
-   * invocation it will be called in) and the subtick priority (which order it
-   * will be called in within the tick).
+   * The promise will be resolved depending on the cycle priority (which event
+   * invocation it will be called in) and the subcycle priority (which order it
+   * will be called in within the cycle).
    * @param event The event name to wait for.
-   * @param listenerPriority The tick and subtick priority of the listener, if
-   * not provided, the listener will be called in the next available tick, in
-   * subtick order 0.
    */
-  wait<B extends EventBaseName, E extends EventName<B>>(
-    event: E,
-    listenerPriority?: ListenerPriority,
-  ): Promise<EventParams<E>>;
+  wait<B extends EventBaseName, E extends EventName<B>>(event: E): Promise<EventParams<B>>;
 
   // TODO: add waitAny, waitAll?
   // Emits an event, and waits for another
@@ -152,7 +132,7 @@ export interface TypedEventTransceiver {
   /**
    * Emit an event, and wait for another event to be emitted. The returned
    * promise will be resolved with the parameters of the emitted event.
-   * The listener priority will be the next tick, in subtick order 0.
+   * The listener priority will be the next cycle, in subcycle order 0.
    * @param listenedEvent The event name to wait for.
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
@@ -167,23 +147,6 @@ export interface TypedEventTransceiver {
     emittedEvent: Emit,
     ...args: EventParams<BEmit>
   ): Promise<EventCallbackArgs<BListen>>;
-
-  /**
-   * Emit an event, and wait for another event to be emitted. The returned
-   * promise will be resolved with the parameters of the emitted event.
-   * The listened event's priority can be customized through the listenerPriority
-   * parameter.
-   * @param listenedEvent The event name to wait for.
-   * @param listenerPriority The tick and subtick priority of the listened event.
-   * @param emittedEvent The event name to emit.
-   * @param args The event parameters.
-   */
-  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
-    listenedEvent: L,
-    listenerPriority: ListenerPriority,
-    emittedEvent: E,
-    ...args: EventParams<E>
-  ): Promise<EventCallbackArgs<L>>;
 }
 
 // The event declaration type, which specifies the events that a module provides,
@@ -191,12 +154,12 @@ export interface TypedEventTransceiver {
 /**
  * The event listeners are specified as an object, where the key is the event name,
  * and the value is either:
- * - an array containing the callback function and the subtick priority
- * - the callback function for the event (interpreted as subtick priority 0)
+ * - an array containing the callback function and the subcycle priority
+ * - the callback function for the event (interpreted as subcycle priority 0)
  */
 export type EventDeclarationListeners = Partial<{
   [B in EventBaseName]: {
-    [K in EventName<B>]?: EventCallback<B> | [EventCallback<B>, SubtickPriority] | null;
+    [K in EventName<B>]?: EventCallback<B> | null;
   }[EventName<B>];
 }>;
 export type EventDeclaration = {
