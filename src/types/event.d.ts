@@ -181,7 +181,6 @@ export interface TypedEventTransceiver {
   ): Promise<EventCallbackArgs<L>>;
 }
 
-type BaseEventOf<E> = E extends EventName<infer Base> ? Base : never;
 // The event declaration type, which specifies the events that a module provides,
 // requires, and optionally requires.
 /**
@@ -190,12 +189,11 @@ type BaseEventOf<E> = E extends EventName<infer Base> ? Base : never;
  * - an array containing the callback function and the subtick priority
  * - the callback function for the event (interpreted as subtick priority 0)
  */
-export type EventDeclarationListeners = {
-  [E in EventName]?:
-    | [EventCallback<BaseEventOf<E>>, SubtickPriority]
-    | EventCallback<BaseEventOf<E>>
-    | null;
-};
+export type EventDeclarationListeners = Partial<{
+  [B in EventBaseName]: {
+    [K in EventName<B>]?: EventCallback<B> | [EventCallback<B>, SubtickPriority] | null;
+  }[EventName<B>];
+}>;
 export type EventDeclaration = {
   provided: EventBaseName[];
   required: EventDeclarationListeners;
