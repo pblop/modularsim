@@ -107,12 +107,13 @@ class Multiplexer implements IModule {
 
   getCorrespondingEntry = (address: number): MultiplexerEntry | undefined => {
     const entries = this.config.entries
-      .filter((e) => e.start <= address && e.start + e.size > address)
+      .filter((e) => e.start <= address && e.start + e.size >= address)
       .sort((a, b) => a.priority - b.priority);
     if (entries.length === 0) {
       console.error(`[${this.id}] No module found for address 0x${address.toString(16)}`);
       return;
     }
+    // TODO: Enviar a varios módulos si tienen la misma prioridad.
     return entries[0];
   };
 
@@ -140,10 +141,19 @@ class Multiplexer implements IModule {
   ): (...args: EventCallbackArgs<O>) => void {
     const [base, _] = separateEventName(event);
     return (...args: EventCallbackArgs<O>) => {
+      const ctx: EventContext = args[args.length - 1] as EventContext;
+
       // The first argument is always the address (for the incoming events we've set).
       const address = args[0] as number;
-      const entry = this.getCorrespondingEntry(address);
+
+      // We need to find the starting address of the module that emitted the event,
+      // so we can calculate the absolute address.
+      const entry = this.config.entries.find((e) => e.module === ctx.emitter);
       if (!entry) return;
+
+      // Calculate the address relative to the module, and pass it as the first argument to the
+      // global event.
+      (args[0] as number) = address + entry.start; // (casted to number to avoid TS error, it's fine)
 
       // We remove the last argument (context) before passing the args
       const eventArgs = args.slice(0, -1) as EventParams<O>;
