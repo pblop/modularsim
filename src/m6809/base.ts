@@ -186,6 +186,7 @@ class M6809Simulator implements ISimulator {
   }
 
   performCycle() {
+    console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycles}`);
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
     this.queue.incrementCycle();
@@ -193,7 +194,7 @@ class M6809Simulator implements ISimulator {
     while (!this.queue.hasFinishedCycle()) {
       const callback = this.queue.dequeue()!;
       if (!callback) {
-        throw new Error("[MC6809] callback for cycle is undefined");
+        throw new Error(`[${this.constructor.name}] callback for cycle is undefined`);
       }
       callback(this.queue.cycles);
     }
@@ -203,6 +204,7 @@ class M6809Simulator implements ISimulator {
       callback(cycle);
       this.onceCycle(wrappedCallback, priority);
     };
+    this.onceCycle(wrappedCallback, priority);
   }
   onceCycle(callback: CycleCallback, priority: ListenerPriority = {}) {
     // Set defaults for order and index, and calculate the latter in case an
@@ -268,6 +270,7 @@ class M6809Simulator implements ISimulator {
    * Emit an event.
    */
   emit<B extends EventBaseName>(caller: string, event: EventName<B>, ...args: EventParams<B>) {
+    console.log(`(event) ${caller}: ${event}`);
     const subscribers = this.subscribers[event] as EventCallback<B>[] | undefined;
 
     if (!subscribers) return;
