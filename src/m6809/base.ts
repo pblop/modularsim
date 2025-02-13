@@ -435,6 +435,7 @@ class M6809Simulator implements ISimulator {
 
     if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
     const evtDeclaration = this.declarations[caller].events;
+    if (evtDeclaration == null) throw new Error(`[${caller}] Module has no event declaration`);
     if (!evtDeclaration.provided.includes(base))
       throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
@@ -443,6 +444,7 @@ class M6809Simulator implements ISimulator {
 
     if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
     const evtDeclaration = this.declarations[caller].events;
+    if (evtDeclaration == null) throw new Error(`[${caller}] Module has no event declaration`);
     if (
       !(base in evtDeclaration.required) &&
       (!evtDeclaration.optional || !(base in evtDeclaration.optional))
