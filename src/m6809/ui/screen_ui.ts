@@ -1,11 +1,12 @@
 import type { IModule, ModuleDeclaration } from "../../types/module";
-import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
+import type { TypedEventTransceiver, EventDeclaration, EventBaseName } from "../../types/event";
 import { element } from "../../general/html.js";
 import { verify } from "../../general/config.js";
 import { createLanguageStrings } from "../../general/lang.js";
+import { joinEventName } from "../../general/event.js";
 
 type ScreenConfig = {
-  address: number;
+  multiplexer?: string;
 };
 
 const ScreenUIStrings = createLanguageStrings({
@@ -30,12 +31,15 @@ class ScreenUI implements IModule {
   localeStrings!: typeof ScreenUIStrings.en;
 
   getModuleDeclaration(): ModuleDeclaration {
+    const multiplexedName = (event: EventBaseName) =>
+      this.config.multiplexer ? joinEventName(event, this.id) : event;
+
     return {
       events: {
-        provided: [],
+        provided: ["memory:write:result"],
         required: {
           "signal:reset": this.onReset,
-          "memory:write": this.onMemoryWrite,
+          [multiplexedName("memory:write")]: this.onMemoryWrite,
           "gui:panel_created": this.onGuiPanelCreated,
         },
         optional: {},
@@ -52,9 +56,9 @@ class ScreenUI implements IModule {
     this.event_transceiver = eventTransceiver;
 
     this.config = verify(config, {
-      address: {
-        type: "number",
-        required: true,
+      multiplexer: {
+        type: "string",
+        required: false,
       },
     });
 
@@ -72,10 +76,14 @@ class ScreenUI implements IModule {
   };
 
   onMemoryWrite = (address: number, data: number): void => {
-    if (address !== this.config.address) return;
     if (!this.textElement) return;
 
     this.textElement.textContent += String.fromCharCode(data);
+
+    const event = this.config.multiplexer
+      ? joinEventName("memory:write:result", this.config.multiplexer)
+      : "memory:write:result";
+    this.event_transceiver.emit(event, address, data);
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
