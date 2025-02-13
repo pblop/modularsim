@@ -2,8 +2,8 @@ import type { CycleDeclaration, CycleManager } from "./cycles";
 import type { EventDeclaration, TypedEventTransceiver } from "./event";
 
 export type ModuleDeclaration = {
-  events: EventDeclaration;
-  cycles: CycleDeclaration;
+  events?: EventDeclaration;
+  cycles?: CycleDeclaration;
 };
 
 export type SimulationModuleInteraction = TypedEventTransceiver & CycleManager;

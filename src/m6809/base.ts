@@ -142,9 +142,13 @@ class M6809Simulator implements ISimulator {
       );
 
       const declaration = module.getModuleDeclaration();
-      required_events.push(...Object.keys(declaration.events.required));
-      provided_events.push(...declaration.events.provided);
-      if (declaration.cycles.initiator) initiators++;
+      if (declaration.events != null) {
+        required_events.push(...Object.keys(declaration.events.required));
+        provided_events.push(...declaration.events.provided);
+      }
+      if (declaration.cycles) {
+        if (declaration.cycles.initiator) initiators++;
+      }
 
       // Store the event declaration and the module instance.
       this.declarations[moduleId] = declaration;
@@ -168,9 +172,13 @@ class M6809Simulator implements ISimulator {
 
     // Add all the event listeners.
     for (const [module, declaration] of Object.entries(this.declarations)) {
-      this.addEDListeners(module, declaration.events.required);
-      if (declaration.events.optional) this.addEDListeners(module, declaration.events.optional);
-      if (declaration.cycles.permanent) this.addCDListeners(declaration.cycles.permanent);
+      if (declaration.events) {
+        this.addEDListeners(module, declaration.events.required);
+        if (declaration.events.optional) this.addEDListeners(module, declaration.events.optional);
+      }
+      if (declaration.cycles) {
+        if (declaration.cycles.permanent) this.addCDListeners(declaration.cycles.permanent);
+      }
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);

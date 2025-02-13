@@ -36,5 +36,5 @@ export type CycleDeclarationListener = CycleCallback | [CycleCallback, ListenerP
 export type CycleDeclaration = {
   permanent?: CycleDeclarationListener[];
   // TODO: ephemeral events maybe too?
-  initiator: boolean;
+  initiator?: boolean;
 };
