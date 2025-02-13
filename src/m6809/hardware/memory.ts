@@ -1,4 +1,8 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type {
+  IModule,
+  ModuleDeclaration,
+  SimulationModuleInteraction,
+} from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 
@@ -27,7 +31,7 @@ function validate_memory_config(config: Record<string, unknown>): MemoryConfig {
 }
 
 class Memory implements IModule {
-  event_transceiver: TypedEventTransceiver;
+  simulation: SimulationModuleInteraction;
   id: string;
 
   memory: Uint8Array;
@@ -61,10 +65,10 @@ class Memory implements IModule {
   constructor(
     id: string,
     config: Record<string, unknown> | undefined,
-    eventTransceiver: TypedEventTransceiver,
+    simulation: SimulationModuleInteraction,
   ) {
     // We use the simulator to emit/receive events.
-    this.event_transceiver = eventTransceiver;
+    this.simulation = simulation;
     this.id = id;
 
     console.log(`[${this.id}] Initializing module.`);
@@ -89,14 +93,14 @@ class Memory implements IModule {
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    this.event_transceiver.emit("ui:memory:read:result", address, data);
+    this.simulation.emit("ui:memory:read:result", address, data);
   };
   onUiMemoryWrite = (address: number, data: number, ctx: EventContext): void => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     this.memory[address - this.start] = data;
-    this.event_transceiver.emit("ui:memory:write:result", address, data);
+    this.simulation.emit("ui:memory:write:result", address, data);
   };
   onUiMemoryBulkWrite = (data: Uint8Array): void => {
     if (data.length > this.memory.length) {
@@ -104,17 +108,16 @@ class Memory implements IModule {
     }
 
     this.memory.set(data);
-    this.event_transceiver.emit("ui:memory:bulk:write:result", data);
+    this.simulation.emit("ui:memory:bulk:write:result", data);
   };
   onMemoryRead = (address: number) => {
     // If the address is out of bounds, do nothing.
     if (address < this.start || address >= this.start + this.memory.length) return;
 
     const data = this.memory[address - this.start];
-    this.event_transceiver.once(
-      "clock:cycle_start",
+    this.simulation.onceCycle(
       () => {
-        this.event_transceiver.emit("memory:read:result", address, data);
+        this.simulation.emit("memory:read:result", address, data);
       },
       { order: -1 },
     );
@@ -125,10 +128,9 @@ class Memory implements IModule {
 
     this.memory[address - this.start] = data;
 
-    this.event_transceiver.once(
-      "clock:cycle_start",
+    this.simulation.onceCycle(
       () => {
-        this.event_transceiver.emit("memory:write:result", address, data);
+        this.simulation.emit("memory:write:result", address, data);
       },
       { order: -1 },
     );
