@@ -1,7 +1,7 @@
 import M6809Simulator from "../src/m6809/base.ts";
 import Cpu from "../src/m6809/hardware/cpu.ts";
 import type { EventDeclaration, TypedEventTransceiver } from "../src/types/event";
-import type { IModule, ModuleConstructor } from "../src/types/module.d.ts";
+import type { IModule, ModuleConstructor, ModuleDeclaration } from "../src/types/module.d.ts";
 
 export function generateCpuOnlySimulator() {
   const config = {
@@ -24,23 +24,23 @@ export function generateCpuOnlySimulator() {
   };
 
   /**
-   * A module that provides the events the CPU requires so that the simulator doesn't
+   * A module that provides the declaration the CPU requires so that the simulator doesn't
    * throw an error on initialisation, and also kickstarts the system.
    */
-  class EventDeclarator implements IModule {
-    getEventDeclaration(): EventDeclaration {
+  class TestingModule implements IModule {
+    getModuleDeclaration(): ModuleDeclaration {
       return {
-        provided: [
-          "clock:cycle_start",
-          "signal:reset",
-          "memory:read:result",
-          "memory:write:result",
-        ],
-        required: {},
+        events: {
+          provided: ["signal:reset", "memory:read:result", "memory:write:result"],
+          required: {},
+        },
+        cycles: {
+          initiator: true,
+        },
       };
     }
   }
-  const modules = [Cpu as ModuleConstructor, EventDeclarator as ModuleConstructor];
+  const modules = [Cpu as ModuleConstructor, TestingModule as ModuleConstructor];
 
   console.log = () => {};
   console.info = () => {};

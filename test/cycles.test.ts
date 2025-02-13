@@ -7,7 +7,7 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
   return (memory: Uint8Array) => {
     return new Promise((resolve, reject) => {
       const simulator = generateCpuOnlySimulator();
-      const et = simulator.asTransceiver({ module: "test", secure: false });
+      const et = simulator.asSimulation({ module: "test", secure: false });
       let cycles = 0;
       let finished = false;
 
@@ -36,7 +36,7 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
       et.emit("signal:reset");
       while (!finished) {
         cycles++;
-        et.emit("clock:cycle_start");
+        et.performCycle();
       }
     });
   };
