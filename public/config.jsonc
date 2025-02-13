@@ -10,6 +10,7 @@
         // "url" es la ruta del archivo que contiene el módulo
         "url": "./m6809/hardware/memory.js",
         "config": {
+          "multiplexer": "multiplexer",
           "size": 65536,
           "start": 0,
           "type": "ram"
@@ -198,6 +199,30 @@
               "bits": 8
             }
           }
+        }
+      },
+      {
+        "id": "multiplexer",
+        "type": "hw",
+        "url": "./m6809/hardware/multiplexer.js",
+        "config": {
+          "entries": [
+            {
+              "start": "0xFF00",
+              "size": 1,
+              "module": "screen_ui"
+            },
+            {
+              "start": "0xFF01",
+              "size": 1,
+              "module": "stopper"
+            },
+            {
+              "start": "0x0",
+              "module": "main_memory",
+              "size": 65536
+            }
+          ]
         }
       }
     ]
