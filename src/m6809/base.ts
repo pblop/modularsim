@@ -4,10 +4,7 @@ import type {
   EventCallback,
   EventParams,
   EventDeclaration,
-  EventMap,
-  ListenerPriority,
   EventDeclarationListeners,
-  SubtickPriority,
   EventContext,
   ModuleID,
   EventCallbackArgs,
@@ -18,34 +15,30 @@ import type {
 import type { ISimulator } from "../types/simulator.js";
 import { PriorityQueue } from "../general/priority.js";
 import { separateEventName } from "../general/event.js";
+import type {
+  CycleCallback,
+  FinalListenerPriority,
+  ListenerPriority,
+  SubcyclePriority,
+} from "../types/cycles.js";
 
-type EventQueuePriority = {
-  // The tick when the event should be executed (starting on 1).
-  tick: number;
-  order: number;
-};
-// Any is used here because the event names can be dynamic (while developing
-// the app, all events are known, but because of the extensibility of the
-// architecture, it's better to allow any string as an event name).
-// biome-ignore lint/suspicious/noExplicitAny: see above
-type AnyEventCallback = EventCallback<any>;
-type EventQueueElement = {
-  callback: AnyEventCallback;
-  priority: EventQueuePriority;
+type ClockQueueElement = {
+  callback: CycleCallback;
+  priority: FinalListenerPriority;
 };
 class ClockQueue {
-  queue: PriorityQueue<EventQueueElement>;
-  // The number of times the event has happened since the start of the simulation, starting on 1.
-  ticks = 0;
+  queue: PriorityQueue<ClockQueueElement>;
+  // The number of cycles since the start of the simulation, starting on 1.
+  cycles = 0;
 
-  cmp = (a: EventQueueElement, b: EventQueueElement) =>
-    a.priority.tick - b.priority.tick || a.priority.order - b.priority.order;
+  cmp = (a: ClockQueueElement, b: ClockQueueElement) =>
+    a.priority.cycle - b.priority.cycle || a.priority.order - b.priority.order;
 
   constructor() {
     this.queue = new PriorityQueue(this.cmp);
   }
 
-  enqueue(callback: AnyEventCallback, priority: EventQueuePriority) {
+  enqueue(callback: CycleCallback, priority: FinalListenerPriority) {
     this.queue.enqueue({ callback, priority });
   }
   size() {
@@ -54,31 +47,28 @@ class ClockQueue {
   isEmpty() {
     return this.queue.isEmpty();
   }
-  hasFinishedIndex() {
+  hasFinishedCycle() {
     if (this.isEmpty()) return true;
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this.queue.peek()!.priority.tick > this.ticks;
+    return this.queue.peek()!.priority.cycle > this.cycles;
   }
-  dequeue(): [AnyEventCallback, number] | undefined {
-    const el = this.queue.dequeue();
-    if (!el) return undefined;
-
-    return [el.callback, el.priority.tick];
+  dequeue(): CycleCallback | undefined {
+    return this.queue.dequeue()?.callback;
   }
   debugView() {
     const sorted = this.queue._heap.slice().sort(this.cmp);
-    return sorted.reduce((acc: Map<string, AnyEventCallback[]>, el) => {
-      const str = `${el.priority.tick}|${el.priority.order}`;
+    return sorted.reduce((acc: Map<string, CycleCallback[]>, el) => {
+      const str = `${el.priority.cycle}|${el.priority.order}`;
       if (!acc.has(str)) acc.set(str, []);
       acc.get(str)!.push(el.callback);
       return acc;
     }, new Map());
   }
 
-  incrementTick() {
-    this.ticks++;
+  incrementCycle() {
+    this.cycles++;
   }
 }
 
@@ -173,19 +163,45 @@ class M6809Simulator implements ISimulator {
   performCycle() {
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
-    this.queue.incrementTick();
+    this.queue.incrementCycle();
 
-    while (!this.queue.hasFinishedIndex()) {
-      const [callback, tick] = this.subscribers[event].dequeue()!;
-      const context: EventContext = {
-        emitter: caller,
-        cycle: this.queue.tick,
-      };
+    while (!this.queue.hasFinishedCycle()) {
+      const callback = this.queue.dequeue()!;
       if (!callback) {
-        throw new Error("[MC6809] callback for listener is undefined");
+        throw new Error("[MC6809] callback for cycle is undefined");
       }
-      callback(...args, context);
+      callback(this.queue.cycles);
     }
+  }
+  onCycle(callback: CycleCallback, priority: SubcyclePriority) {
+    const wrappedCallback = (cycle: number) => {
+      callback(cycle);
+      this.onceCycle(wrappedCallback, priority);
+    };
+  }
+  onceCycle(callback: CycleCallback, priority: ListenerPriority) {
+    // Set defaults for order and index, and calculate the latter in case an
+    // offset is given.
+    const order = priority?.order ?? 0;
+
+    // The current cycle (by default)
+    let cycle = this.queue.cycles + 1;
+    if (priority.cycle != null) {
+      cycle = priority.cycle;
+    } else if (priority.offset != null) {
+      cycle += priority.offset;
+    }
+
+    if (cycle <= this.queue.cycles) {
+      throw new Error("[MC6809] Only future cycles can be scheduled");
+    }
+
+    this.onCycle(callback, priority);
+  }
+  awaitCycle(priority: ListenerPriority) {
+    return new Promise((resolve) => {
+      this.onceCycle(resolve, priority);
+    });
   }
 
   /**
@@ -198,23 +214,12 @@ class M6809Simulator implements ISimulator {
     module: ModuleID,
     listeners: EventDeclarationListeners,
   ) {
-    for (const [name, object] of Object.entries(listeners)) {
-      if (object == null) continue;
-
-      let subtickPriority: SubtickPriority | undefined;
-      let callback: EventCallback<B>;
-
-      // We know that the event name is in the provided events (it's a valid
-      // event declaration), so we can cast it safely.
-      if (typeof object === "function") {
-        callback = object as EventCallback<B>;
-      } else {
-        [callback, subtickPriority] = object as [EventCallback<B>, SubtickPriority];
-      }
+    for (const [name, callback] of Object.entries(listeners)) {
+      if (callback == null) continue;
 
       // We know that the event is in the event declaration, and, thus, properly
       // accounted for and checked, so we can just call on (instead of onNamed).
-      this.on(module, name as E, callback, subtickPriority);
+      this.on(module, name as E, callback as EventCallback<B>);
     }
   }
 
@@ -228,7 +233,7 @@ class M6809Simulator implements ISimulator {
 
     const context: EventContext = {
       emitter: caller,
-      cycle: this.queue.ticks,
+      cycle: this.queue.cycles,
     };
 
     // We copy the array to prevent issues when the callback modifies the array

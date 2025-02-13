@@ -65,23 +65,6 @@ export type EventCallbackArgs<B extends EventBaseName> = [
 type EventCallback<B extends EventBaseName> = (...args: EventCallbackArgs<B>) => void;
 
 type ModuleID = string | "*";
-/**
- * Subcycle priority for listeners, with the following properties:
- * - order: The order within a cycle, lower is higher (default: 0)
- */
-export type SubcyclePriority = { order?: number };
-/**
- * Cycle priority for listeners, with the following properties:
- * - cycle: The cycle of the listener in the list (default: next available cycle)
- * - cycleOffset: The offset to apply to the next cycle, must be positive (default: 0)
- * Only one of cycle or cycleOffset should be provided, if both are provided,
- * cycle will be used.
- */
-export type CyclePriority =
-  | { cycle: number; cycleOffset?: never }
-  | { cycle?: never; cycleOffset: number }
-  | { cycle?: never; cycleOffset?: never };
-export type ListenerPriority = SubcyclePriority & CyclePriority;
 
 // Typed event emitter interface.
 // Rename to: MessageOrchestrator
