@@ -32,7 +32,9 @@ export interface CycleManager {
   awaitCycle(priority?: ListenerPriority): Promise<number>;
 }
 
+export type CycleDeclarationListener = CycleCallback | [CycleCallback, ListenerPriority];
 export type CycleDeclaration = {
-  permanent: CycleCallback[];
+  permanent?: CycleDeclarationListener[];
+  // TODO: ephemeral events maybe too?
   initiator: boolean;
 };

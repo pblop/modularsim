@@ -1,10 +1,12 @@
-import type { CycleDeclaration } from "./cycles";
+import type { CycleDeclaration, CycleManager } from "./cycles";
 import type { EventDeclaration, TypedEventTransceiver } from "./event";
 
 export type ModuleDeclaration = {
   events: EventDeclaration;
   cycles: CycleDeclaration;
 };
+
+export type SimulationModuleInteraction = TypedEventTransceiver & CycleManager;
 
 export interface IModule {
   /**
@@ -21,6 +23,6 @@ export type ModuleConstructor = {
   new (
     id: string,
     config: Record<string, unknown> | undefined,
-    eventTransceiver: TypedEventTransceiver,
+    simulation: SimulationModuleInteraction,
   ): IModule;
 };

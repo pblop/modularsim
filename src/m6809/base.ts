@@ -1,5 +1,10 @@
 import type { SimulatorConfig } from "../types/config.js";
-import type { IModule, ModuleConstructor, ModuleDeclaration } from "../types/module.js";
+import type {
+  IModule,
+  ModuleConstructor,
+  ModuleDeclaration,
+  SimulationModuleInteraction,
+} from "../types/module.js";
 import type {
   EventCallback,
   EventParams,
@@ -17,6 +22,7 @@ import { PriorityQueue } from "../general/priority.js";
 import { separateEventName } from "../general/event.js";
 import type {
   CycleCallback,
+  CycleDeclarationListener,
   CycleManager,
   FinalListenerPriority,
   ListenerPriority,
@@ -105,6 +111,7 @@ class M6809Simulator implements ISimulator {
     const required_events = [];
     const provided_events = [];
     const module_ids: string[] = [];
+    let initiators = 0;
 
     for (let i = 0; i < config.modules.length; i++) {
       // TODO: Check that the config is valid.
@@ -126,15 +133,18 @@ class M6809Simulator implements ISimulator {
       // and bind it to its module id. This way, the module can only emit and
       // listen to the events it has declared, and the sender field is
       // automatically filled.
+      // TODO: Disallow modules from emitting, or listening, until the simulator
+      //       has finished loading.
       const module = new Module(
         moduleId,
         module_config.config,
-        this.asTransceiver({ module: moduleId }),
+        this.asSimulation({ module: moduleId, secure: true }),
       );
 
       const declaration = module.getModuleDeclaration();
       required_events.push(...Object.keys(declaration.events.required));
       provided_events.push(...declaration.events.provided);
+      if (declaration.cycles.initiator) initiators++;
 
       // Store the event declaration and the module instance.
       this.declarations[moduleId] = declaration;
@@ -147,14 +157,20 @@ class M6809Simulator implements ISimulator {
       if (event.startsWith("system:")) continue;
 
       if (!provided_events.includes(event)) {
-        throw new Error(`[M6809Simulator] Event ${event} is required but not provided`);
+        throw new Error(`[${this.constructor.name}] Event ${event} is required but not provided`);
       }
     }
+
+    if (initiators !== 1)
+      throw new Error(
+        `[${this.constructor.name}] There must be exactly one cycle initiator module`,
+      );
 
     // Add all the event listeners.
     for (const [module, declaration] of Object.entries(this.declarations)) {
       this.addEDListeners(module, declaration.events.required);
       if (declaration.events.optional) this.addEDListeners(module, declaration.events.optional);
+      if (declaration.cycles.permanent) this.addCDListeners(declaration.cycles.permanent);
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
@@ -221,6 +237,22 @@ class M6809Simulator implements ISimulator {
       // We know that the event is in the event declaration, and, thus, properly
       // accounted for and checked, so we can just call on (instead of onNamed).
       this.on(module, name as E, callback as EventCallback<B>);
+    }
+  }
+
+  /**
+   * Internal method to add listeners from a (C)ycle (D)eclaration to the cycle
+   * queue. No checks are performed.
+   * @returns listeners The cycle listeners to add.
+   */
+  addCDListeners(listeners: CycleDeclarationListener[]) {
+    for (const listener of listeners) {
+      if (typeof listener === "function") {
+        this.onCycle(listener);
+      } else {
+        const [callback, priority] = listener;
+        this.onCycle(callback, priority);
+      }
     }
   }
 
@@ -309,14 +341,22 @@ class M6809Simulator implements ISimulator {
     return promise;
   }
 
-  asTransceiver({
+  asSimulation({
     module,
     secure,
-  }: { module?: ModuleID; secure?: boolean }): TypedEventTransceiver {
+  }: { module?: ModuleID; secure?: boolean }): SimulationModuleInteraction {
     module = module ?? "*";
 
-    if (secure) return this.asSecureTransceiver(module);
-    return this.asInsecureTransceiver(module);
+    const transceiver = secure
+      ? this.asSecureTransceiver(module)
+      : this.asInsecureTransceiver(module);
+
+    // TODO: Add permissions to the cycle manager.
+
+    return {
+      ...transceiver,
+      ...this.asCycleManager(),
+    };
   }
   asSecureTransceiver(module: ModuleID): TypedEventTransceiver {
     return {
