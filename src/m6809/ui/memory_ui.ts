@@ -153,19 +153,32 @@ class MemoryUI implements IModule {
     cell.classList.add("write-highlight");
     this.lastMemoryWrite = address;
   };
-  onMemoryBulkWriteResult = (data: Uint8Array): void => {
+  onMemoryBulkWriteResult = (dataStart: number, data: Uint8Array): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;
 
+    // If the bulk write is completely outside the memory table, we can ignore
+    // it.
+    if (dataStart >= this.config.start + this.config.size) return;
+    const dataEnd = dataStart + data.length;
+
+    // If the start of the bulk write is before the start of the memory table,
+    // we will start from the start of the memory table.
+    // Otherwise, if the start of the bulk write is after the start of the
+    // memory table, we will start from the start of the bulk write.
+    const initial = Math.max(dataStart, this.config.start);
+
     for (
-      let addr = this.config.start;
-      addr < this.config.start + this.config.size && addr < data.length;
-      addr++
+      let address = initial;
+      // We will iterate until the end of the memory table or the end of the
+      // bulk write, whichever comes first.
+      address < this.config.start + this.config.size && address < dataEnd;
+      address++
     ) {
-      const cell = this.panel.querySelector(`.byte-${addr}`);
+      const cell = this.panel.querySelector(`.byte-${address}`);
       if (!cell) continue;
 
-      cell.textContent = this.formatMemoryData(data[addr]);
+      cell.textContent = this.formatMemoryData(data[address - dataStart]);
     }
   };
   onMemoryWriteResult = (address: number, data: number): void => {
