@@ -31,3 +31,8 @@ export interface CycleManager {
   onceCycle(callback: CycleCallback, priority?: ListenerPriority): void;
   awaitCycle(priority?: ListenerPriority): Promise<number>;
 }
+
+export type CycleDeclaration = {
+  permanent: CycleCallback[];
+  initiator: boolean;
+};

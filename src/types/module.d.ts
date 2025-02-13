@@ -1,4 +1,10 @@
+import type { CycleDeclaration } from "./cycles";
 import type { EventDeclaration, TypedEventTransceiver } from "./event";
+
+export type ModuleDeclaration = {
+  events: EventDeclaration;
+  cycles: CycleDeclaration;
+};
 
 export interface IModule {
   /**
@@ -8,7 +14,7 @@ export interface IModule {
    * It will also only be called once, after the module is initialized, at the
    * start of the simulation.
    */
-  getEventDeclaration(): EventDeclaration;
+  getModuleDeclaration(): ModuleDeclaration;
 }
 
 export type ModuleConstructor = {

@@ -1,5 +1,5 @@
 import type { SimulatorConfig } from "../types/config.js";
-import type { IModule, ModuleConstructor } from "../types/module.js";
+import type { IModule, ModuleConstructor, ModuleDeclaration } from "../types/module.js";
 import type {
   EventCallback,
   EventParams,
@@ -17,6 +17,7 @@ import { PriorityQueue } from "../general/priority.js";
 import { separateEventName } from "../general/event.js";
 import type {
   CycleCallback,
+  CycleManager,
   FinalListenerPriority,
   ListenerPriority,
   SubcyclePriority,
@@ -83,7 +84,7 @@ type SubscribersType = {
 //   ahí, y luego cargar los módulos en un método init.
 class M6809Simulator implements ISimulator {
   modules: Record<string, IModule> = {};
-  event_declarations: Record<string, EventDeclaration> = {};
+  declarations: Record<string, ModuleDeclaration> = {};
 
   // Any is used here because the event names can be dynamic (while developing
   // the app, all events are known, but because of the extensibility of the
@@ -131,12 +132,12 @@ class M6809Simulator implements ISimulator {
         this.asTransceiver({ module: moduleId }),
       );
 
-      const eventDeclaration = module.getEventDeclaration();
-      required_events.push(...Object.keys(eventDeclaration.required));
-      provided_events.push(...eventDeclaration.provided);
+      const declaration = module.getModuleDeclaration();
+      required_events.push(...Object.keys(declaration.events.required));
+      provided_events.push(...declaration.events.provided);
 
       // Store the event declaration and the module instance.
-      this.event_declarations[moduleId] = eventDeclaration;
+      this.declarations[moduleId] = declaration;
       this.modules[moduleId] = module;
     }
 
@@ -151,9 +152,9 @@ class M6809Simulator implements ISimulator {
     }
 
     // Add all the event listeners.
-    for (const [module, eventDeclaration] of Object.entries(this.event_declarations)) {
-      this.addEDListeners(module, eventDeclaration.required);
-      if (eventDeclaration.optional) this.addEDListeners(module, eventDeclaration.optional);
+    for (const [module, declaration] of Object.entries(this.declarations)) {
+      this.addEDListeners(module, declaration.events.required);
+      if (declaration.events.optional) this.addEDListeners(module, declaration.events.optional);
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
@@ -173,22 +174,22 @@ class M6809Simulator implements ISimulator {
       callback(this.queue.cycles);
     }
   }
-  onCycle(callback: CycleCallback, priority: SubcyclePriority) {
+  onCycle(callback: CycleCallback, priority: SubcyclePriority = {}) {
     const wrappedCallback = (cycle: number) => {
       callback(cycle);
       this.onceCycle(wrappedCallback, priority);
     };
   }
-  onceCycle(callback: CycleCallback, priority: ListenerPriority) {
+  onceCycle(callback: CycleCallback, priority: ListenerPriority = {}) {
     // Set defaults for order and index, and calculate the latter in case an
     // offset is given.
     const order = priority?.order ?? 0;
 
     // The current cycle (by default)
     let cycle = this.queue.cycles + 1;
-    if (priority.cycle != null) {
+    if (priority?.cycle != null) {
       cycle = priority.cycle;
-    } else if (priority.offset != null) {
+    } else if (priority?.offset != null) {
       cycle += priority.offset;
     }
 
@@ -196,9 +197,9 @@ class M6809Simulator implements ISimulator {
       throw new Error("[MC6809] Only future cycles can be scheduled");
     }
 
-    this.onCycle(callback, priority);
+    this.queue.enqueue(callback, { cycle, order });
   }
-  awaitCycle(priority: ListenerPriority) {
+  awaitCycle(priority: ListenerPriority = {}): Promise<number> {
     return new Promise((resolve) => {
       this.onceCycle(resolve, priority);
     });
@@ -336,6 +337,15 @@ class M6809Simulator implements ISimulator {
     };
   }
 
+  asCycleManager(): CycleManager {
+    return {
+      performCycle: this.performCycle.bind(this),
+      onCycle: this.onCycle.bind(this),
+      onceCycle: this.onceCycle.bind(this),
+      awaitCycle: this.awaitCycle.bind(this),
+    };
+  }
+
   /**
    * A helper function to check that the caller can emit and/or listen to an
    * event, and then call the function.
@@ -375,21 +385,19 @@ class M6809Simulator implements ISimulator {
   permissionsCheckEmit(caller: string, event: EventName): void {
     const [base, group] = separateEventName(event);
 
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
-    if (!eventDeclaration.provided.includes(base))
+    if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
+    const evtDeclaration = this.declarations[caller].events;
+    if (!evtDeclaration.provided.includes(base))
       throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
   permissionsCheckListen(caller: string, event: EventName): void {
     const [base, group] = separateEventName(event);
 
-    if (!this.event_declarations[caller])
-      throw new Error(`[${caller}] Module has no event declaration`);
-    const eventDeclaration = this.event_declarations[caller];
+    if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
+    const evtDeclaration = this.declarations[caller].events;
     if (
-      !(base in eventDeclaration.required) &&
-      (!eventDeclaration.optional || !(base in eventDeclaration.optional))
+      !(base in evtDeclaration.required) &&
+      (!evtDeclaration.optional || !(base in evtDeclaration.optional))
     )
       throw new Error(`[${caller}] Cannot listen to event ${event}.`);
   }
