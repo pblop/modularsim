@@ -160,8 +160,9 @@ class M6809Simulator implements ISimulator {
       // Skip system events, we provide them.
       if (event.startsWith("system:")) continue;
 
-      if (!provided_events.includes(event)) {
-        throw new Error(`[${this.constructor.name}] Event ${event} is required but not provided`);
+      const [base, group] = separateEventName(event as EventName<EventBaseName>);
+      if (!provided_events.includes(base)) {
+        throw new Error(`[${this.constructor.name}] Event ${base} is required but not provided`);
       }
     }
 
@@ -270,7 +271,10 @@ class M6809Simulator implements ISimulator {
    * Emit an event.
    */
   emit<B extends EventBaseName>(caller: string, event: EventName<B>, ...args: EventParams<B>) {
-    console.log(`(event) ${caller}: ${event}`);
+    const [base, group] = separateEventName(event);
+    if (!base.startsWith("ui:")) {
+      console.log(`(event) ${caller}: ${base} -> ${group ? group : "all"}`);
+    }
     const subscribers = this.subscribers[event] as EventCallback<B>[] | undefined;
 
     if (!subscribers) return;
