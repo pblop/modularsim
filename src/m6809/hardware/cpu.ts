@@ -62,6 +62,13 @@ export type CpuAddressingData<M extends AddressingMode> =
   M extends "inherent" ? CpuInherentAddressingData :
   never;
 
+type ActionTable = {
+  [action in string]?: {
+    [cycle: number]: () => unknown;
+    logic?: () => unknown;
+  };
+};
+
 class Cpu implements IModule {
   id: string;
   config: CpuConfig;
@@ -410,79 +417,142 @@ class Cpu implements IModule {
 
     if (readPending) return null;
 
-    const postbyte = this.addressing.postbyte;
+    const postbyte = this.addressing.postbyte!;
 
+    const dontCare = () => {};
     // Otherwise, we do whatever we need to do in this state, and decrement the remaining ticks.
-    switch (postbyte.action) {
-      case IndexedAction.Offset0: // Don't Care cycle.
-        break;
-      case IndexedAction.Offset5: // 2 DC cycles.
-        if (ctx.remainingTicks === 1) ctx.offset = signExtend(postbyte.rest, 5, 16);
-        break;
-      case IndexedAction.Offset8: // 1 data read, 1 DC
-        if (ctx.remainingTicks === 2) this.queryMemoryRead(this.registers.pc++, 1);
-        else if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.readInfo!.value!, 8, 16);
-        break;
-      case IndexedAction.Offset16: // 2 DR, 3 DC
-        if (ctx.remainingTicks === 5) this.queryMemoryRead("pc", 1);
-        else if (ctx.remainingTicks === 4) {
-          ctx.offset = this.readInfo!.value << 8;
+    const actionTable: ActionTable = {
+      [IndexedAction.Offset0]: {
+        1: dontCare,
+      },
+      [IndexedAction.Offset5]: {
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          ctx.offset = signExtend(postbyte.rest, 5, 16);
+        },
+      },
+      [IndexedAction.Offset8]: {
+        2: () => this.queryMemoryRead("pc", 1),
+        1: dontCare,
+      },
+      [IndexedAction.Offset16]: {
+        5: () => this.queryMemoryRead("pc", 1),
+        4: () => {
+          ctx.offset = this.readInfo!.value! << 8;
           this.queryMemoryRead("pc", 1);
-        } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
-        break;
-      case IndexedAction.OffsetA: // 2 DC
-        if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.registers.A, 8, 16);
-        break;
-      case IndexedAction.OffsetB: // 2 DC
-        if (ctx.remainingTicks === 1) ctx.offset = signExtend(this.registers.B, 8, 16);
-        break;
-      case IndexedAction.OffsetD: // 5 DC
-        if (ctx.remainingTicks === 1) ctx.offset = this.registers.D;
-        break;
-      case IndexedAction.PostInc1: // 3 DC
-        if (ctx.remainingTicks === 1) this.registers[postbyte.register]++;
-        break;
-      case IndexedAction.PreDec1: // 3 DC
-        if (ctx.remainingTicks === 1) {
+        },
+        3: () => {
+          ctx.offset! |= this.readInfo!.value;
+        },
+        2: dontCare,
+        1: dontCare,
+      },
+      [IndexedAction.OffsetA]: {
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          ctx.offset = signExtend(this.registers.A, 8, 16);
+        },
+      },
+      [IndexedAction.OffsetB]: {
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          ctx.offset = signExtend(this.registers.B, 8, 16);
+        },
+      },
+      [IndexedAction.OffsetD]: {
+        5: dontCare,
+        4: dontCare,
+        3: dontCare,
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          ctx.offset = this.registers.D;
+        },
+      },
+      [IndexedAction.PostInc1]: {
+        3: dontCare,
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          this.registers[postbyte.register]++;
+        },
+      },
+      [IndexedAction.PreDec1]: {
+        3: dontCare,
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
           // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
           this.registers[postbyte.register] += numberToIntN(-1, 2);
           ctx.baseAddress = this.registers[postbyte.register];
-        }
-        break;
-      case IndexedAction.PostInc2: // 4 DC
-        if (ctx.remainingTicks === 1) this.registers[postbyte.register] += 2;
-        break;
-      case IndexedAction.PreDec2: // 4 DC
-        // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
-        this.registers[postbyte.register] += numberToIntN(-2, 2);
-        ctx.baseAddress = this.registers[postbyte.register];
-        break;
-      case IndexedAction.OffsetPC16: // 2 DR, 4 DC
-        // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
-        if (ctx.remainingTicks === 6) this.queryMemoryRead("pc", 1);
-        else if (ctx.remainingTicks === 5) {
-          ctx.offset = this.readInfo!.value << 8;
+        },
+      },
+      [IndexedAction.PostInc2]: {
+        4: dontCare,
+        3: dontCare,
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          this.registers[postbyte.register] += 2;
+        },
+      },
+      [IndexedAction.PreDec2]: {
+        4: dontCare,
+        3: dontCare,
+        2: dontCare,
+        1: dontCare,
+        logic: () => {
+          // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
+          this.registers[postbyte.register] += numberToIntN(-2, 2);
+          ctx.baseAddress = this.registers[postbyte.register];
+        },
+      },
+      [IndexedAction.OffsetPC16]: {
+        6: () => this.queryMemoryRead("pc", 1),
+        5: () => {
+          ctx.offset = this.readInfo!.value! << 8;
           this.queryMemoryRead("pc", 1);
-        } else if (ctx.remainingTicks === 3) ctx.offset! |= this.readInfo!.value;
-        break;
-      case IndexedAction.ExtendedIndirect: // 2 DR, 1 DC
-        if (ctx.remainingTicks === 3) this.queryMemoryRead("pc", 2);
-        else if (ctx.remainingTicks === 2) {
-          ctx.baseAddress = this.readInfo!.value;
+        },
+        4: () => {
+          ctx.offset = this.readInfo!.value! << 8;
+        },
+        3: dontCare,
+        2: dontCare,
+        1: dontCare,
+      },
+      [IndexedAction.ExtendedIndirect]: {
+        3: () => this.queryMemoryRead("pc", 2),
+        // During a memory read (queryMemoryRead), the remaining cycle count
+        // is not decremented, so we need to do it manually.
+        2: () => {
+          ctx.baseAddress = this.readInfo!.value!;
           ctx.offset = 0;
-        }
-        break;
-      case IndexedAction.OffsetPC8: // 1 DR, 2 DC
-        // NOTE: The PC from which we read the offset is the one before the current PC, I don't know if that's correct or not.
-        if (ctx.remainingTicks === 3) this.queryMemoryRead("pc", 1);
-        else if (ctx.remainingTicks === 2) ctx.offset = signExtend(this.readInfo!.value, 8, 16);
-        break;
-    }
+          ctx.remainingTicks--;
+        },
+        // This will not be called, as we're done after the second (third) cycle.
+        1: dontCare,
+      },
+      [IndexedAction.OffsetPC8]: {
+        2: () => this.queryMemoryRead("pc", 1),
+        1: dontCare,
+        logic: () => {
+          ctx.offset = signExtend(this.readInfo!.value!, 8, 16);
+        },
+      },
+    };
 
+    const indexdedActionFunctions = actionTable[postbyte.action];
+    if (!indexdedActionFunctions) return this.fail(`Invalid indexed action ${postbyte.action}`);
+    indexdedActionFunctions[ctx.remainingTicks]();
     ctx.remainingTicks--;
+
     // If we're done waiting however many cycles we needed to wait for this indexed action,
     // we can move on to the next state.
     if (ctx.remainingTicks === 0) {
+      indexdedActionFunctions.logic?.();
       this.addressing!.address = truncate(ctx.baseAddress + ctx.offset!, 16);
       return "indexed_indirect";
     }
