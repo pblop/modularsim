@@ -73,7 +73,7 @@ export interface TypedEventTransceiver {
    * @param listener The callback function to call when the event is emitted (
    * the arguments to the callback function are the event parameters).
    */
-  on<E extends EventBaseName>(event: E, listener: EventCallback<E>): void;
+  on<B extends EventBaseName>(event: EventName<B>, listener: EventCallback<B>): void;
   /**
    * Emit an event, calling all listeners for the event, in the order specified
    * by their priority.
@@ -81,7 +81,7 @@ export interface TypedEventTransceiver {
    * @param emitter The ID of the emitter of the event.
    * @param args The event parameters.
    */
-  emit<B extends EventBaseName, E extends EventName<B>>(event: E, ...args: EventParams<B>): void;
+  emit<B extends EventBaseName>(event: EventName<B>, ...args: EventParams<B>): void;
 
   /**
    * Add a transient listener for an event, that will be called once.
@@ -92,7 +92,7 @@ export interface TypedEventTransceiver {
    * @param listener The callback function to call when the event is emitted (
    * the arguments to the callback function are the event parameters).
    */
-  once<B extends EventBaseName, E extends EventName<B>>(event: E, listener: EventCallback<B>): void;
+  once<B extends EventBaseName>(event: EventName<B>, listener: EventCallback<B>): void;
 
   /**
    * Await an event, returning a promise that, when resolved, returns the event
@@ -102,7 +102,7 @@ export interface TypedEventTransceiver {
    * will be called in within the cycle).
    * @param event The event name to wait for.
    */
-  wait<B extends EventBaseName, E extends EventName<B>>(event: E): Promise<EventParams<B>>;
+  wait<B extends EventBaseName>(event: EventName<B>): Promise<EventParams<B>>;
 
   // TODO: add waitAny, waitAll?
   // Emits an event, and waits for another
@@ -117,16 +117,11 @@ export interface TypedEventTransceiver {
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
    */
-  emitAndWait<
-    BListen extends EventBaseName,
-    BEmit extends EventBaseName,
-    Listen extends EventName<BListen>,
-    Emit extends EventName<BEmit>,
-  >(
-    listenedEvent: Listen,
-    emittedEvent: Emit,
-    ...args: EventParams<BEmit>
-  ): Promise<EventCallbackArgs<BListen>>;
+  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
+    listenedEvent: EventName<L>,
+    emittedEvent: EventName<E>,
+    ...args: EventParams<E>
+  ): Promise<EventCallbackArgs<L>>;
 }
 
 // The event declaration type, which specifies the events that a module provides,
