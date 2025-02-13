@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 
 type LoaderConfig = {
@@ -15,13 +15,15 @@ class Loader implements IModule {
   id: string;
   config: LoaderConfig;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["ui:memory:write", "ui:memory:bulk:write"],
-      required: {
-        "system:load_finish": this.onLoadFinish,
+      events: {
+        provided: ["ui:memory:write", "ui:memory:bulk:write"],
+        required: {
+          "system:load_finish": this.onLoadFinish,
+        },
+        optional: {},
       },
-      optional: {},
     };
   }
 

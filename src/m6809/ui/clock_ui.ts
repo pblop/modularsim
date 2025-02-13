@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module";
+import type { IModule, ModuleDeclaration } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
 import { element } from "../../general/html.js";
@@ -50,23 +50,27 @@ class ClockUI implements IModule {
   language!: string;
   localeStrings!: typeof ClockUIStrings.en;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: [
-        "signal:reset",
-        "ui:clock:step_cycle",
-        "ui:clock:pause",
-        "ui:clock:start",
-        "ui:clock:step_instruction",
-        "ui:clock:fast_reset",
-      ],
-      required: {
-        "clock:cycle_start": this.onCycleStart,
-        "gui:panel_created": this.onGuiPanelCreated,
-        "cpu:instruction_finish": this.onInstructionFinish,
+      events: {
+        provided: [
+          "signal:reset",
+          "ui:clock:step_cycle",
+          "ui:clock:pause",
+          "ui:clock:start",
+          "ui:clock:step_instruction",
+          "ui:clock:fast_reset",
+        ],
+        required: {
+          "gui:panel_created": this.onGuiPanelCreated,
+          "cpu:instruction_finish": this.onInstructionFinish,
+        },
+        optional: {
+          "cpu:reset_finish": this.onResetFinish,
+        },
       },
-      optional: {
-        "cpu:reset_finish": this.onResetFinish,
+      cycles: {
+        permanent: [[this.onCycleStart, { order: -9999 }]],
       },
     };
   }

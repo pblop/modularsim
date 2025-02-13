@@ -15,9 +15,6 @@ export interface EventMap {
   // The hardware reset signal.
   "signal:reset": [];
 
-  // Clock events.
-  "clock:cycle_start": [];
-
   // CPU events
   "cpu:instruction_finish": [];
   "cpu:registers_update": [registers: Registers];

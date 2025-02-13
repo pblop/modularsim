@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { isNumber, parseNumber } from "../../general/config.js";
@@ -105,18 +105,20 @@ class RegisterUI implements IModule {
   language!: string;
   localeStrings!: typeof RegisterUIStrings.en;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["ui:memory:read"],
-      required: {
-        "gui:panel_created": this.onGuiPanelCreated,
-        "cpu:register_update": this.onRegisterUpdate,
-        // TODO: mem:read:result is only needed for the hover effect, maybe the
-        // base module should be able to tell us if it's available, and we could
-        // provide the hover effect only if it is.
-        "ui:memory:read:result": null,
+      events: {
+        provided: ["ui:memory:read"],
+        required: {
+          "gui:panel_created": this.onGuiPanelCreated,
+          "cpu:register_update": this.onRegisterUpdate,
+          // TODO: mem:read:result is only needed for the hover effect, maybe the
+          // base module should be able to tell us if it's available, and we could
+          // provide the hover effect only if it is.
+          "ui:memory:read:result": null,
+        },
+        optional: {},
       },
-      optional: {},
     };
   }
 

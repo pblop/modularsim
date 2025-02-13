@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type { EmptyObject } from "../../types/common.js";
@@ -96,24 +96,28 @@ class Cpu implements IModule {
   instruction?: InstructionData;
   addressing?: CpuAddressingData<AddressingMode>;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: [
-        "cpu:instruction_finish",
-        "memory:read",
-        "memory:write",
-        "cpu:register_update",
-        "cpu:registers_update",
-        "cpu:fail",
-        "cpu:reset_finish",
-      ],
-      required: {
-        "clock:cycle_start": this.onCycleStart,
-        "signal:reset": this.reset,
-        "memory:read:result": this.onMemoryReadResult,
-        "memory:write:result": this.onMemoryWriteResult,
+      events: {
+        provided: [
+          "cpu:instruction_finish",
+          "memory:read",
+          "memory:write",
+          "cpu:register_update",
+          "cpu:registers_update",
+          "cpu:fail",
+          "cpu:reset_finish",
+        ],
+        required: {
+          "signal:reset": this.reset,
+          "memory:read:result": this.onMemoryReadResult,
+          "memory:write:result": this.onMemoryWriteResult,
+        },
+        optional: {},
       },
-      optional: {},
+      cycles: {
+        permanent: [[this.onCycleStart, { order: 0 }]],
+      },
     };
   }
 

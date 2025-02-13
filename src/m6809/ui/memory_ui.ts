@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
@@ -47,20 +47,22 @@ class MemoryUI implements IModule {
   language!: string;
   localeStrings!: typeof MemoryUIStrings.en;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["ui:memory:read", "ui:memory:write"],
-      required: {
-        "gui:panel_created": this.onGuiPanelCreated,
-        "memory:read": this.updateLastMemoryRead,
-        "memory:write": this.updateLastMemoryWrite,
-        "memory:write:result": this.onMemoryWriteResult,
-        "ui:memory:write:result": this.onMemoryWriteResult,
-        "ui:memory:bulk:write:result": this.onMemoryBulkWriteResult,
-        "signal:reset": this.onReset,
-      },
-      optional: {
-        "cpu:register_update": this.onRegisterUpdate,
+      events: {
+        provided: ["ui:memory:read", "ui:memory:write"],
+        required: {
+          "gui:panel_created": this.onGuiPanelCreated,
+          "memory:read": this.updateLastMemoryRead,
+          "memory:write": this.updateLastMemoryWrite,
+          "memory:write:result": this.onMemoryWriteResult,
+          "ui:memory:write:result": this.onMemoryWriteResult,
+          "ui:memory:bulk:write:result": this.onMemoryBulkWriteResult,
+          "signal:reset": this.onReset,
+        },
+        optional: {
+          "cpu:register_update": this.onRegisterUpdate,
+        },
       },
     };
   }

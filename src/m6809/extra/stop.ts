@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module";
+import type { IModule, ModuleDeclaration } from "../../types/module";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
 import { verify } from "../../general/config.js";
 
@@ -11,13 +11,15 @@ class Stop implements IModule {
   event_transceiver: TypedEventTransceiver;
   config: StopConfig;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["ui:clock:pause"],
-      required: {
-        "memory:write": this.onMemoryWrite,
+      events: {
+        provided: ["ui:clock:pause"],
+        required: {
+          "memory:write": this.onMemoryWrite,
+        },
+        optional: {},
       },
-      optional: {},
     };
   }
 

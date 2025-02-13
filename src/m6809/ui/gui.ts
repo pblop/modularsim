@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
@@ -23,11 +23,13 @@ class Gui implements IModule {
 
   root_element: HTMLElement;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["gui:panel_created"],
-      required: { "system:load_finish": this.onSystemLoadFinish },
-      optional: {},
+      events: {
+        provided: ["gui:panel_created"],
+        required: { "system:load_finish": this.onSystemLoadFinish },
+        optional: {},
+      },
     };
   }
 

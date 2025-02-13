@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module";
+import type { IModule, ModuleDeclaration } from "../../types/module";
 import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
 import { element } from "../../general/html.js";
 import { verify } from "../../general/config.js";
@@ -29,15 +29,17 @@ class ScreenUI implements IModule {
   language!: string;
   localeStrings!: typeof ScreenUIStrings.en;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: [],
-      required: {
-        "signal:reset": this.onReset,
-        "memory:write": this.onMemoryWrite,
-        "gui:panel_created": this.onGuiPanelCreated,
+      events: {
+        provided: [],
+        required: {
+          "signal:reset": this.onReset,
+          "memory:write": this.onMemoryWrite,
+          "gui:panel_created": this.onGuiPanelCreated,
+        },
+        optional: {},
       },
-      optional: {},
     };
   }
 

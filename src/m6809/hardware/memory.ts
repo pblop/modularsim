@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
 import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 
@@ -36,22 +36,23 @@ class Memory implements IModule {
   read_delay: number;
   write_delay: number;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: [
-        "memory:read:result",
-        "memory:write:result",
-        "ui:memory:read:result",
-        "ui:memory:write:result",
-        "ui:memory:bulk:write:result",
-      ],
-      required: { "clock:cycle_start": null },
-      optional: {
-        "memory:read": this.onMemoryRead,
-        "memory:write": this.onMemoryWrite,
-        "ui:memory:read": this.onUiMemoryRead,
-        "ui:memory:write": this.onUiMemoryWrite,
-        "ui:memory:bulk:write": this.onUiMemoryBulkWrite,
+      events: {
+        provided: [
+          "memory:read:result",
+          "memory:write:result",
+          "ui:memory:read:result",
+          "ui:memory:write:result",
+          "ui:memory:bulk:write:result",
+        ],
+        optional: {
+          "memory:read": this.onMemoryRead,
+          "memory:write": this.onMemoryWrite,
+          "ui:memory:read": this.onUiMemoryRead,
+          "ui:memory:write": this.onUiMemoryWrite,
+          "ui:memory:bulk:write": this.onUiMemoryBulkWrite,
+        },
       },
     };
   }

@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module";
+import type { IModule, ModuleDeclaration, SimulationModuleInteraction } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event";
 
@@ -15,27 +15,32 @@ function validate_clock_config(config: Record<string, unknown>): ClockConfig {
 class Clock implements IModule {
   id: string;
   config: ClockConfig;
-  event_transceiver: TypedEventTransceiver;
+  simulation: SimulationModuleInteraction;
 
   interval_id?: number;
 
   mode: "normal" | "instruction" | "fast_reset";
   prevCycle: number;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["clock:cycle_start"],
-      required: {
-        "signal:reset": this.onResetSignal,
+      events: {
+        provided: [],
+        required: {
+          "signal:reset": this.onResetSignal,
+        },
+        optional: {
+          "ui:clock:start": this.onStartRequested,
+          "ui:clock:pause": this.onPauseRequested,
+          "ui:clock:step_cycle": this.onStepCycleRequested,
+          "ui:clock:step_instruction": this.onStepInstructionRequested,
+          "ui:clock:fast_reset": this.onFastResetRequested,
+          "cpu:instruction_finish": this.onInstructionFinished,
+          "cpu:reset_finish": this.onResetFinished,
+        },
       },
-      optional: {
-        "ui:clock:start": this.onStartRequested,
-        "ui:clock:pause": this.onPauseRequested,
-        "ui:clock:step_cycle": this.onStepCycleRequested,
-        "ui:clock:step_instruction": this.onStepInstructionRequested,
-        "ui:clock:fast_reset": this.onFastResetRequested,
-        "cpu:instruction_finish": this.onInstructionFinished,
-        "cpu:reset_finish": this.onResetFinished,
+      cycles: {
+        initiator: true,
       },
     };
   }
@@ -43,11 +48,11 @@ class Clock implements IModule {
   constructor(
     id: string,
     config: Record<string, unknown>,
-    eventTransceiver: TypedEventTransceiver,
+    simulation: SimulationModuleInteraction,
   ) {
     this.id = id;
     this.config = validate_clock_config(config);
-    this.event_transceiver = eventTransceiver;
+    this.simulation = simulation;
 
     this.mode = "normal";
     this.prevCycle = 0;
@@ -61,7 +66,7 @@ class Clock implements IModule {
     this.prevCycle = now;
 
     // The function that will be called every clock cycle.
-    this.event_transceiver.emit("clock:cycle_start");
+    this.simulation.performCycle();
   };
 
   stopInterval(): void {
@@ -95,7 +100,7 @@ class Clock implements IModule {
     this.mode = "normal";
   };
   onStepCycleRequested = (): void => {
-    this.event_transceiver.emit("clock:cycle_start");
+    this.simulation.performCycle();
   };
   onStepInstructionRequested = (): void => {
     this.mode = "instruction";

@@ -1,4 +1,4 @@
-import type { IModule } from "../../types/module.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type { Registers } from "../util/cpu_parts.js";
 import { element } from "../../general/html.js";
@@ -19,16 +19,18 @@ class InstructionUI implements IModule {
 
   panel?: HTMLElement;
 
-  getEventDeclaration(): EventDeclaration {
+  getModuleDeclaration(): ModuleDeclaration {
     return {
-      provided: ["ui:memory:read"],
-      required: {
-        "ui:memory:read:result": null,
-        "gui:panel_created": this.onGuiPanelCreated,
-        "cpu:registers_update": this.onRegistersUpdate,
-        "signal:reset": this.onReset,
+      events: {
+        provided: ["ui:memory:read"],
+        required: {
+          "ui:memory:read:result": null,
+          "gui:panel_created": this.onGuiPanelCreated,
+          "cpu:registers_update": this.onRegistersUpdate,
+          "signal:reset": this.onReset,
+        },
+        optional: {},
       },
-      optional: {},
     };
   }
 
