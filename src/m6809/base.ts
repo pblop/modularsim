@@ -220,7 +220,7 @@ class M6809Simulator implements ISimulator {
     }
 
     if (cycle <= this.queue.cycles) {
-      throw new Error("[MC6809] Only future cycles can be scheduled");
+      throw new Error(`[${this.constructor.name}] Only future cycles can be scheduled`);
     }
 
     this.queue.enqueue(callback, { cycle, order });
@@ -366,7 +366,7 @@ class M6809Simulator implements ISimulator {
 
     return {
       ...transceiver,
-      ...this.asCycleManager(),
+      ...this.asCycleManager({ module, secure }),
     };
   }
   asSecureTransceiver(module: ModuleID): TypedEventTransceiver {
@@ -388,9 +388,27 @@ class M6809Simulator implements ISimulator {
     };
   }
 
-  asCycleManager(): CycleManager {
+  asCycleManager({ module, secure }: { module?: ModuleID; secure?: boolean }): CycleManager {
     return {
-      performCycle: this.performCycle.bind(this),
+      performCycle: () => {
+        if (secure) {
+          if (module == null) throw new Error("Module must be specified to perform a cycle");
+          const declaration = this.declarations[module];
+          if (declaration == null)
+            throw new Error(
+              `[${module}] Module has no declaration but is trying to perform a cycle`,
+            );
+          if (declaration.cycles == null)
+            throw new Error(
+              `[${module}] Module has no cycle declaration but is trying to perform a cycle`,
+            );
+          if (!declaration.cycles.initiator)
+            throw new Error(
+              `[${module}] Module is not a cycle initiator but is trying to perform a cycle`,
+            );
+        }
+        this.performCycle();
+      },
       onCycle: this.onCycle.bind(this),
       onceCycle: this.onceCycle.bind(this),
       awaitCycle: this.awaitCycle.bind(this),
