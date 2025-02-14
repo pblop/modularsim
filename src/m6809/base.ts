@@ -183,7 +183,7 @@ class M6809Simulator implements ISimulator {
     }
 
     console.log(`[${this.constructor.name}] Initialized M6809 simulator`);
-    this.emit("*", "system:load_finish");
+    this.emit("system", "system:load_finish");
   }
 
   performCycle() {
@@ -273,7 +273,7 @@ class M6809Simulator implements ISimulator {
   emit<B extends EventBaseName>(caller: string, event: EventName<B>, ...args: EventParams<B>) {
     const [base, group] = separateEventName(event);
     if (!base.startsWith("ui:")) {
-      console.log(`(event) ${caller}: ${base} -> ${group ? group : "all"}`);
+      console.log(`(event) ${caller}: ${base} -> ${group ? group : "all"} with args: `, args);
     }
     const subscribers = this.subscribers[event] as EventCallback<B>[] | undefined;
 
