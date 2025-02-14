@@ -70,7 +70,7 @@ class ClockUI implements IModule {
         },
       },
       cycles: {
-        permanent: [[this.onCycleStart, { order: -9999 }]],
+        permanent: [[this.onCycleStart, { subcycle: -9999 }]],
       },
     };
   }

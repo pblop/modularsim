@@ -41,7 +41,7 @@ class ClockQueue {
   subcycle = Number.NEGATIVE_INFINITY;
 
   cmp = (a: ClockQueueElement, b: ClockQueueElement) =>
-    a.priority.cycle - b.priority.cycle || a.priority.order - b.priority.order;
+    a.priority.cycle - b.priority.cycle || a.priority.subcycle - b.priority.subcycle;
 
   constructor() {
     this.queue = new PriorityQueue(this.cmp);
@@ -67,13 +67,13 @@ class ClockQueue {
     const elem = this.queue.dequeue();
     if (!elem) return undefined;
 
-    this.subcycle = elem.priority.order;
+    this.subcycle = elem.priority.subcycle;
     return elem.callback;
   }
   debugView() {
     const sorted = this.queue._heap.slice().sort(this.cmp);
     return sorted.reduce((acc: Map<string, CycleCallback[]>, el) => {
-      const str = `${el.priority.cycle}|${el.priority.order}`;
+      const str = `${el.priority.cycle}|${el.priority.subcycle}`;
       if (!acc.has(str)) acc.set(str, []);
       acc.get(str)!.push(el.callback);
       return acc;
@@ -214,9 +214,9 @@ class M6809Simulator implements ISimulator {
     this.onceCycle(wrappedCallback, priority);
   }
   onceCycle(callback: CycleCallback, priority: ListenerPriority = {}) {
-    // Set defaults for order and index, and calculate the latter in case an
+    // Set defaults for subcycle and cycle, and calculate the latter in case an
     // offset is given.
-    const order = priority?.order ?? 0;
+    const subcycle = priority?.subcycle ?? 0;
 
     // The current cycle (by default)
     let cycle = this.queue.cycles + 1;
@@ -226,18 +226,19 @@ class M6809Simulator implements ISimulator {
       cycle += priority.offset;
     }
 
+    // Ensure that the cycle is in the future.
     if (cycle < this.queue.cycles) {
       throw new Error(
         `[${this.constructor.name}] Cannot schedule something to happen in the past (${cycle} (cycle) < ${this.queue.cycles}(current))`,
       );
     } else if (cycle === this.queue.cycles) {
-      if (order < this.queue.subcycle)
+      if (subcycle < this.queue.subcycle)
         throw new Error(
-          `[${this.constructor.name}] Cannot schedule something to happen in the past (${order} (subcycle) < ${this.queue.subcycle}(current))`,
+          `[${this.constructor.name}] Cannot schedule something to happen in the past (${subcycle} (subcycle) < ${this.queue.subcycle}(current))`,
         );
     }
 
-    this.queue.enqueue(callback, { cycle, order });
+    this.queue.enqueue(callback, { cycle, subcycle });
   }
   awaitCycle(priority: ListenerPriority = {}): Promise<number> {
     return new Promise((resolve) => {

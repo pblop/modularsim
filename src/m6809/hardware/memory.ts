@@ -114,7 +114,7 @@ class Memory implements IModule {
       () => {
         this.emitMultiplexed("memory:read:result", address, data);
       },
-      { order: -1 },
+      { subcycle: -1 },
     );
   };
   onMemoryWrite = (address: number, data: number) => {
@@ -124,7 +124,7 @@ class Memory implements IModule {
       () => {
         this.emitMultiplexed("memory:write:result", address, data);
       },
-      { order: -1 },
+      { subcycle: -1 },
     );
   };
 }

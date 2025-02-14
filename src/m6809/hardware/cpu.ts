@@ -123,7 +123,7 @@ class Cpu implements IModule {
         optional: {},
       },
       cycles: {
-        permanent: [[this.onCycleStart, { order: 0 }]],
+        permanent: [[this.onCycleStart, { subcycle: 0 }]],
       },
     };
   }
