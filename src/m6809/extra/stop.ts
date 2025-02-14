@@ -1,9 +1,10 @@
 import type { IModule, ModuleDeclaration } from "../../types/module";
-import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
+import type { TypedEventTransceiver, EventDeclaration, EventBaseName } from "../../types/event";
 import { verify } from "../../general/config.js";
+import { joinEventName } from "../../general/event.js";
 
 type StopConfig = {
-  address: number;
+  multiplexer: string;
 };
 
 class Stop implements IModule {
@@ -12,11 +13,16 @@ class Stop implements IModule {
   config: StopConfig;
 
   getModuleDeclaration(): ModuleDeclaration {
+    const eventAsMultiplexedInput = (event: EventBaseName) =>
+      this.config.multiplexer ? joinEventName(event, this.id) : event;
+    const eventAsMultiplexedOutput = (event: EventBaseName) =>
+      this.config.multiplexer ? joinEventName(event, this.config.multiplexer) : event;
+
     return {
       events: {
-        provided: ["ui:clock:pause"],
+        provided: ["ui:clock:pause", eventAsMultiplexedOutput("memory:write:result")],
         required: {
-          "memory:write": this.onMemoryWrite,
+          [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
         },
         optional: {},
       },
@@ -32,9 +38,9 @@ class Stop implements IModule {
     this.event_transceiver = eventTransceiver;
 
     this.config = verify(config, {
-      address: {
-        type: "number",
-        required: true,
+      multiplexer: {
+        type: "string",
+        required: false,
       },
     });
 
@@ -42,9 +48,12 @@ class Stop implements IModule {
   }
 
   onMemoryWrite = (address: number, data: number): void => {
-    if (address !== this.config.address) return;
-
     this.event_transceiver.emit("ui:clock:pause");
+    this.event_transceiver.emit(
+      joinEventName("memory:write:result", this.config.multiplexer),
+      address,
+      data,
+    );
   };
 }
 
