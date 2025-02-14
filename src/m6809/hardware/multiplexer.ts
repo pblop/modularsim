@@ -101,7 +101,7 @@ class Multiplexer implements IModule {
 
   getCorrespondingEntry = (address: number): MultiplexerEntry | undefined => {
     const entries = this.config.entries
-      .filter((e) => e.start <= address && e.start + e.size >= address)
+      .filter((e) => e.start <= address && address < e.start + e.size)
       .sort((a, b) => a.priority - b.priority);
     if (entries.length === 0) {
       console.error(`[${this.id}] No module found for address 0x${address.toString(16)}`);
