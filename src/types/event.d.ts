@@ -138,7 +138,7 @@ export type EventDeclarationListeners = Partial<{
   }[EventName<B>];
 }>;
 export type EventDeclaration = {
-  provided: EventBaseName[];
+  provided: EventName[];
   required: EventDeclarationListeners;
   optional?: EventDeclarationListeners;
 };

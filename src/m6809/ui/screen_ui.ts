@@ -31,15 +31,17 @@ class ScreenUI implements IModule {
   localeStrings!: typeof ScreenUIStrings.en;
 
   getModuleDeclaration(): ModuleDeclaration {
-    const multiplexedName = (event: EventBaseName) =>
+    const eventAsMultiplexedInput = (event: EventBaseName) =>
       this.config.multiplexer ? joinEventName(event, this.id) : event;
+    const eventAsMultiplexedOutput = (event: EventBaseName) =>
+      this.config.multiplexer ? joinEventName(event, this.config.multiplexer) : event;
 
     return {
       events: {
-        provided: ["memory:write:result"],
+        provided: [eventAsMultiplexedOutput("memory:write:result")],
         required: {
           "signal:reset": this.onReset,
-          [multiplexedName("memory:write")]: this.onMemoryWrite,
+          [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
           "gui:panel_created": this.onGuiPanelCreated,
         },
         optional: {},

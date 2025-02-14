@@ -54,20 +54,14 @@ class Multiplexer implements IModule {
       this.passEventUp(event),
     ]);
 
+    const providedEvents: EventName<EventBaseName>[] = [
+      ...IncomingEvents.flatMap((e) => this.config.entries.map((m) => joinEventName(e, m.module))),
+      ...OutgoingEvents,
+    ];
+
     return {
       events: {
-        provided: [
-          "memory:read",
-          "memory:write",
-          "ui:memory:read",
-          "ui:memory:write",
-          "ui:memory:bulk:write",
-          "memory:read:result",
-          "memory:write:result",
-          "ui:memory:read:result",
-          "ui:memory:write:result",
-          "ui:memory:bulk:write:result",
-        ],
+        provided: providedEvents,
         required: {},
         optional: Object.fromEntries([...incomingEventHandlers, ...outgoingEventHandlers]),
       },

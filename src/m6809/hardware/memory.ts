@@ -33,24 +33,26 @@ class Memory implements IModule {
   memory: Uint8Array;
 
   getModuleDeclaration(): ModuleDeclaration {
-    const multiplexedName = (event: EventBaseName) =>
+    const eventAsMultiplexedInput = (event: EventBaseName) =>
       this.config.multiplexer ? joinEventName(event, this.id) : event;
+    const eventAsMultiplexedOutput = (event: EventBaseName): EventName =>
+      this.config.multiplexer ? joinEventName(event, this.config.multiplexer) : event;
     return {
       events: {
         provided: [
-          "memory:read:result",
-          "memory:write:result",
-          "ui:memory:read:result",
-          "ui:memory:write:result",
-          "ui:memory:bulk:write:result",
+          eventAsMultiplexedOutput("memory:read:result"),
+          eventAsMultiplexedOutput("memory:write:result"),
+          eventAsMultiplexedOutput("ui:memory:read:result"),
+          eventAsMultiplexedOutput("ui:memory:write:result"),
+          eventAsMultiplexedOutput("ui:memory:bulk:write:result"),
         ],
         required: {},
         optional: {
-          [multiplexedName("memory:read")]: this.onMemoryRead,
-          [multiplexedName("memory:write")]: this.onMemoryWrite,
-          [multiplexedName("ui:memory:read")]: this.onUiMemoryRead,
-          [multiplexedName("ui:memory:write")]: this.onUiMemoryWrite,
-          [multiplexedName("ui:memory:bulk:write")]: this.onUiMemoryBulkWrite,
+          [eventAsMultiplexedInput("memory:read")]: this.onMemoryRead,
+          [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
+          [eventAsMultiplexedInput("ui:memory:read")]: this.onUiMemoryRead,
+          [eventAsMultiplexedInput("ui:memory:write")]: this.onUiMemoryWrite,
+          [eventAsMultiplexedInput("ui:memory:bulk:write")]: this.onUiMemoryBulkWrite,
         },
       },
     };
@@ -92,11 +94,11 @@ class Memory implements IModule {
   }
   onUiMemoryRead = (address: number, ctx: EventContext): void => {
     const data = this.memory[address];
-    this.simulation.emit("ui:memory:read:result", address, data);
+    this.emitMultiplexed("ui:memory:read:result", address, data);
   };
   onUiMemoryWrite = (address: number, data: number, ctx: EventContext): void => {
     this.memory[address] = data;
-    this.simulation.emit("ui:memory:write:result", address, data);
+    this.emitMultiplexed("ui:memory:write:result", address, data);
   };
   onUiMemoryBulkWrite = (address: number, data: Uint8Array): void => {
     if (data.length > this.memory.length) {
@@ -104,7 +106,7 @@ class Memory implements IModule {
     }
 
     this.memory.set(data);
-    this.simulation.emit("ui:memory:bulk:write:result", address, data);
+    this.emitMultiplexed("ui:memory:bulk:write:result", address, data);
   };
   onMemoryRead = (address: number) => {
     const data = this.memory[address];

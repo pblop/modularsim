@@ -160,9 +160,8 @@ class M6809Simulator implements ISimulator {
       // Skip system events, we provide them.
       if (event.startsWith("system:")) continue;
 
-      const [base, group] = separateEventName(event as EventName<EventBaseName>);
-      if (!provided_events.includes(base)) {
-        throw new Error(`[${this.constructor.name}] Event ${base} is required but not provided`);
+      if (!provided_events.includes(event)) {
+        throw new Error(`[${this.constructor.name}] Event ${event} is required but not provided`);
       }
     }
 
@@ -456,23 +455,19 @@ class M6809Simulator implements ISimulator {
   };
 
   permissionsCheckEmit(caller: string, event: EventName): void {
-    const [base, group] = separateEventName(event);
-
     if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
     const evtDeclaration = this.declarations[caller].events;
     if (evtDeclaration == null) throw new Error(`[${caller}] Module has no event declaration`);
-    if (!evtDeclaration.provided.includes(base))
+    if (!evtDeclaration.provided.includes(event))
       throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
   permissionsCheckListen(caller: string, event: EventName): void {
-    const [base, group] = separateEventName(event);
-
     if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
     const evtDeclaration = this.declarations[caller].events;
     if (evtDeclaration == null) throw new Error(`[${caller}] Module has no event declaration`);
     if (
-      !(base in evtDeclaration.required) &&
-      (!evtDeclaration.optional || !(base in evtDeclaration.optional))
+      !(event in evtDeclaration.required) &&
+      (!evtDeclaration.optional || !(event in evtDeclaration.optional))
     )
       throw new Error(`[${caller}] Cannot listen to event ${event}.`);
   }
