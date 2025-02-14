@@ -12,7 +12,6 @@
         "config": {
           "multiplexer": "multiplexer",
           "size": 65536,
-          "start": 0,
           "type": "ram"
         }
       },
@@ -42,6 +41,7 @@
         "url": "./m6809/ui/gui.js",
         "css": ["./m6809/ui/reset.css", "./m6809/ui/gui.css", "./config-colors.css"],
         "config": {
+          "language": "es",
           "panels": [
             {
               "id": "register_ui",
@@ -136,7 +136,7 @@
         "url": "./m6809/ui/screen_ui.js",
         "css": ["./m6809/ui/screen_ui.css"],
         "config": {
-          "address": "0xFF00"
+          "multiplexer": "multiplexer"
         }
       },
       {
@@ -144,7 +144,7 @@
         "type": "extra",
         "url": "./m6809/extra/stop.js",
         "config": {
-          "address": "0xFF01"
+          "multiplexer": "multiplexer"
         }
       },
       {
@@ -210,17 +210,20 @@
             {
               "start": "0xFF00",
               "size": 1,
-              "module": "screen_ui"
+              "module": "screen_ui",
+              "priority": 0
             },
             {
               "start": "0xFF01",
               "size": 1,
-              "module": "stopper"
+              "module": "stopper",
+              "priority": 0
             },
             {
               "start": "0x0",
               "module": "main_memory",
-              "size": 65536
+              "size": 65536,
+              "priority": 1
             }
           ]
         }
