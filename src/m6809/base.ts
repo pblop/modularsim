@@ -35,8 +35,10 @@ type ClockQueueElement = {
 };
 class ClockQueue {
   queue: PriorityQueue<ClockQueueElement>;
-  // The number of cycles since the start of the simulation, starting on 1.
+  // The number of cycles since the start of the simulation.
+  // The first cycle is 1.
   cycles = 0;
+  subcycle = Number.NEGATIVE_INFINITY;
 
   cmp = (a: ClockQueueElement, b: ClockQueueElement) =>
     a.priority.cycle - b.priority.cycle || a.priority.order - b.priority.order;
@@ -62,7 +64,11 @@ class ClockQueue {
     return this.queue.peek()!.priority.cycle > this.cycles;
   }
   dequeue(): CycleCallback | undefined {
-    return this.queue.dequeue()?.callback;
+    const elem = this.queue.dequeue();
+    if (!elem) return undefined;
+
+    this.subcycle = elem.priority.order;
+    return elem.callback;
   }
   debugView() {
     const sorted = this.queue._heap.slice().sort(this.cmp);
@@ -76,6 +82,7 @@ class ClockQueue {
 
   incrementCycle() {
     this.cycles++;
+    this.subcycle = Number.NEGATIVE_INFINITY;
   }
 }
 
@@ -219,8 +226,15 @@ class M6809Simulator implements ISimulator {
       cycle += priority.offset;
     }
 
-    if (cycle <= this.queue.cycles) {
-      throw new Error(`[${this.constructor.name}] Only future cycles can be scheduled`);
+    if (cycle < this.queue.cycles) {
+      throw new Error(
+        `[${this.constructor.name}] Cannot schedule something to happen in the past (${cycle} (cycle) < ${this.queue.cycles}(current))`,
+      );
+    } else if (cycle === this.queue.cycles) {
+      if (order < this.queue.subcycle)
+        throw new Error(
+          `[${this.constructor.name}] Cannot schedule something to happen in the past (${order} (subcycle) < ${this.queue.subcycle}(current))`,
+        );
     }
 
     this.queue.enqueue(callback, { cycle, order });
