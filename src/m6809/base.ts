@@ -84,6 +84,9 @@ class ClockQueue {
     this.cycles++;
     this.subcycle = Number.NEGATIVE_INFINITY;
   }
+  isInPast(cycle: number, subcycle: number) {
+    return cycle < this.cycles || (cycle === this.cycles && subcycle < this.subcycle);
+  }
 }
 
 type SubscribersType = {
@@ -227,15 +230,10 @@ class M6809Simulator implements ISimulator {
     }
 
     // Ensure that the cycle is in the future.
-    if (cycle < this.queue.cycles) {
+    if (this.queue.isInPast(cycle, subcycle)) {
       throw new Error(
-        `[${this.constructor.name}] Cannot schedule something to happen in the past (${cycle} (cycle) < ${this.queue.cycles}(current))`,
+        `Cannot add a listener for cycle ${cycle} and subcycle ${subcycle} because it's in the past (current: ${this.queue.cycles}, ${this.queue.subcycle})`,
       );
-    } else if (cycle === this.queue.cycles) {
-      if (subcycle < this.queue.subcycle)
-        throw new Error(
-          `[${this.constructor.name}] Cannot schedule something to happen in the past (${subcycle} (subcycle) < ${this.queue.subcycle}(current))`,
-        );
     }
 
     this.queue.enqueue(callback, { cycle, subcycle });
