@@ -287,9 +287,10 @@ function add<M extends GeneralAddressingMode>(
       H: truncate(a, 4) + truncate(b, 4) > 0xf,
       N: isNegative(result, size * 8),
       Z: result === 0,
-      V: untruncated > 0xff,
+      // For carry, we check if the result "overflowed".
+      C: untruncated > 0xff,
       // For carry, we add the bits up to 7 and check if the result overflowed.
-      C: truncate(a, 7) + truncate(b, 7) > 0x7f,
+      V: truncate(a, 7) + truncate(b, 7) > 0x7f,
     });
   } else {
     // 16-bit
@@ -298,9 +299,10 @@ function add<M extends GeneralAddressingMode>(
       // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
       N: isNegative(result, size * 8),
       Z: result === 0,
-      V: untruncated > 0xffff,
-      // For carry, we add the bits up to 15 and check if the result overflowed.
-      C: truncate(a, 15) + truncate(b, 15) > 0x7fff,
+      // For carry, we check if the result "overflowed".
+      C: untruncated > 0xffff,
+      // For overflow, we add the bits up to 15 and check if the result overflowed.
+      V: truncate(a, 15) + truncate(b, 15) > 0x7fff,
     });
   }
 
