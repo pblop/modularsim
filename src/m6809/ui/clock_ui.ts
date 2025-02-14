@@ -1,6 +1,6 @@
 import type { IModule, ModuleDeclaration } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
-import type { TypedEventTransceiver, EventDeclaration } from "../../types/event";
+import type { TypedEventTransceiver, EventDeclaration, EventContext } from "../../types/event";
 import { element } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 
@@ -64,6 +64,7 @@ class ClockUI implements IModule {
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
           "cpu:instruction_finish": this.onInstructionFinish,
+          "ui:clock:pause": this.onClockPaused,
         },
         optional: {
           "cpu:reset_finish": this.onResetFinish,
@@ -102,6 +103,14 @@ class ClockUI implements IModule {
   onCycleStart = (): void => {
     console.log(`[${this.id}] Clock cycle started`);
     this.setState({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
+  };
+
+  onClockPaused = (ctx: EventContext): void => {
+    // We want to pause only if the emitter is not this module (to keep in
+    // sync with the rest of the system).
+    if (ctx.emitter === this.id) return;
+
+    this.setState({ machineState: "paused" });
   };
 
   setState(state: Partial<ClockUIState>): void {
