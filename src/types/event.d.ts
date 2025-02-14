@@ -52,9 +52,10 @@ export type EventParams<B extends EventBaseName> = EventMap[B];
 /**
  * Contextual data about the event, with the following properties:
  * - emitter: The ID of the emitter of the event.
- * - cycle: The cycle of the event.
+ * - cycle: The cycle the event is being executed in.
+ * - subcycle: The subcycle the event is being executed in.
  */
-export type EventContext = { emitter: string; cycle: number };
+export type EventContext = { emitter: string; cycle: number; subcycle: number };
 export type EventCallbackArgs<B extends EventBaseName> = [
   ...args: EventParams<B>,
   context: EventContext,

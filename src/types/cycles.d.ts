@@ -1,4 +1,4 @@
-export type CycleCallback = (cycle: number) => void;
+export type CycleCallback = (cycle: number, subcycle: number) => void;
 
 /**
  * Subcycle priority for listeners, with the following properties:

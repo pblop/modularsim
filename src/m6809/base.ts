@@ -35,9 +35,10 @@ type ClockQueueElement = {
 };
 class ClockQueue {
   queue: PriorityQueue<ClockQueueElement>;
-  // The number of cycles since the start of the simulation.
+  // The number of cycles since the start of the simulation (the current cycle,
+  // or the last cycle if the next one hasn't started yet).
   // The first cycle is 1.
-  cycles = 0;
+  cycle = 0;
   subcycle = Number.NEGATIVE_INFINITY;
 
   cmp = (a: ClockQueueElement, b: ClockQueueElement) =>
@@ -61,7 +62,7 @@ class ClockQueue {
     // If <, we have a big issue
     // If ==, we haven't finished
     // If >, we have finished
-    return this.queue.peek()!.priority.cycle > this.cycles;
+    return this.queue.peek()!.priority.cycle > this.cycle;
   }
   dequeue(): CycleCallback | undefined {
     const elem = this.queue.dequeue();
@@ -81,11 +82,11 @@ class ClockQueue {
   }
 
   incrementCycle() {
-    this.cycles++;
+    this.cycle++;
     this.subcycle = Number.NEGATIVE_INFINITY;
   }
   isInPast(cycle: number, subcycle: number) {
-    return cycle < this.cycles || (cycle === this.cycles && subcycle < this.subcycle);
+    return cycle < this.cycle || (cycle === this.cycle && subcycle < this.subcycle);
   }
 }
 
@@ -196,7 +197,7 @@ class M6809Simulator implements ISimulator {
   }
 
   performCycle() {
-    console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycles}`);
+    console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycle}`);
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
     this.queue.incrementCycle();
@@ -206,12 +207,12 @@ class M6809Simulator implements ISimulator {
       if (!callback) {
         throw new Error(`[${this.constructor.name}] callback for cycle is undefined`);
       }
-      callback(this.queue.cycles);
+      callback(this.queue.cycle, this.queue.subcycle);
     }
   }
   onCycle(callback: CycleCallback, priority: SubcyclePriority = {}) {
-    const wrappedCallback = (cycle: number) => {
-      callback(cycle);
+    const wrappedCallback = (...args: Parameters<CycleCallback>) => {
+      callback(...args);
       this.onceCycle(wrappedCallback, priority);
     };
     this.onceCycle(wrappedCallback, priority);
@@ -221,8 +222,8 @@ class M6809Simulator implements ISimulator {
     // offset is given.
     const subcycle = priority?.subcycle ?? 0;
 
-    // The current cycle (by default)
-    let cycle = this.queue.cycles + 1;
+    // The next cycle (by default)
+    let cycle = this.queue.cycle + 1;
     if (priority?.cycle != null) {
       cycle = priority.cycle;
     } else if (priority?.offset != null) {
@@ -232,7 +233,7 @@ class M6809Simulator implements ISimulator {
     // Ensure that the cycle is in the future.
     if (this.queue.isInPast(cycle, subcycle)) {
       throw new Error(
-        `Cannot add a listener for cycle ${cycle} and subcycle ${subcycle} because it's in the past (current: ${this.queue.cycles}, ${this.queue.subcycle})`,
+        `Cannot add a listener for cycle ${cycle} and subcycle ${subcycle} because it's in the past (current: ${this.queue.cycle}, ${this.queue.subcycle})`,
       );
     }
 
@@ -293,7 +294,8 @@ class M6809Simulator implements ISimulator {
 
     const context: EventContext = {
       emitter: caller,
-      cycle: this.queue.cycles,
+      cycle: this.queue.cycle,
+      subcycle: this.queue.subcycle,
     };
 
     // We copy the array to prevent issues when the callback modifies the array
