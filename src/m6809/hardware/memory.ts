@@ -86,12 +86,21 @@ class Memory implements IModule {
   }
 
   emitMultiplexed<B extends EventBaseName>(event: B, ...args: EventParams<B>): void {
-    if (this.config.multiplexer) {
-      this.simulation.emit(joinEventName(event, this.config.multiplexer), ...args);
+    const emitFn = () => {
+      if (this.config.multiplexer) {
+        this.simulation.emit(joinEventName(event, this.config.multiplexer), ...args);
+      } else {
+        this.simulation.emit(event, ...args);
+      }
+    };
+    if (event.startsWith("ui:")) {
+      emitFn();
     } else {
-      this.simulation.emit(event, ...args);
+      // Memory only responds on its specified time to hardware events.
+      this.simulation.onceCycle(emitFn, { offset: 0, subcycle: 100 });
     }
   }
+
   onUiMemoryRead = (address: number, ctx: EventContext): void => {
     const data = this.memory[address];
     this.emitMultiplexed("ui:memory:read:result", address, data);
