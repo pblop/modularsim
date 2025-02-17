@@ -28,10 +28,37 @@ export function twosComplement(val: number, bits: number): number {
   return truncate(~val + 1, bits);
 }
 
+/**
+ * Decomposes a number into an array of bytes (big-endian).
+ * @param val - The number to decompose
+ * @param bytes - The number of bytes to decompose into
+ * @returns An array of numbers, where each number represents a byte from most
+ * significant to most significant
+ * @example
+ * decompose(0x0102, 2) // returns [0x01, 0x02]
+ * decompose(0x00000001, 4) // returns [0x00, 0x00, 0x00, 0x01]
+ */
 export function decompose(val: number, bytes: number): number[] {
   const result = [];
-  for (let i = 0; i < bytes; i++) {
+  for (let i = bytes - 1; i >= 0; i--) {
     result.push(truncate(val >> (i * 8), 8));
+  }
+  return result;
+}
+
+/**
+ * Composes a single number from an array of bytes (big-endian).
+ * @param bytes - An array of numbers, where each number represents a byte from
+ * most significant to least significant
+ * @returns The composed number
+ * @example
+ * compose([0x01, 0x02]) // returns 0x0102
+ * compose([0x00, 0x00, 0x00, 0x01]) // returns 0x00000001
+ */
+export function compose(bytes: number[]): number {
+  let result = 0;
+  for (const byte of bytes) {
+    result = (result << 8) | byte;
   }
   return result;
 }
