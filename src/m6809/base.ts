@@ -223,12 +223,8 @@ class M6809Simulator implements ISimulator {
     const subcycle = priority?.subcycle ?? 0;
 
     // The next cycle (by default)
-    let cycle = this.queue.cycle + 1;
-    if (priority?.cycle != null) {
-      cycle = priority.cycle;
-    } else if (priority?.offset != null) {
-      cycle += priority.offset;
-    }
+    const offset = priority?.offset ?? +1;
+    const cycle = priority?.cycle ?? this.queue.cycle + offset;
 
     // Ensure that the cycle is in the future.
     if (this.queue.isInPast(cycle, subcycle)) {
