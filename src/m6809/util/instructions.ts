@@ -104,11 +104,11 @@ export type FetchableAddress = number | "pc";
 function getValueFromMemory(
   bytes: number,
   cpu: Cpu,
-  readPending: boolean,
+  memoryPending: boolean,
   ticksOnState: number,
   addr: CpuAddressingData<GeneralAddressingMode>,
 ): number | null {
-  if (readPending) return null;
+  if (memoryPending) return null;
 
   if (addr.mode === "immediate") {
     return addr.value;
@@ -126,12 +126,12 @@ function getValueFromMemory(
 function writeValueToMemory(
   bytes: number,
   cpu: Cpu,
-  writePending: boolean,
+  memoryPending: boolean,
   ticksOnState: number,
   addr: CpuAddressingData<"direct" | "indexed" | "extended">,
   value: number,
 ): boolean {
-  if (writePending) return false;
+  if (memoryPending) return false;
 
   if (ticksOnState === 0) {
     // We need to write the value to memory.
@@ -164,14 +164,14 @@ function ld<M extends GeneralAddressingMode>(
   reg: Accumulator | Register,
   mode: M,
   cpu: Cpu,
-  { readPending }: CpuInfo,
+  { memoryPending }: CpuInfo,
   { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
   const size = REGISTER_SIZE[reg];
 
-  const val = getValueFromMemory(size, cpu, readPending, ticksOnState, addr);
+  const val = getValueFromMemory(size, cpu, memoryPending, ticksOnState, addr);
   if (val === null) return false;
 
   regs[reg] = val;
@@ -188,7 +188,7 @@ function ld<M extends GeneralAddressingMode>(
 function branching<M extends "relative">(
   cpu: Cpu,
   mnemonic: string,
-  { readPending }: CpuInfo,
+  { memoryPending }: CpuInfo,
   { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
@@ -217,7 +217,7 @@ function st<M extends "direct" | "indexed" | "extended">(
   reg: Accumulator | Register,
   mode: M,
   cpu: Cpu,
-  { writePending }: CpuInfo,
+  { memoryPending }: CpuInfo,
   { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
@@ -225,7 +225,7 @@ function st<M extends "direct" | "indexed" | "extended">(
   const size = REGISTER_SIZE[reg];
 
   const val = regs[reg];
-  if (!writeValueToMemory(size, cpu, writePending, ticksOnState, addr, val)) return false;
+  if (!writeValueToMemory(size, cpu, memoryPending, ticksOnState, addr, val)) return false;
 
   updateConditionCodes(regs, {
     N: isNegative(val, size * 8),
@@ -252,7 +252,7 @@ function add<M extends GeneralAddressingMode>(
   reg: Register | Accumulator,
   mode: M,
   cpu: Cpu,
-  { readPending }: CpuInfo,
+  { memoryPending }: CpuInfo,
   { ticksOnState, ctx }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
@@ -266,7 +266,7 @@ function add<M extends GeneralAddressingMode>(
     ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
   }
 
-  const b = getValueFromMemory(size, cpu, readPending, ticksOnState, addr);
+  const b = getValueFromMemory(size, cpu, memoryPending, ticksOnState, addr);
   if (b === null) return false;
 
   // the remaining cycles are for the add16 operation.
@@ -310,6 +310,12 @@ function add<M extends GeneralAddressingMode>(
   return true;
 }
 
+/**
+ * Information about an instruction, including its mnemonic, cycles, register, and addressing mode.
+ * Additional information includes:
+ * - readAddressing: whether the instruction reads from the memory region specified by the
+ *    addressing mode (e.g., `ld`, `add instructions do, `clr` instructions don't).
+ */
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
   cycles: string;

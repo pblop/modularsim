@@ -39,8 +39,7 @@ type StateContexts = {
 
 // This is the cpu information that is passed to the state functions.
 export type CpuInfo = {
-  readPending: boolean;
-  writePending: boolean;
+  memoryPending: boolean;
 };
 export type StateInfo<S extends CpuState> = {
   ctx: StateContexts[S];

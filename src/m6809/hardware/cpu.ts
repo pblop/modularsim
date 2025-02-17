@@ -258,15 +258,15 @@ class Cpu implements IModule {
     return "fail";
   };
 
-  enterFetchOpcode: OnEnterFn<"fetch_opcode"> = ({ readPending }, _) => {
-    if (readPending) return undefined;
+  enterFetchOpcode: OnEnterFn<"fetch_opcode"> = ({ memoryPending }, _) => {
+    if (memoryPending) return undefined;
 
     // Fetch the opcode.
     this.queryMemoryRead("pc", 1);
     return;
   };
-  exitFetchOpcode: OnExitFn<"fetch_opcode"> = ({ readPending }, { ctx }) => {
-    if (readPending) return null;
+  exitFetchOpcode: OnExitFn<"fetch_opcode"> = ({ memoryPending }, { ctx }) => {
+    if (memoryPending) return null;
 
     // Convert the opcode bytes (one or two) to a single u16 containing the
     // whole opcode.
@@ -315,16 +315,16 @@ class Cpu implements IModule {
     }
   };
 
-  enterImmediate: OnEnterFn<"immediate"> = ({ readPending }, _) => {
-    if (readPending) return undefined;
+  enterImmediate: OnEnterFn<"immediate"> = ({ memoryPending }, _) => {
+    if (memoryPending) return undefined;
 
     // Fetch the immediate value.
     const reg = this.instruction!.register;
     const regSize = REGISTER_SIZE[reg];
     this.queryMemoryRead("pc", regSize);
   };
-  exitImmediate: OnExitFn<"immediate"> = ({ readPending }, _) => {
-    if (readPending) return null;
+  exitImmediate: OnExitFn<"immediate"> = ({ memoryPending }, _) => {
+    if (memoryPending) return null;
 
     // We have the immediate value, so we can store it in the addressing info.
     const value = this.memoryAction!.valueRead;
@@ -372,15 +372,15 @@ class Cpu implements IModule {
     return "fetch_opcode";
   };
 
-  enterIndexedPostbyte: OnEnterFn<"indexed_postbyte"> = ({ readPending }, { ctx }) => {
-    if (readPending) return false;
+  enterIndexedPostbyte: OnEnterFn<"indexed_postbyte"> = ({ memoryPending }, { ctx }) => {
+    if (memoryPending) return false;
 
     // Fetch the indexed postbyte.
     this.queryMemoryRead("pc", 1);
     return false;
   };
-  exitIndexedPostbyte: OnExitFn<"indexed_postbyte"> = ({ readPending }, { ctx }) => {
-    if (readPending) return null;
+  exitIndexedPostbyte: OnExitFn<"indexed_postbyte"> = ({ memoryPending }, { ctx }) => {
+    if (memoryPending) return null;
 
     // Parse the postbyte.
     const postbyte = this.memoryAction!.valueRead;
@@ -393,7 +393,7 @@ class Cpu implements IModule {
     return "indexed_main";
   };
 
-  enterIndexedMain: OnEnterFn<"indexed_main"> = ({ readPending }, { ctx }) => {
+  enterIndexedMain: OnEnterFn<"indexed_main"> = ({ memoryPending }, { ctx }) => {
     if (this.addressing?.mode !== "indexed") {
       this.fail("[indexed_main] Invalid addressing mode");
       return false;
@@ -422,10 +422,10 @@ class Cpu implements IModule {
     }
     return false;
   };
-  exitIndexedMain: OnExitFn<"indexed_main"> = ({ readPending }, { ctx }) => {
+  exitIndexedMain: OnExitFn<"indexed_main"> = ({ memoryPending }, { ctx }) => {
     if (this.addressing?.mode !== "indexed") return this.fail("Invalid addressing mode");
 
-    if (readPending) return null;
+    if (memoryPending) return null;
 
     const postbyte = this.addressing.postbyte!;
 
@@ -570,14 +570,14 @@ class Cpu implements IModule {
     return null;
   };
 
-  enterIndexedIndirect: OnEnterFn<"indexed_indirect"> = ({ readPending }, { ctx }) => {
+  enterIndexedIndirect: OnEnterFn<"indexed_indirect"> = ({ memoryPending }, { ctx }) => {
     if (this.addressing?.mode !== "indexed") {
       this.fail("[indexed_indirect] Invalid addressing mode");
       return false;
     }
 
     if (this.addressing.postbyte.indirect) {
-      if (readPending) return false;
+      if (memoryPending) return false;
       ctx.remainingTicks = 1;
 
       // If the addressing is indirect, we need to read the memory at the address we calculated.
@@ -588,12 +588,12 @@ class Cpu implements IModule {
       return !this.addressing.postbyte.indirect;
     }
   };
-  exitIndexedIndirect: OnExitFn<"indexed_indirect"> = ({ readPending }, { ctx }) => {
+  exitIndexedIndirect: OnExitFn<"indexed_indirect"> = ({ memoryPending }, { ctx }) => {
     if (this.addressing?.mode !== "indexed") return this.fail("Invalid addressing mode");
 
     if (this.addressing.postbyte.indirect) {
       // If the addressing is indirect, we need to read the memory at the address we calculated.
-      if (readPending) return null;
+      if (memoryPending) return null;
       if (ctx.remainingTicks === 1) {
         this.addressing!.address = this.memoryAction!.valueRead;
       } else if (ctx.remainingTicks === 0) {
@@ -608,16 +608,16 @@ class Cpu implements IModule {
     return null;
   };
 
-  enterRelative: OnEnterFn<"relative"> = ({ readPending }, _) => {
-    if (readPending) return false;
+  enterRelative: OnEnterFn<"relative"> = ({ memoryPending }, _) => {
+    if (memoryPending) return false;
 
     // Fetch the relative value.
     // TODO: Implement LONG branches.
     this.queryMemoryRead("pc", 1);
     return false;
   };
-  exitRelative: OnExitFn<"relative"> = ({ readPending }, _) => {
-    if (readPending) return null;
+  exitRelative: OnExitFn<"relative"> = ({ memoryPending }, _) => {
+    if (memoryPending) return null;
 
     const long = false;
     const offset = long
@@ -634,9 +634,9 @@ class Cpu implements IModule {
     return "execute";
   };
 
-  enterExtended: OnEnterFn<"extended"> = ({ readPending }, { ctx }) => {
+  enterExtended: OnEnterFn<"extended"> = ({ memoryPending }, { ctx }) => {
     if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
-    if (readPending) return false;
+    if (memoryPending) return false;
 
     if (ctx.remainingTicks === 1) {
       // Fetch the extended address.
@@ -645,8 +645,8 @@ class Cpu implements IModule {
     }
   };
 
-  exitExtended: OnExitFn<"extended"> = ({ readPending }, { ctx }) => {
-    if (readPending) return null;
+  exitExtended: OnExitFn<"extended"> = ({ memoryPending }, { ctx }) => {
+    if (memoryPending) return null;
 
     const address = this.memoryAction!.valueRead;
     this.addressing = { mode: "extended", address };
@@ -659,9 +659,9 @@ class Cpu implements IModule {
     return "execute";
   };
 
-  enterDirect: OnEnterFn<"direct"> = ({ readPending }, { ctx }) => {
+  enterDirect: OnEnterFn<"direct"> = ({ memoryPending }, { ctx }) => {
     if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
-    if (readPending) return false;
+    if (memoryPending) return false;
 
     if (ctx.remainingTicks === 1) {
       // Fetch the direct low byte.
@@ -669,8 +669,8 @@ class Cpu implements IModule {
       return false;
     }
   };
-  exitDirect: OnExitFn<"direct"> = ({ readPending }, { ctx }) => {
-    if (readPending) return null;
+  exitDirect: OnExitFn<"direct"> = ({ memoryPending }, { ctx }) => {
+    if (memoryPending) return null;
 
     const low = this.memoryAction!.valueRead;
     const address = truncate((this.registers.dp << 8) | low, 16);
@@ -684,15 +684,15 @@ class Cpu implements IModule {
     return "execute";
   };
 
-  enterResetting: OnEnterFn<"resetting"> = ({ readPending }, { ticksOnState, ctx }) => {
-    if (readPending) return false;
+  enterResetting: OnEnterFn<"resetting"> = ({ memoryPending }, { ticksOnState, ctx }) => {
+    if (memoryPending) return false;
 
     if (ctx.remainingTicks === 3) {
       // Fetch the reset vector.
       this.queryMemoryRead(this.config.resetVector, 2);
     }
   };
-  exitResetting: OnExitFn<"resetting"> = ({ readPending }, { ticksOnState, ctx }) => {
+  exitResetting: OnExitFn<"resetting"> = ({ memoryPending }, { ticksOnState, ctx }) => {
     // This state is a bit special because of it being the "first" one. It
     // doesn't get entered into, so onExit actually gets called before onExit.
     // Doing the reading here and doing it in onEnter are, thus, functionally
@@ -705,7 +705,7 @@ class Cpu implements IModule {
       return null;
     }
     ctx.remainingTicks--;
-    if (readPending || ctx.remainingTicks > 0) return null;
+    if (memoryPending || ctx.remainingTicks > 0) return null;
 
     // Clear all registers.
     // Set pc to the value stored at the reset vector.
@@ -797,14 +797,8 @@ class Cpu implements IModule {
    * The entry point of the CPU state machine.
    */
   onCycleStart = () => {
-    const readPending =
-      this.memoryAction != null && this.memoryAction.type === "read" && !this.memoryAction.isDone();
-    const writePending =
-      this.memoryAction != null &&
-      this.memoryAction.type === "write" &&
-      !this.memoryAction.isDone();
+    const memoryPending = this.memoryAction != null && !this.memoryAction.isDone();
 
-    console.log(`rp: ${readPending}, wp: ${writePending}`);
     // Memory operations are ubiquitous for all states. We query it if we need
     // it.  Explanation: we expect the memory to take 1 cycle to respond to our
     // read, so we query it at the beginning of the cycle, and we expect the
@@ -813,8 +807,7 @@ class Cpu implements IModule {
 
     console.debug(`[${this.id}] exit CPU state: ${this.stateMachine.current}`);
     this.stateMachine.tick({
-      readPending,
-      writePending,
+      memoryPending,
     });
     console.debug(`[${this.id}] enter CPU state: ${this.stateMachine.current}`);
   };
