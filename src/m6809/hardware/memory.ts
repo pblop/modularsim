@@ -110,22 +110,13 @@ class Memory implements IModule {
   };
   onMemoryRead = (address: number) => {
     const data = this.memory[address];
-    this.simulation.onceCycle(
-      () => {
-        this.emitMultiplexed("memory:read:result", address, data);
-      },
-      { subcycle: -1 },
-    );
+
+    this.emitMultiplexed("memory:read:result", address, data);
   };
   onMemoryWrite = (address: number, data: number) => {
     this.memory[address] = data;
 
-    this.simulation.onceCycle(
-      () => {
-        this.emitMultiplexed("memory:write:result", address, data);
-      },
-      { subcycle: -1 },
-    );
+    this.emitMultiplexed("memory:write:result", address, data);
   };
 }
 

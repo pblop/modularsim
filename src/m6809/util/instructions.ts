@@ -3,6 +3,7 @@ import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/c
 import type { CpuInfo, StateInfo } from "./state_machine.js";
 import { ConditionCodes, REGISTER_SIZE, type Registers } from "../util/cpu_parts.js";
 import { isNegative, signExtend, truncate } from "../../general/numbers.js";
+import M6809Simulator from "../base.js";
 
 type ExecuteStateInfo = StateInfo<"execute">;
 
@@ -117,7 +118,7 @@ function getValueFromMemory(
       cpu.queryMemoryRead(addr.address, bytes);
       return null;
     } else {
-      return cpu.readInfo!.value;
+      return cpu.memoryAction!.valueRead;
     }
   }
 }
