@@ -85,19 +85,18 @@ class Memory implements IModule {
     console.log(`[${this.id}] Initialized ${this.config.type} memory of size ${this.config.size}`);
   }
 
+  emitTimed = (event: EventBaseName, ...args: EventParams<EventBaseName>): void => {
+    // Memory only responds on its specified time to hardware events.
+    this.simulation.onceCycle(() => this.emitMultiplexed(event, ...args), {
+      offset: 0,
+      subcycle: 100,
+    });
+  };
   emitMultiplexed<B extends EventBaseName>(event: B, ...args: EventParams<B>): void {
-    const emitFn = () => {
-      if (this.config.multiplexer) {
-        this.simulation.emit(joinEventName(event, this.config.multiplexer), ...args);
-      } else {
-        this.simulation.emit(event, ...args);
-      }
-    };
-    if (event.startsWith("ui:")) {
-      emitFn();
+    if (this.config.multiplexer) {
+      this.simulation.emit(joinEventName(event, this.config.multiplexer), ...args);
     } else {
-      // Memory only responds on its specified time to hardware events.
-      this.simulation.onceCycle(emitFn, { offset: 0, subcycle: 100 });
+      this.simulation.emit(event, ...args);
     }
   }
 
@@ -120,12 +119,12 @@ class Memory implements IModule {
   onMemoryRead = (address: number) => {
     const data = this.memory[address];
 
-    this.emitMultiplexed("memory:read:result", address, data);
+    this.emitTimed("memory:read:result", address, data);
   };
   onMemoryWrite = (address: number, data: number) => {
     this.memory[address] = data;
 
-    this.emitMultiplexed("memory:write:result", address, data);
+    this.emitTimed("memory:write:result", address, data);
   };
 }
 
