@@ -495,13 +495,11 @@ addInstructions(
 );
 
 export function performInstructionLogic<M extends AddressingMode>(
-  cpu: Cpu,
   cpuInfo: CpuInfo,
   // This is being executed in the execute state (we can safely modify the context, it is ours!).
   stateInfo: ExecuteStateInfo,
   data: InstructionData<M>,
   addressing: CpuAddressingData<M>,
-  registers: Registers,
 ): boolean {
-  return data.function(cpu, cpuInfo, stateInfo, addressing, registers);
+  return data.function(cpuInfo.cpu, cpuInfo, stateInfo, addressing, cpuInfo.registers);
 }

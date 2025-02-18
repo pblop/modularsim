@@ -1,4 +1,7 @@
 import type { EmptyObject } from "../../types/common.js";
+import { TypedEventTransceiver } from "../../types/event.js";
+import Cpu, { CpuConfig, RWHelper } from "../hardware/cpu.js";
+import { Registers } from "./cpu_parts.js";
 import type { ParsedIndexedPostbyte } from "./instructions.js";
 
 export type CpuState =
@@ -40,6 +43,13 @@ type StateContexts = {
 // This is the cpu information that is passed to the state functions.
 export type CpuInfo = {
   memoryPending: boolean;
+  queryMemoryRead: (where: number | "pc", size: number) => void;
+  config: CpuConfig;
+  registers: Registers;
+  memoryAction: RWHelper | null;
+  commitRegisters: () => void;
+  et: TypedEventTransceiver;
+  cpu: Cpu;
 };
 export type StateInfo<S extends CpuState> = {
   ctx: StateContexts[S];
