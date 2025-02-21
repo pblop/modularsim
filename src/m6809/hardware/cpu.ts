@@ -311,10 +311,12 @@ class Cpu implements IModule {
     // read, so we query it at the beginning of the cycle, and we expect the
     // result to be ready at the beginning of the next cycle.
     this.performPendingMemory();
+    console.log(`[${this.id}] start state: ${this.stateMachine.current}`);
     this.stateMachine.tick("start", cpuInfo);
   };
 
   onCycleEnd = () => {
+    console.log(`[${this.id}] end state: ${this.stateMachine.current}`);
     this.stateMachine.tick("end", this.generateCpuInfo());
   };
 }

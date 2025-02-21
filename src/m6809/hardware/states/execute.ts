@@ -22,14 +22,23 @@ const start: CycleStartFn<"execute"> = (cpuInfo, stateInfo) => {
     `[${cpu.id}] Executing instruction ${cpu.instruction.mnemonic} ${cpu.addressing.mode}`,
   );
 
-  const done = performInstructionLogic(cpuInfo, stateInfo, cpu.instruction, cpu.addressing);
-
-  stateInfo.ctx.isDone = done;
-  if (done) return true;
+  performInstructionLogic("start", cpuInfo, stateInfo, cpu.instruction, cpu.addressing);
 };
 
-const end: CycleEndFn<"execute"> = ({ cpu }, { ctx }) => {
-  if (!ctx.isDone) return null;
+const end: CycleEndFn<"execute"> = (cpuInfo, stateInfo) => {
+  const { cpu } = cpuInfo;
+
+  if (cpu.instruction === undefined) return cpu.fail("No instruction to execute");
+  if (cpu.addressing === undefined) return cpu.fail("No addressing mode to execute");
+
+  const done = performInstructionLogic(
+    "start",
+    cpuInfo,
+    stateInfo,
+    cpu.instruction,
+    cpu.addressing,
+  );
+  if (!done) return null;
 
   cpu.onInstructionFinish();
   return "fetch";

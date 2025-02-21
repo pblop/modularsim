@@ -11,7 +11,14 @@ type ExecuteStateInfo = StateInfo<"execute">;
 // returns the number of cycles the processor should wait.
 // This is also typed to specify what address will be passed to the function
 // given a certain addressing mode.
-type InstructionLogic<M extends AddressingMode = AddressingMode> = (
+type InstructionStartFn<M extends AddressingMode = AddressingMode> = (
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addressingData: CpuAddressingData<M>,
+  registers: Registers,
+) => void;
+type InstructionEndFn<M extends AddressingMode = AddressingMode> = (
   cpu: Cpu,
   cpuInfo: CpuInfo,
   stateInfo: ExecuteStateInfo,
@@ -101,24 +108,34 @@ export function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | 
 }
 export type FetchableAddress = number | "pc";
 
-function getValueFromMemory(
+/**
+ * Query the memory for a value and store it in the instruction context. This is
+ * made to be used in the start function of instructions that need to read a value
+ * from memory.
+ * @param size The size of the value to read (in bytes).
+ * @param addr The addressing data to read from.
+ * @param cpuInfo The CPU information.
+ * @param stateInfo The state information.
+ */
+function queryAddressing(
   bytes: number,
-  cpu: Cpu,
-  memoryPending: boolean,
-  ticksOnState: number,
   addr: CpuAddressingData<GeneralAddressingMode>,
-): number | null {
-  if (memoryPending) return null;
+  { queryMemoryRead, memoryAction, memoryPending }: CpuInfo,
+  { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
+) {
+  if (instructionCtx.memory != null) return;
+  instructionCtx.memory = null;
+  if (memoryPending) return;
 
   if (addr.mode === "immediate") {
-    return addr.value;
+    instructionCtx.memory = addr.value;
   } else {
     if (ticksOnState === 0) {
       // We need to fetch the value from memory.
-      cpu.queryMemoryRead(addr.address, bytes);
-      return null;
+      queryMemoryRead(addr.address, bytes);
+      instructionCtx.memory = null;
     } else {
-      return cpu.memoryAction!.valueRead;
+      instructionCtx.memory = memoryAction!.valueRead;
     }
   }
 }
@@ -169,11 +186,10 @@ function ld<M extends GeneralAddressingMode>(
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
+  if (memoryPending || ctx.instructionCtx.memory) return false;
   const size = REGISTER_SIZE[reg];
 
-  const val = getValueFromMemory(size, cpu, memoryPending, ticksOnState, addr);
-  if (val === null) return false;
-
+  const val = ctx.instructionCtx.memory;
   regs[reg] = val;
 
   updateConditionCodes(regs, {
@@ -266,7 +282,7 @@ function add<M extends GeneralAddressingMode>(
     ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
   }
 
-  const b = getValueFromMemory(size, cpu, memoryPending, ticksOnState, addr);
+  const b = ctx.instructionCtx.memory;
   if (b === null) return false;
 
   // the remaining cycles are for the add16 operation.
@@ -321,30 +337,40 @@ export type InstructionData<T extends AddressingMode = AddressingMode> = {
   cycles: string;
   register: Accumulator | Register | "pc";
   mode: T;
-  function: InstructionLogic<T>;
+  start?: InstructionStartFn<T>;
+  end?: InstructionEndFn<T>;
 };
 export const INSTRUCTIONS: Record<number, InstructionData> = {};
 /**
  * Helper function to add instructions to the INSTRUCTIONS object in a more readable way.
  * @param mnemonic The mnemonic of the instruction (a '{register}' will be replaced with the register name).
  * @param modes An array of [opcode, register, addressing mode, cycles] tuples.
- * @param logic A function that, given the register, mode, and cycles, returns the instruction logic (useful
- * for instructions that have the same logic but different modes).
+ * @param funGen A function that, given the register, mode, and cycles,
+ * returns the instruction functions (useful for instructions that have
+ * the same logic but different modes).
+ * The function can return an object with `start` and `end` functions,
+ * or just an `end` function.
  */
 function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
   mnemonic: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
-  logic: (register: R, mode: M, cycles: string) => InstructionLogic<M>,
+  funGen: (
+    register: R,
+    mode: M,
+    cycles: string,
+  ) => { start?: InstructionStartFn<M>; end?: InstructionEndFn<M> } | InstructionEndFn<M>,
 ) {
   for (const [opcode, register, mode, cycles] of modes) {
     const replaced = mnemonic.replace("{register}", register.toLowerCase());
 
+    const fun = funGen(register, mode, cycles);
     INSTRUCTIONS[opcode] = {
       mnemonic: replaced,
       register,
       mode,
       cycles,
-      function: logic(register, mode, cycles),
+      start: typeof fun === "function" ? undefined : fun.start,
+      end: typeof fun === "function" ? fun : fun.end,
     };
   }
 }
@@ -417,8 +443,12 @@ addInstructions(
     [0xbe, "X", "extended", "6"],
     [0x10be, "Y", "extended", "7"],
   ],
-  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    ld(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+  (reg, mode, cycles) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      queryAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      ld(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+  }),
 );
 // st8 (sta, stb) and st16 (std, sts, stu, stx, sty)
 addInstructions(
@@ -449,8 +479,12 @@ addInstructions(
     [0xbf, "X", "extended", "6"],
     [0x10bf, "Y", "extended", "7"],
   ],
-  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+  (reg, mode, cycles) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+  }),
 );
 
 // add8 (adda, addb) and add16 (addd)
@@ -470,8 +504,12 @@ addInstructions(
     [0xe3, "D", "indexed", "6+"],
     [0xf3, "D", "extended", "7"],
   ],
-  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
+  (reg, mode, cycles) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      queryAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
+  }),
 );
 // adc8 (adca, adcb) and adc16 (adcd)
 addInstructions(
@@ -490,16 +528,28 @@ addInstructions(
     [0x10a9, "D", "indexed", "7+"],
     [0x10b9, "D", "extended", "8"],
   ],
-  (reg, mode, cycles) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
+  (reg, mode, cycles) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      queryAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
+  }),
 );
 
 export function performInstructionLogic<M extends AddressingMode>(
+  part: "start" | "end",
   cpuInfo: CpuInfo,
   // This is being executed in the execute state (we can safely modify the context, it is ours!).
   stateInfo: ExecuteStateInfo,
   data: InstructionData<M>,
   addressing: CpuAddressingData<M>,
 ): boolean {
-  return data.function(cpuInfo.cpu, cpuInfo, stateInfo, addressing, cpuInfo.registers);
+  if (part === "start" && data.start) {
+    data.start(cpuInfo.cpu, cpuInfo, stateInfo, addressing, cpuInfo.registers);
+    return true;
+  } else if (part === "end" && data.end) {
+    return data.end(cpuInfo.cpu, cpuInfo, stateInfo, addressing, cpuInfo.registers);
+  } else {
+    return true;
+  }
 }
