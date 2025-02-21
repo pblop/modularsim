@@ -89,7 +89,7 @@ class Memory implements IModule {
     // Memory only responds on its specified time to hardware events.
     this.simulation.onceCycle(() => this.emitMultiplexed(event, ...args), {
       offset: 0,
-      subcycle: 100,
+      subcycle: 99,
     });
   };
   emitMultiplexed<B extends EventBaseName>(event: B, ...args: EventParams<B>): void {

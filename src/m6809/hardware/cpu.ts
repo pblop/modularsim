@@ -6,17 +6,18 @@ import type {
   ParsedIndexedPostbyte,
 } from "../util/instructions.js";
 import { Registers } from "../util/cpu_parts.js";
-import { type CpuState, StateMachine } from "../util/state_machine.js";
+import { CpuInfo, type CpuState, StateMachine } from "../util/state_machine.js";
 import { compose, decompose } from "../../general/numbers.js";
 import { verify } from "../../general/config.js";
 import ResettingState from "./states/resetting.js";
 import FetchState from "./states/fetch.js";
-import ImmediateState from "./states/immediate.js";
-import RelativeState from "./states/relative.js";
-import ExtendedState from "./states/extended.js";
-import DirectState from "./states/direct.js";
-import ExecuteState from "./states/execute.js";
-import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
+import FailState from "./states/fail.js";
+// import ImmediateState from "./states/immediate.js";
+// import RelativeState from "./states/relative.js";
+// import ExtendedState from "./states/extended.js";
+// import DirectState from "./states/direct.js";
+// import ExecuteState from "./states/execute.js";
+// import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
 
 export type CpuConfig = {
   resetVector: number;
@@ -148,7 +149,10 @@ class Cpu implements IModule {
         optional: {},
       },
       cycles: {
-        permanent: [[this.onCycleStart, { subcycle: 0 }]],
+        permanent: [
+          [this.onCycleStart, { subcycle: 0 }],
+          [this.onCycleEnd, { subcycle: 100 }],
+        ],
       },
     };
   }
@@ -259,42 +263,24 @@ class Cpu implements IModule {
 
   stateMachine: StateMachine = new StateMachine(
     {
-      unreset: {
-        onEnter: () => false,
-        onExit: () => this.fail("CPU is not reset"),
-      },
       resetting: ResettingState,
-      fetch_opcode: FetchState,
-      immediate: ImmediateState,
-      indexed_postbyte: IndexedPostbyteState,
-      indexed_main: IndexedMainState,
-      indexed_indirect: IndexedIndirectState,
-      relative: RelativeState,
-      extended: ExtendedState,
-      direct: DirectState,
-      execute: ExecuteState,
-      fail: {
-        onEnter: () => this.et.emit("cpu:fail"),
-        onExit: () => null,
-      },
+      fetch: FetchState,
+      immediate: FailState,
+      indexed_postbyte: FailState,
+      indexed_main: FailState,
+      indexed_indirect: FailState,
+      relative: FailState,
+      extended: FailState,
+      direct: FailState,
+      execute: FailState,
+      fail: FailState,
     },
-    "unreset",
+    "fail",
   );
 
-  /**
-   * The entry point of the CPU state machine.
-   */
-  onCycleStart = () => {
+  generateCpuInfo(): CpuInfo {
     const memoryPending = this.memoryAction != null && !this.memoryAction.isDone();
-
-    // Memory operations are ubiquitous for all states. We query it if we need
-    // it.  Explanation: we expect the memory to take 1 cycle to respond to our
-    // read, so we query it at the beginning of the cycle, and we expect the
-    // result to be ready at the beginning of the next cycle.
-    this.performPendingMemory();
-
-    console.debug(`[${this.id}] exit CPU state: ${this.stateMachine.current}`);
-    this.stateMachine.tick({
+    return {
       memoryPending,
       queryMemoryRead: this.queryMemoryRead,
       config: this.config,
@@ -303,8 +289,23 @@ class Cpu implements IModule {
       commitRegisters: this.commitRegisters,
       et: this.et,
       cpu: this,
-    });
-    console.debug(`[${this.id}] enter CPU state: ${this.stateMachine.current}`);
+    };
+  }
+
+  /**
+   * The entry point of the CPU state machine.
+   */
+  onCycleStart = () => {
+    // Memory operations are ubiquitous for all states. We query it if we need
+    // it.  Explanation: we expect the memory to take 1 cycle to respond to our
+    // read, so we query it at the beginning of the cycle, and we expect the
+    // result to be ready at the beginning of the next cycle.
+    this.performPendingMemory();
+    this.stateMachine.tick("start", this.generateCpuInfo());
+  };
+
+  onCycleEnd = () => {
+    this.stateMachine.tick("end", this.generateCpuInfo());
   };
 }
 

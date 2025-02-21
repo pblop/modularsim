@@ -1,14 +1,15 @@
 import { INSTRUCTIONS } from "../../util/instructions.js";
-import type { OnEnterFn, OnExitFn } from "../../util/state_machine";
+import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
 
-const enterFetchOpcode: OnEnterFn<"fetch_opcode"> = ({ memoryPending, queryMemoryRead }, _) => {
+const start: CycleStartFn<"fetch"> = ({ memoryPending, queryMemoryRead }, _) => {
   if (memoryPending) return undefined;
 
   // Fetch the opcode.
   queryMemoryRead("pc", 1);
   return;
 };
-const exitFetchOpcode: OnExitFn<"fetch_opcode"> = (
+
+const end: CycleEndFn<"fetch"> = (
   { memoryPending, memoryAction, queryMemoryRead, cpu },
   { ctx },
 ) => {
@@ -61,4 +62,4 @@ const exitFetchOpcode: OnExitFn<"fetch_opcode"> = (
   }
 };
 
-export default { onEnter: enterFetchOpcode, onExit: exitFetchOpcode };
+export default { start, end };

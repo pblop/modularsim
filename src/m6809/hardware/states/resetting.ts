@@ -1,6 +1,6 @@
-import type { OnEnterFn, OnExitFn } from "../../util/state_machine.js";
+import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
-const enterResetting: OnEnterFn<"resetting"> = (
+const start: CycleStartFn<"resetting"> = (
   { memoryPending, queryMemoryRead, config },
   { ticksOnState, ctx },
 ) => {
@@ -12,7 +12,7 @@ const enterResetting: OnEnterFn<"resetting"> = (
   }
 };
 
-const exitResetting: OnExitFn<"resetting"> = (
+const end: CycleEndFn<"resetting"> = (
   { memoryPending, memoryAction, registers, commitRegisters, et },
   { ticksOnState, ctx },
 ) => {
@@ -43,7 +43,7 @@ const exitResetting: OnExitFn<"resetting"> = (
   commitRegisters();
 
   et.emit("cpu:reset_finish");
-  return "fetch_opcode";
+  return "fetch";
 };
 
-export default { onEnter: enterResetting, onExit: exitResetting };
+export default { start, end };
