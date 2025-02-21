@@ -1,13 +1,16 @@
 import { REGISTER_SIZE } from "../../util/cpu_parts.js";
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
 
-const start: CycleStartFn<"immediate"> = ({ memoryPending, cpu, queryMemoryRead }, _) => {
-  if (memoryPending) return;
-
+const start: CycleStartFn<"immediate"> = (
+  { memoryPending, cpu, queryMemoryRead },
+  { ticksOnState },
+) => {
   // Fetch the immediate value.
-  const reg = cpu.instruction!.register;
-  const regSize = REGISTER_SIZE[reg];
-  queryMemoryRead("pc", regSize);
+  if (ticksOnState === 0) {
+    const reg = cpu.instruction!.register;
+    const regSize = REGISTER_SIZE[reg];
+    queryMemoryRead("pc", regSize);
+  }
 };
 const end: CycleEndFn<"immediate"> = ({ memoryPending, memoryAction, cpu }, _) => {
   if (memoryPending) return null;

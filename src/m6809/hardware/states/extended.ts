@@ -2,12 +2,11 @@ import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"extended"> = ({ memoryPending, queryMemoryRead }, { ctx }) => {
   if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
-  if (memoryPending) return false;
+  if (memoryPending) return;
 
   if (ctx.remainingTicks === 1) {
     // Fetch the extended address.
     queryMemoryRead("pc", 2);
-    return false;
   }
 };
 

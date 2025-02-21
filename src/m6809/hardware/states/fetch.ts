@@ -1,12 +1,11 @@
 import { INSTRUCTIONS } from "../../util/instructions.js";
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
 
-const start: CycleStartFn<"fetch"> = ({ memoryPending, queryMemoryRead }, _) => {
-  if (memoryPending) return;
-
-  // Fetch the opcode.
-  queryMemoryRead("pc", 1);
-  return;
+const start: CycleStartFn<"fetch"> = ({ memoryPending, queryMemoryRead }, { ticksOnState }) => {
+  if (ticksOnState === 0) {
+    // Fetch the opcode.
+    queryMemoryRead("pc", 1);
+  }
 };
 
 const end: CycleEndFn<"fetch"> = (
