@@ -296,12 +296,22 @@ class Cpu implements IModule {
    * The entry point of the CPU state machine.
    */
   onCycleStart = () => {
+    // The CpuInfo object is generated _before_ performing the pending memory
+    // operations, so that, in the case that the memoryAction is not done before
+    // the pendingMemoryOperation, and the memory module returns INSTANTLY, the
+    // memoryPending flag is correctly set to true.
+    // If we generated the CpuInfo object _after_ performing the pending memory
+    // operations, the memoryPending flag would be set to false, as the memory
+    // would have already responded to the read, and as such, the memoryAction
+    // would be done, and we would no longer have a pending memory operation.
+    const cpuInfo = this.generateCpuInfo();
+
     // Memory operations are ubiquitous for all states. We query it if we need
     // it.  Explanation: we expect the memory to take 1 cycle to respond to our
     // read, so we query it at the beginning of the cycle, and we expect the
     // result to be ready at the beginning of the next cycle.
     this.performPendingMemory();
-    this.stateMachine.tick("start", this.generateCpuInfo());
+    this.stateMachine.tick("start", cpuInfo);
   };
 
   onCycleEnd = () => {
