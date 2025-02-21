@@ -2,7 +2,7 @@ import { INSTRUCTIONS } from "../../util/instructions.js";
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
 
 const start: CycleStartFn<"fetch"> = ({ memoryPending, queryMemoryRead }, _) => {
-  if (memoryPending) return undefined;
+  if (memoryPending) return;
 
   // Fetch the opcode.
   queryMemoryRead("pc", 1);

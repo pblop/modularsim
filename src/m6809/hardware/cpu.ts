@@ -12,12 +12,12 @@ import { verify } from "../../general/config.js";
 import ResettingState from "./states/resetting.js";
 import FetchState from "./states/fetch.js";
 import FailState from "./states/fail.js";
-// import ImmediateState from "./states/immediate.js";
-// import RelativeState from "./states/relative.js";
-// import ExtendedState from "./states/extended.js";
-// import DirectState from "./states/direct.js";
-// import ExecuteState from "./states/execute.js";
-// import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
+import ImmediateState from "./states/immediate.js";
+import RelativeState from "./states/relative.js";
+import ExtendedState from "./states/extended.js";
+import DirectState from "./states/direct.js";
+import ExecuteState from "./states/execute.js";
+import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
 
 export type CpuConfig = {
   resetVector: number;
@@ -265,14 +265,14 @@ class Cpu implements IModule {
     {
       resetting: ResettingState,
       fetch: FetchState,
-      immediate: FailState,
-      indexed_postbyte: FailState,
-      indexed_main: FailState,
-      indexed_indirect: FailState,
-      relative: FailState,
-      extended: FailState,
-      direct: FailState,
-      execute: FailState,
+      immediate: ImmediateState,
+      indexed_postbyte: IndexedPostbyteState,
+      indexed_main: IndexedMainState,
+      indexed_indirect: IndexedIndirectState,
+      relative: RelativeState,
+      extended: ExtendedState,
+      direct: DirectState,
+      execute: ExecuteState,
       fail: FailState,
     },
     "fail",
