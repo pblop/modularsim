@@ -31,13 +31,7 @@ const end: CycleEndFn<"execute"> = (cpuInfo, stateInfo) => {
   if (cpu.instruction === undefined) return cpu.fail("No instruction to execute");
   if (cpu.addressing === undefined) return cpu.fail("No addressing mode to execute");
 
-  const done = performInstructionLogic(
-    "start",
-    cpuInfo,
-    stateInfo,
-    cpu.instruction,
-    cpu.addressing,
-  );
+  const done = performInstructionLogic("end", cpuInfo, stateInfo, cpu.instruction, cpu.addressing);
   if (!done) return null;
 
   cpu.onInstructionFinish();
