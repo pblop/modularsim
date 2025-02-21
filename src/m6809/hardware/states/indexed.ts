@@ -1,7 +1,13 @@
 import { signExtend, numberToIntN, truncate } from "../../../general/numbers.js";
 import { parseIndexedPostbyte, IndexedAction } from "../../util/instructions.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
-import { CpuIndexedAddressingData } from "../cpu.js";
+import type {
+  CycleStartFn,
+  CycleEndFn,
+  StateInfo,
+  CpuState,
+  CpuInfo,
+} from "../../util/state_machine";
+import type { CpuIndexedAddressingData } from "../cpu.js";
 
 const startIndexedPostbyte: CycleStartFn<"indexed_postbyte"> = (
   { memoryPending, queryMemoryRead },
@@ -30,7 +36,147 @@ const endIndexedPostbyte: CycleEndFn<"indexed_postbyte"> = (
   return "indexed_main";
 };
 
-const startIndexedMain: CycleStartFn<"indexed_main"> = ({ cpu, registers }, { ctx }) => {
+type ActionTable<S extends CpuState> = {
+  [action in string]?: {
+    [cycle: number]: (cpuInfo: CpuInfo, stateInfo: StateInfo<S>) => unknown;
+    logic?: (cpuInfo: CpuInfo, stateInfo: StateInfo<S>) => unknown;
+  };
+};
+const dontCare = () => {};
+
+const indexedMainActionTable: ActionTable<"indexed_main"> = {
+  [IndexedAction.Offset0]: {
+    1: dontCare,
+  },
+  [IndexedAction.Offset5]: {
+    2: dontCare,
+    1: dontCare,
+    logic: ({ cpu }, { ctx }) => {
+      const postbyte = (cpu.addressing! as CpuIndexedAddressingData).postbyte;
+      ctx.offset = signExtend(postbyte.rest, 5, 16);
+    },
+  },
+  [IndexedAction.Offset8]: {
+    2: ({ queryMemoryRead }) => queryMemoryRead("pc", 1),
+    1: dontCare,
+  },
+  [IndexedAction.Offset16]: {
+    5: ({ queryMemoryRead }) => queryMemoryRead("pc", 1),
+    4: ({ queryMemoryRead, memoryAction }, { ctx }) => {
+      ctx.offset = memoryAction!.valueRead << 8;
+      queryMemoryRead("pc", 1);
+    },
+    3: ({ memoryAction }, { ctx }) => {
+      ctx.offset! |= memoryAction!.valueRead;
+    },
+    2: dontCare,
+    1: dontCare,
+  },
+  [IndexedAction.OffsetA]: {
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers }, { ctx }) => {
+      ctx.offset = signExtend(registers.A, 8, 16);
+    },
+  },
+  [IndexedAction.OffsetB]: {
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers }, { ctx }) => {
+      ctx.offset = signExtend(registers.B, 8, 16);
+    },
+  },
+  [IndexedAction.OffsetD]: {
+    5: dontCare,
+    4: dontCare,
+    3: dontCare,
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers }, { ctx }) => {
+      ctx.offset = registers.D;
+    },
+  },
+  [IndexedAction.PostInc1]: {
+    3: dontCare,
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers, cpu }) => {
+      const postbyte = (cpu.addressing! as CpuIndexedAddressingData).postbyte;
+      registers[postbyte.register]++;
+    },
+  },
+  [IndexedAction.PreDec1]: {
+    3: dontCare,
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers, cpu }, { ctx }) => {
+      const postbyte = (cpu.addressing! as CpuIndexedAddressingData).postbyte;
+
+      // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
+      registers[postbyte.register] += numberToIntN(-1, 2);
+      ctx.baseAddress = registers[postbyte.register];
+    },
+  },
+  [IndexedAction.PostInc2]: {
+    4: dontCare,
+    3: dontCare,
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers, cpu }) => {
+      const postbyte = (cpu.addressing! as CpuIndexedAddressingData).postbyte;
+      registers[postbyte.register] += 2;
+    },
+  },
+  [IndexedAction.PreDec2]: {
+    4: dontCare,
+    3: dontCare,
+    2: dontCare,
+    1: dontCare,
+    logic: ({ registers, cpu }, { ctx }) => {
+      const postbyte = (cpu.addressing! as CpuIndexedAddressingData).postbyte;
+      // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
+      registers[postbyte.register] += numberToIntN(-2, 2);
+      ctx.baseAddress = registers[postbyte.register];
+    },
+  },
+  [IndexedAction.OffsetPC16]: {
+    6: ({ queryMemoryRead }) => queryMemoryRead("pc", 1),
+    5: ({ queryMemoryRead, memoryAction }, { ctx }) => {
+      ctx.offset = memoryAction!.valueRead;
+      queryMemoryRead("pc", 1);
+    },
+    4: ({ memoryAction }, { ctx }) => {
+      ctx.offset = memoryAction!.valueRead;
+    },
+    3: dontCare,
+    2: dontCare,
+    1: dontCare,
+  },
+  [IndexedAction.ExtendedIndirect]: {
+    3: ({ queryMemoryRead }) => queryMemoryRead("pc", 2),
+    // During a memory read (queryMemoryRead), the remaining cycle count
+    // is not decremented, so we need to do it manually.
+    2: ({ memoryAction }, { ctx }) => {
+      ctx.baseAddress = memoryAction!.valueRead;
+      ctx.offset = 0;
+      ctx.remainingTicks--;
+    },
+    // This will not be called, as we're done after the second (third) cycle.
+    1: dontCare,
+  },
+  [IndexedAction.OffsetPC8]: {
+    2: ({ queryMemoryRead }) => queryMemoryRead("pc", 1),
+    1: dontCare,
+    logic: ({ memoryAction }, { ctx }) => {
+      ctx.offset = signExtend(memoryAction!.valueRead, 8, 16);
+    },
+  },
+};
+
+const startIndexedMain: CycleStartFn<"indexed_main"> = (cpuInfo, stateInfo) => {
+  const { cpu, registers } = cpuInfo;
+  const { ctx } = stateInfo;
+
   if (cpu.addressing == null || cpu.addressing.mode !== "indexed") {
     cpu.fail("[indexed_main] Invalid addressing mode");
     return false;
@@ -57,20 +203,22 @@ const startIndexedMain: CycleStartFn<"indexed_main"> = ({ cpu, registers }, { ct
     ctx.baseAddress = registers[cpu.addressing.postbyte.register];
     ctx.offset = 0; // Default offset is 0 (we will modify it if not 0 in endIndexedMain)
   }
+
+  // We do whatever we need to do in this state and decrement the remaining ticks.
+  const indexdedActionFunctions = indexedMainActionTable[cpu.addressing.postbyte.action];
+  if (!indexdedActionFunctions) {
+    cpu.fail(`Invalid indexed action ${cpu.addressing.postbyte.action}`);
+    return true;
+  }
+  indexdedActionFunctions[ctx.remainingTicks](cpuInfo, stateInfo);
+  ctx.remainingTicks--;
   return false;
 };
 
-type ActionTable = {
-  [action in string]?: {
-    [cycle: number]: () => unknown;
-    logic?: () => unknown;
-  };
-};
+const endIndexedMain: CycleEndFn<"indexed_main"> = (cpuInfo, stateInfo) => {
+  const { memoryPending, cpu, queryMemoryRead, memoryAction, registers } = cpuInfo;
+  const { ctx } = stateInfo;
 
-const endIndexedMain: CycleEndFn<"indexed_main"> = (
-  { memoryPending, cpu, queryMemoryRead, memoryAction, registers },
-  { ctx },
-) => {
   if (cpu.addressing == null || cpu.addressing.mode !== "indexed")
     return cpu.fail("Invalid addressing mode");
 
@@ -78,140 +226,13 @@ const endIndexedMain: CycleEndFn<"indexed_main"> = (
 
   const postbyte = cpu.addressing!.postbyte;
 
-  const dontCare = () => {};
-  // Otherwise, we do whatever we need to do in this state, and decrement the remaining ticks.
-  const actionTable: ActionTable = {
-    [IndexedAction.Offset0]: {
-      1: dontCare,
-    },
-    [IndexedAction.Offset5]: {
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        ctx.offset = signExtend(postbyte.rest, 5, 16);
-      },
-    },
-    [IndexedAction.Offset8]: {
-      2: () => queryMemoryRead("pc", 1),
-      1: dontCare,
-    },
-    [IndexedAction.Offset16]: {
-      5: () => queryMemoryRead("pc", 1),
-      4: () => {
-        ctx.offset = memoryAction!.valueRead << 8;
-        queryMemoryRead("pc", 1);
-      },
-      3: () => {
-        ctx.offset! |= memoryAction!.valueRead;
-      },
-      2: dontCare,
-      1: dontCare,
-    },
-    [IndexedAction.OffsetA]: {
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        ctx.offset = signExtend(registers.A, 8, 16);
-      },
-    },
-    [IndexedAction.OffsetB]: {
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        ctx.offset = signExtend(registers.B, 8, 16);
-      },
-    },
-    [IndexedAction.OffsetD]: {
-      5: dontCare,
-      4: dontCare,
-      3: dontCare,
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        ctx.offset = registers.D;
-      },
-    },
-    [IndexedAction.PostInc1]: {
-      3: dontCare,
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        registers[postbyte.register]++;
-      },
-    },
-    [IndexedAction.PreDec1]: {
-      3: dontCare,
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
-        registers[postbyte.register] += numberToIntN(-1, 2);
-        ctx.baseAddress = registers[postbyte.register];
-      },
-    },
-    [IndexedAction.PostInc2]: {
-      4: dontCare,
-      3: dontCare,
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        registers[postbyte.register] += 2;
-      },
-    },
-    [IndexedAction.PreDec2]: {
-      4: dontCare,
-      3: dontCare,
-      2: dontCare,
-      1: dontCare,
-      logic: () => {
-        // All valid registers are 16-bit, so we need to sign-extend the -1 to 16 bits.
-        registers[postbyte.register] += numberToIntN(-2, 2);
-        ctx.baseAddress = registers[postbyte.register];
-      },
-    },
-    [IndexedAction.OffsetPC16]: {
-      6: () => queryMemoryRead("pc", 1),
-      5: () => {
-        ctx.offset = memoryAction!.valueRead;
-        queryMemoryRead("pc", 1);
-      },
-      4: () => {
-        ctx.offset = memoryAction!.valueRead;
-      },
-      3: dontCare,
-      2: dontCare,
-      1: dontCare,
-    },
-    [IndexedAction.ExtendedIndirect]: {
-      3: () => queryMemoryRead("pc", 2),
-      // During a memory read (queryMemoryRead), the remaining cycle count
-      // is not decremented, so we need to do it manually.
-      2: () => {
-        ctx.baseAddress = memoryAction!.valueRead;
-        ctx.offset = 0;
-        ctx.remainingTicks--;
-      },
-      // This will not be called, as we're done after the second (third) cycle.
-      1: dontCare,
-    },
-    [IndexedAction.OffsetPC8]: {
-      2: () => queryMemoryRead("pc", 1),
-      1: dontCare,
-      logic: () => {
-        ctx.offset = signExtend(memoryAction!.valueRead, 8, 16);
-      },
-    },
-  };
-
-  const indexdedActionFunctions = actionTable[postbyte.action];
+  const indexdedActionFunctions = indexedMainActionTable[postbyte.action];
   if (!indexdedActionFunctions) return cpu.fail(`Invalid indexed action ${postbyte.action}`);
-  indexdedActionFunctions[ctx.remainingTicks]();
-  ctx.remainingTicks--;
 
   // If we're done waiting however many cycles we needed to wait for this indexed action,
   // we can move on to the next state.
   if (ctx.remainingTicks === 0) {
-    indexdedActionFunctions.logic?.();
+    indexdedActionFunctions.logic?.(cpuInfo, stateInfo);
     cpu.addressing!.address = truncate(ctx.baseAddress + ctx.offset!, 16);
     return "indexed_indirect";
   }
