@@ -153,7 +153,7 @@ type DecompiledAddressingInfo<T extends AddressingMode> =
   T extends "inherent" ? { mode: T } :
   never;
 
-type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
+export type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   startAddress: number;
 
   // The values in memory that make up the instruction.
@@ -169,13 +169,25 @@ type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
 
   failed: false;
 };
-type FailedDecompilation = {
+export type FailedDecompilation = {
   startAddress: number;
   bytes: number[];
   opcode: number;
   failed: true;
   reason: "opcode" | "indexed_postbyte";
 };
+export function eqDecompilation(
+  a: DecompiledInstruction | FailedDecompilation,
+  b: DecompiledInstruction | FailedDecompilation,
+): boolean {
+  return (
+    a.startAddress === b.startAddress &&
+    a.failed === b.failed &&
+    a.bytes.length === b.bytes.length &&
+    a.bytes.every((byte, i) => byte === b.bytes[i])
+  );
+}
+
 export async function decompileInstruction(
   read: ReadFunction,
   registers: Registers,
