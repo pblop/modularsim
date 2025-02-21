@@ -2,7 +2,11 @@ import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type { Registers } from "../util/cpu_parts.js";
 import { element } from "../../general/html.js";
-import { decompileInstruction, generateInstructionElement } from "../util/decompile.js";
+import {
+  decompileInstruction,
+  generateInstructionElement,
+  generateRowData,
+} from "../util/decompile.js";
 
 // biome-ignore lint/complexity/noBannedTypes: <explanation>
 type InstructionUIConfig = {};
@@ -127,9 +131,9 @@ class HistoryUI implements IModule {
 
     const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
     (row.children[0] as HTMLSpanElement).innerText = this.formatAddress(currentAddress);
+    const rowData = generateRowData(decompiled, this.formatAddress);
     generateInstructionElement(
-      decompiled,
-      this.formatAddress,
+      rowData,
       row.children[1] as HTMLSpanElement,
       row.children[2] as HTMLSpanElement,
       row.children[3] as HTMLSpanElement,

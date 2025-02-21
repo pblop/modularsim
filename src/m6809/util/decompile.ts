@@ -16,7 +16,7 @@ import {
 } from "../../general/numbers.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.
-type ReadFunction = (address: number, bytes?: number) => Promise<number>;
+export type ReadFunction = (address: number, bytes?: number) => Promise<number>;
 
 type DisassIdxAddressingResult = {
   // The number of bytes read from the PC
@@ -298,21 +298,40 @@ export async function decompileInstruction(
   };
 }
 
+export type InstructionRowData = {
+  address: string;
+  data: string;
+  extra: string;
+  size: number;
+  ok: true;
+};
+type FailedInstructionRowData = {
+  address: string;
+  ok: false;
+};
+export type AllInstructionRowData = InstructionRowData | FailedInstructionRowData;
 export function generateInstructionElement(
+  row: AllInstructionRowData,
+  rawElement: HTMLElement,
+  dataElement: HTMLElement,
+  extraElement: HTMLElement,
+) {
+  rawElement.innerText = row.address;
+  dataElement.innerText = row.ok ? row.data : "???";
+  extraElement.innerText = row.ok ? row.extra : "???";
+}
+
+export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
   formatAddress: (data: number) => string,
-  rawElement: HTMLSpanElement,
-  dataElement: HTMLSpanElement,
-  extraElement: HTMLSpanElement,
-): void {
-  rawElement.innerHTML = decompiled.bytes
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join(" ");
+): AllInstructionRowData {
+  const address = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
 
   if (decompiled.failed) {
-    dataElement.innerText = "??";
-    extraElement.innerText = "";
-    return;
+    return {
+      address,
+      ok: false,
+    };
   } else {
     const { registerSize, args, addressing } = decompiled;
     const { mnemonic } = decompiled.instruction;
@@ -386,7 +405,12 @@ export function generateInstructionElement(
       }
     }
 
-    dataElement.innerText = data;
-    extraElement.innerText = extra;
+    return {
+      address,
+      data,
+      extra,
+      size: decompiled.size,
+      ok: true,
+    };
   }
 }
