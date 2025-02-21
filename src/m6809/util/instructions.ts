@@ -196,7 +196,7 @@ function ld<M extends GeneralAddressingMode>(
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  if (memoryPending || ctx.instructionCtx.memory) return false;
+  if (ctx.instructionCtx.memory === null) return false;
   const size = REGISTER_SIZE[reg];
 
   const val = ctx.instructionCtx.memory;
