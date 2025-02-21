@@ -312,6 +312,7 @@ export async function decompileInstruction(
 
 export type InstructionRowData = {
   address: string;
+  raw: string;
   data: string;
   extra: string;
   size: number;
@@ -319,16 +320,19 @@ export type InstructionRowData = {
 };
 type FailedInstructionRowData = {
   address: string;
+  raw: string;
   ok: false;
 };
 export type AllInstructionRowData = InstructionRowData | FailedInstructionRowData;
 export function generateInstructionElement(
   row: AllInstructionRowData,
+  addressElement: HTMLElement,
   rawElement: HTMLElement,
   dataElement: HTMLElement,
   extraElement: HTMLElement,
 ) {
-  rawElement.innerText = row.address;
+  addressElement.innerText = row.address;
+  rawElement.innerText = row.raw;
   dataElement.innerText = row.ok ? row.data : "???";
   extraElement.innerText = row.ok ? row.extra : "???";
 }
@@ -337,11 +341,13 @@ export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
   formatAddress: (data: number) => string,
 ): AllInstructionRowData {
-  const address = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
+  const address = formatAddress(decompiled.startAddress);
+  const raw = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
 
   if (decompiled.failed) {
     return {
       address,
+      raw,
       ok: false,
     };
   } else {
@@ -419,6 +425,7 @@ export function generateRowData(
 
     return {
       address,
+      raw,
       data,
       extra,
       size: decompiled.size,

@@ -264,7 +264,7 @@ class InstructionUI implements IModule {
     if (cached) {
       const rowData = generateRowData(cached, this.formatAddress);
       row.classList.toggle("pc", isPC);
-      generateInstructionElement(rowData, children[1], children[2], children[3]);
+      generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
       return cached.bytes.length;
     } else {
       throw new Error(`[${this.id}] Cache unpopulated when populating panel.`);

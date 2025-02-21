@@ -130,10 +130,10 @@ class HistoryUI implements IModule {
     );
 
     const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
-    (row.children[0] as HTMLSpanElement).innerText = this.formatAddress(currentAddress);
     const rowData = generateRowData(decompiled, this.formatAddress);
     generateInstructionElement(
       rowData,
+      row.children[0] as HTMLSpanElement,
       row.children[1] as HTMLSpanElement,
       row.children[2] as HTMLSpanElement,
       row.children[3] as HTMLSpanElement,
