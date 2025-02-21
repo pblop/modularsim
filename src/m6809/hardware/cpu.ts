@@ -283,6 +283,7 @@ class Cpu implements IModule {
     return {
       memoryPending,
       queryMemoryRead: this.queryMemoryRead,
+      queryMemoryWrite: this.queryMemoryWrite,
       config: this.config,
       registers: this.registers,
       memoryAction: this.memoryAction,

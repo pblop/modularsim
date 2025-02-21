@@ -31,6 +31,7 @@ export type CpuState = keyof StateContexts;
 export type CpuInfo = {
   memoryPending: boolean;
   queryMemoryRead: (where: number | "pc", size: number) => void;
+  queryMemoryWrite: (address: number, bytes: number, value: number) => void;
   config: CpuConfig;
   registers: Registers;
   memoryAction: RWHelper | null;

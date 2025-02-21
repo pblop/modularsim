@@ -140,21 +140,31 @@ function queryAddressing(
   }
 }
 
+/**
+ * Query the memory to write a value. This is made to be used in the start function
+ * of instructions that need to write a value to memory.
+ * @param bytes The size of the value to write (in bytes).
+ * @param value The value to write.
+ * @returns Whether the memory has been fully written to.
+ */
 function writeValueToMemory(
-  bytes: number,
-  cpu: Cpu,
-  memoryPending: boolean,
-  ticksOnState: number,
-  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
+  size: number,
   value: number,
+  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
+  { queryMemoryWrite, memoryAction, memoryPending }: CpuInfo,
+  { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
 ): boolean {
+  if (instructionCtx.written === true) return true;
+  instructionCtx.written = false;
   if (memoryPending) return false;
 
   if (ticksOnState === 0) {
     // We need to write the value to memory.
-    cpu.queryMemoryWrite(addr.address, bytes, value);
+    queryMemoryWrite(addr.address, size, value);
+    instructionCtx.written = false;
     return false;
   } else {
+    instructionCtx.written = true;
     return true;
   }
 }
@@ -234,14 +244,14 @@ function st<M extends "direct" | "indexed" | "extended">(
   mode: M,
   cpu: Cpu,
   { memoryPending }: CpuInfo,
-  { ticksOnState, ctx }: ExecuteStateInfo,
+  { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ): boolean {
   const size = REGISTER_SIZE[reg];
 
   const val = regs[reg];
-  if (!writeValueToMemory(size, cpu, memoryPending, ticksOnState, addr, val)) return false;
+  if (instructionCtx.written === false) return false;
 
   updateConditionCodes(regs, {
     N: isNegative(val, size * 8),
@@ -481,7 +491,7 @@ addInstructions(
   ],
   (reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
+      writeValueToMemory(REGISTER_SIZE[reg], regs[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
       st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
   }),
