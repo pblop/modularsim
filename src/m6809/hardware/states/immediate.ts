@@ -17,7 +17,7 @@ const end: CycleEndFn<"immediate"> = ({ memoryPending, memoryAction, cpu }, _) =
 
   // We have the immediate value, so we can store it in the addressing info.
   const value = memoryAction!.valueRead;
-  cpu.addressing = { mode: "immediate", value };
+  cpu.addressing = { mode: "immediate" };
 
   // Perform instruction execution.
   return "execute";

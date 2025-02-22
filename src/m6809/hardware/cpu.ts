@@ -25,7 +25,6 @@ export type CpuConfig = {
 
 export type CpuImmediateAddressingData = {
   mode: "immediate";
-  value: number;
 };
 export type CpuDirectAddressingData = {
   mode: "direct";

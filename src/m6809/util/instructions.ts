@@ -117,27 +117,28 @@ export type FetchableAddress = number | "pc";
  * @param cpuInfo The CPU information.
  * @param stateInfo The state information.
  */
-function queryAddressing(
+function queryReadAddressing(
   bytes: number,
   addr: CpuAddressingData<GeneralAddressingMode>,
   { queryMemoryRead, memoryAction, memoryPending }: CpuInfo,
   { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
 ) {
-  if (instructionCtx.memory != null) return;
-  instructionCtx.memory = null;
-  if (memoryPending) return;
-
-  if (addr.mode === "immediate") {
-    instructionCtx.memory = addr.value;
-  } else {
-    if (ticksOnState === 0) {
-      // We need to fetch the value from memory.
-      queryMemoryRead(addr.address, bytes);
-      instructionCtx.memory = null;
-    } else {
-      instructionCtx.memory = memoryAction!.valueRead;
-    }
+  if (ticksOnState === 0) {
+    let address: number | "pc";
+    if (addr.mode === "immediate") address = "pc";
+    else address = addr.address;
+    // We need to fetch the value from memory.
+    queryMemoryRead(address, bytes);
+    instructionCtx.memory = null;
   }
+}
+function retrieveReadAddressing(
+  addr: CpuAddressingData<GeneralAddressingMode>,
+  { memoryAction, memoryPending }: CpuInfo,
+  { ctx: { instructionCtx } }: ExecuteStateInfo,
+): number | null {
+  if (memoryPending) return null;
+  else return memoryAction!.valueRead;
 }
 
 /**
@@ -147,7 +148,7 @@ function queryAddressing(
  * @param value The value to write.
  * @returns Whether the memory has been fully written to.
  */
-function writeValueToMemory(
+function queryWrite(
   size: number,
   value: number,
   addr: CpuAddressingData<"direct" | "indexed" | "extended">,
@@ -191,15 +192,15 @@ function ld<M extends GeneralAddressingMode>(
   reg: Accumulator | Register,
   mode: M,
   cpu: Cpu,
-  { memoryPending }: CpuInfo,
-  { ticksOnState, ctx }: ExecuteStateInfo,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ) {
-  if (ctx.instructionCtx.memory === null) return false;
   const size = REGISTER_SIZE[reg];
 
-  const val = ctx.instructionCtx.memory;
+  const val = retrieveReadAddressing(addr, cpuInfo, stateInfo);
+  if (val === null) return false;
   regs[reg] = val;
 
   updateConditionCodes(regs, {
@@ -244,14 +245,14 @@ function st<M extends "direct" | "indexed" | "extended">(
   mode: M,
   cpu: Cpu,
   { memoryPending }: CpuInfo,
-  { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
+  stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
 ): boolean {
-  const size = REGISTER_SIZE[reg];
+  if (memoryPending) return false;
 
+  const size = REGISTER_SIZE[reg];
   const val = regs[reg];
-  if (instructionCtx.written === false) return false;
 
   updateConditionCodes(regs, {
     N: isNegative(val, size * 8),
@@ -278,21 +279,22 @@ function add<M extends GeneralAddressingMode>(
   reg: Register | Accumulator,
   mode: M,
   cpu: Cpu,
-  { memoryPending }: CpuInfo,
-  { ticksOnState, ctx }: ExecuteStateInfo,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
   regs: Registers,
   withCarry = false,
 ) {
   // The size of the register (in bytes).
   const size = REGISTER_SIZE[reg];
+  const { ticksOnState, ctx } = stateInfo;
 
   if (ticksOnState === 0) {
     // add16 takes 1 cycle to do internal calculations, after the read.
     ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
   }
 
-  const b = ctx.instructionCtx.memory;
+  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo);
   if (b === null) return false;
 
   // the remaining cycles are for the add16 operation.
@@ -455,7 +457,7 @@ addInstructions(
   ],
   (reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
       ld(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
   }),
@@ -491,7 +493,7 @@ addInstructions(
   ],
   (reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      writeValueToMemory(REGISTER_SIZE[reg], regs[reg], addr, cpuInfo, stateInfo),
+      queryWrite(REGISTER_SIZE[reg], regs[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
       st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
   }),
@@ -516,7 +518,7 @@ addInstructions(
   ],
   (reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
       add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
   }),
@@ -540,7 +542,7 @@ addInstructions(
   ],
   (reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
       add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
   }),

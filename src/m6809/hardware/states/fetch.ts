@@ -41,7 +41,8 @@ const end: CycleEndFn<"fetch"> = (
 
     switch (instruction.mode) {
       case "immediate":
-        return "immediate";
+        cpu.addressing = { mode: "immediate" };
+        return "execute";
       case "indexed":
         return "indexed_postbyte";
       case "relative":

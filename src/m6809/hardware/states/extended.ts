@@ -1,10 +1,9 @@
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
-const start: CycleStartFn<"extended"> = ({ memoryPending, queryMemoryRead }, { ctx }) => {
-  if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
+const start: CycleStartFn<"extended"> = ({ memoryPending, queryMemoryRead }, { ticksOnState }) => {
   if (memoryPending) return;
 
-  if (ctx.remainingTicks === 1) {
+  if (ticksOnState === 0) {
     // Fetch the extended address.
     queryMemoryRead("pc", 2);
   }
@@ -15,11 +14,6 @@ const end: CycleEndFn<"extended"> = ({ memoryPending, cpu }, { ctx }) => {
 
   const address = cpu.memoryAction!.valueRead;
   cpu.addressing = { mode: "extended", address };
-
-  if (ctx.remainingTicks !== 0) {
-    ctx.remainingTicks--;
-    return null;
-  }
 
   return "execute";
 };
