@@ -264,8 +264,6 @@ function st<M extends "direct" | "indexed" | "extended">(
 }
 
 function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers): boolean {
-  if (stateInfo.ticksOnState === 0) return false;
-
   regs[reg] = 0;
 
   // Clear N,V,C, set Z
