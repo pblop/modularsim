@@ -16,7 +16,6 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
       });
       et.on("memory:write", (address: number, data: number) => {
         if (address === 0xff01) {
-          console.log("Finished");
           finished = true;
           resolve(cycles);
         } else {
@@ -29,9 +28,7 @@ function CycleTester(): (memory: Uint8Array) => Promise<number> {
         reject();
       });
       et.on("cpu:reset_finish", () => {
-        // The cycle that finishes the reset is already the first IF cycle,
-        // so the "actual" cycles start at 1 once the reset finishes.
-        cycles = 1;
+        cycles = 0;
       });
       et.emit("signal:reset");
       while (!finished) {
