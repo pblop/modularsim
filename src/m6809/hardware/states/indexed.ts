@@ -13,11 +13,10 @@ const startIndexedPostbyte: CycleStartFn<"indexed_postbyte"> = (
   { memoryPending, queryMemoryRead },
   { ctx },
 ) => {
-  if (memoryPending) return false;
+  if (memoryPending) return;
 
   // Fetch the indexed postbyte.
   queryMemoryRead("pc", 1);
-  return false;
 };
 const endIndexedPostbyte: CycleEndFn<"indexed_postbyte"> = (
   { memoryPending, memoryAction, cpu },
@@ -208,11 +207,11 @@ const startIndexedMain: CycleStartFn<"indexed_main"> = (cpuInfo, stateInfo) => {
   const indexdedActionFunctions = indexedMainActionTable[cpu.addressing.postbyte.action];
   if (!indexdedActionFunctions) {
     cpu.fail(`Invalid indexed action ${cpu.addressing.postbyte.action}`);
-    return true;
+    return;
   }
   indexdedActionFunctions[ctx.remainingTicks](cpuInfo, stateInfo);
   ctx.remainingTicks--;
-  return false;
+  return;
 };
 
 const endIndexedMain: CycleEndFn<"indexed_main"> = (cpuInfo, stateInfo) => {

@@ -11,11 +11,11 @@ const start: CycleStartFn<"execute"> = (cpuInfo, stateInfo) => {
 
   if (cpu.instruction === undefined) {
     cpu.fail("No instruction to execute");
-    return false;
+    return;
   }
   if (cpu.addressing === undefined) {
     cpu.fail("No addressing mode to execute");
-    return false;
+    return;
   }
 
   console.log(

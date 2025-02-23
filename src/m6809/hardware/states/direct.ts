@@ -3,12 +3,11 @@ import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
 
 const start: CycleStartFn<"direct"> = ({ memoryPending, queryMemoryRead }, { ctx }) => {
   if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;
-  if (memoryPending) return false;
+  if (memoryPending) return;
 
   if (ctx.remainingTicks === 1) {
     // Fetch the direct low byte.
     queryMemoryRead("pc", 1);
-    return false;
   }
 };
 const end: CycleEndFn<"direct"> = ({ memoryPending, memoryAction, registers, cpu }, { ctx }) => {

@@ -4,7 +4,7 @@ const start: CycleStartFn<"resetting"> = (
   { memoryPending, queryMemoryRead, config },
   { ticksOnState, ctx },
 ) => {
-  if (memoryPending) return false;
+  if (memoryPending) return;
 
   if (ctx.remainingTicks === 3) {
     // Fetch the reset vector.

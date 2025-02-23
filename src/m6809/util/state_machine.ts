@@ -47,11 +47,7 @@ export type StateInfo<S extends CpuState> = {
 /**
  * A function called on the first CPU subtick (0) of the simulation.
  */
-export type CycleStartFn<S extends CpuState> = (
-  cpuInfo: CpuInfo,
-  stateInfo: StateInfo<S>,
-  // biome-ignore lint/suspicious/noConfusingVoidType: if I don't use void, TypeScript complains.
-) => boolean | undefined | void;
+export type CycleStartFn<S extends CpuState> = (cpuInfo: CpuInfo, stateInfo: StateInfo<S>) => void;
 /**
  * A function called on the last CPU subtick (100) of the simulation.
  * Returns the next state, or null if self-transition.
