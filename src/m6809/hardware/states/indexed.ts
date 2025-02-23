@@ -234,7 +234,11 @@ const endIndexedMain: CycleEndFn<"indexed_main"> = (cpuInfo, stateInfo) => {
   if (ctx.remainingTicks === 0) {
     indexdedActionFunctions.logic?.(cpuInfo, stateInfo);
     cpu.addressing!.address = truncate(ctx.baseAddress + ctx.offset!, 16);
-    return "indexed_indirect";
+    if (postbyte.indirect) {
+      return "indexed_indirect";
+    } else {
+      return "execute";
+    }
   }
 
   return null;
@@ -246,7 +250,7 @@ const startIndexedIndirect: CycleStartFn<"indexed_indirect"> = (
 ) => {
   if (cpu.addressing == null || cpu.addressing.mode !== "indexed") {
     cpu.fail("[indexed_indirect] Invalid addressing mode");
-    return false;
+    return;
   }
 
   if (cpu.addressing.postbyte.indirect) {
@@ -255,10 +259,6 @@ const startIndexedIndirect: CycleStartFn<"indexed_indirect"> = (
 
     // If the addressing is indirect, we need to read the memory at the address we calculated.
     queryMemoryRead(cpu.addressing.address, 2);
-    return false;
-  } else {
-    // This state is immediate if the addressing is not indirect (we don't need to read any memory).
-    return !cpu.addressing.postbyte.indirect;
   }
 };
 const endIndexedIndirect: CycleEndFn<"indexed_indirect"> = (
