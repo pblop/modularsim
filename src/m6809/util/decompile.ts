@@ -280,12 +280,14 @@ export async function decompileInstruction(
       break;
     }
     case "relative": {
-      const offset = await read(startAddress + size++, 1);
-      address = truncate(startAddress + signExtend(offset, 8, 16), 16);
+      const offsetBytes = instruction.extra.isLongBranch ? 2 : 1;
+
+      const offset = await read(startAddress + size++, offsetBytes);
+      address = truncate(startAddress + signExtend(offset, offsetBytes * 2, 16), 16);
       args.push(address);
 
       addressing = { mode: "relative", offset, address };
-      bytes.push(offset);
+      bytes.push(...decompose(offset, offsetBytes));
       break;
     }
     case "inherent": {
