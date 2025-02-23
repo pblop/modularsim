@@ -221,16 +221,9 @@ function branching<M extends "relative">(
   regs: Registers,
   condition: (cc: number) => boolean | number,
 ): boolean {
-  if (instructionCtx.branchTaken === undefined) {
-    instructionCtx.branchTaken = condition(regs.cc);
-  }
-  // Long Branch instructions take 0 extra cycles if the branch is not taken.
-  if (!instructionCtx.branchTaken && addr.long) return true;
+  const branchTaken = condition(regs.cc);
 
-  // The rest of the instructions take 1 extra cycle: long branches if taken, short branches always.
-  if (ticksOnState === 0) return false;
-
-  if (instructionCtx.branchTaken) {
+  if (branchTaken) {
     if (mnemonic === "bsr" || mnemonic === "lbsr") {
       console.error("BSR/LBSR not implemented");
     }

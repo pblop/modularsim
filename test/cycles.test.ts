@@ -63,4 +63,5 @@ describe("Cycles", () => {
   test("4.asm", genCycleTest("4.bin", 5));
   test("Sumar (2/2)", genCycleTest("sumar.bin", 56));
   test("5.asm", genCycleTest("5.bin", 12));
+  test("6.asm", genCycleTest("6.bin", 10));
 });
