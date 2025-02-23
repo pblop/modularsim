@@ -1,9 +1,16 @@
+import { truncate } from "../../../general/numbers.js";
 import { INSTRUCTIONS } from "../../util/instructions.js";
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
 
-const start: CycleStartFn<"fetch"> = ({ memoryPending, queryMemoryRead }, { ticksOnState }) => {
-  if (ticksOnState === 0) {
-    // Fetch the opcode.
+const start: CycleStartFn<"fetch"> = (
+  { memoryPending, queryMemoryRead },
+  { ctx, ticksOnState },
+) => {
+  if (memoryPending) return;
+
+  if (ctx.lastByteRead === undefined) {
+    queryMemoryRead("pc", 1);
+  } else if (ctx.lastByteRead === 0x10 || ctx.lastByteRead === 0x11) {
     queryMemoryRead("pc", 1);
   }
 };
@@ -21,15 +28,16 @@ const end: CycleEndFn<"fetch"> = (
   // e.g. 0xAB -> 0xAB
   if (ctx.opcode === undefined) {
     ctx.opcode = memoryAction!.valueRead;
+    ctx.lastByteRead = memoryAction!.valueRead;
   } else {
-    ctx.opcode = (ctx.opcode << 8) | memoryAction!.valueRead;
+    // $10 $10 $10 $10 has the same effect as a single $10.
+    ctx.opcode = truncate((ctx.opcode << 8) | memoryAction!.valueRead, 16);
+    ctx.lastByteRead = memoryAction!.valueRead;
   }
 
-  // If the opcode is 0x10 or 0x11, we need to fetch another byte. In the docs,
-  // it says that if the second byte is 0x10 or 0x11, we need to fetch another
-  // byte, but the MC6809 has no 3-byte instructions. I'm following the docs here.
-  if (ctx.opcode === 0x10 || ctx.opcode === 0x11) {
-    queryMemoryRead("pc", 1);
+  // If the opcode is 0x10 or 0x11, we need to fetch another byte.
+  // Page 2  Note, like the 6809, $10 $10 $10 $10 has the same effect as a single $10.
+  if (ctx.lastByteRead === 0x10 || ctx.lastByteRead === 0x11) {
     return null;
   } else {
     // We now have the full opcode, so we can store it, and decode it.
