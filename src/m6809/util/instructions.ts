@@ -220,10 +220,22 @@ function branching<M extends "relative">(
   addr: CpuAddressingData<M>,
   regs: Registers,
   condition: (cc: number) => boolean | number,
+  isLongBranch: boolean,
 ): boolean {
-  const branchTaken = condition(regs.cc);
+  // If this is a long branch, the first cycle we're in "branching" is a DC cycle.
+  // If we don't take the branch, we're finished. But if we do, we take another
+  // cycle (the first cycle of "branching" in a short branch).
 
-  if (branchTaken) {
+  if (instructionCtx.taken === undefined) instructionCtx.taken = condition(regs.cc);
+
+  // LONG BRANCH LOGIC
+  // If the branch is taken, we only take one cycle, and we don't branch, so
+  // we're done.
+  if (isLongBranch && !instructionCtx.taken) return true;
+  // If the branch is not taken, we take TWO cycles.
+  if (isLongBranch && ticksOnState === 0) return false;
+
+  if (instructionCtx.taken) {
     if (mnemonic === "bsr" || mnemonic === "lbsr") {
       console.error("BSR/LBSR not implemented");
     }
@@ -335,6 +347,9 @@ function add<M extends GeneralAddressingMode>(
  * - readAddressing: whether the instruction reads from the memory region specified by the
  *    addressing mode (e.g., `ld`, `add instructions do, `clr` instructions don't).
  */
+type ExtraInstructionData = {
+  isLongBranch: boolean;
+};
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
   cycles: string;
@@ -342,6 +357,7 @@ export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mode: T;
   start?: InstructionStartFn<T>;
   end?: InstructionEndFn<T>;
+  extra: ExtraInstructionData;
 };
 export const INSTRUCTIONS: Record<number, InstructionData> = {};
 /**
@@ -361,12 +377,17 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
     register: R,
     mode: M,
     cycles: string,
+    extra: ExtraInstructionData,
   ) => { start?: InstructionStartFn<M>; end?: InstructionEndFn<M> } | InstructionEndFn<M>,
+  extraIn?: ExtraInstructionData,
 ) {
+  // Default extra information.
+  const extra = { isLongBranch: false, ...extraIn };
+
   for (const [opcode, register, mode, cycles] of modes) {
     const replaced = mnemonic.replace("{register}", register.toLowerCase());
 
-    const fun = funGen(register, mode, cycles);
+    const fun = funGen(register, mode, cycles, extra);
     INSTRUCTIONS[opcode] = {
       mnemonic: replaced,
       register,
@@ -374,6 +395,7 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
       cycles,
       start: typeof fun === "function" ? undefined : fun.start,
       end: typeof fun === "function" ? fun : fun.end,
+      extra,
     };
   }
 }
@@ -381,22 +403,39 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
 addInstructions(
   "beq",
   [[0x27, "pc", "relative", "3"]],
-  () => (cpu, cpuInfo, stateInfo, addressingData, registers) =>
+  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     branching(
       cpu,
       "beq",
       cpuInfo,
       stateInfo,
-      addressingData,
-      registers,
+      addr,
+      regs,
       (cc) => cc & ConditionCodes.ZERO,
+      extra.isLongBranch,
     ),
+);
+addInstructions(
+  "lbeq",
+  [[0x1027, "pc", "relative", "5(6)"]],
+  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    branching(
+      cpu,
+      "lbeq",
+      cpuInfo,
+      stateInfo,
+      addr,
+      regs,
+      (cc) => cc & ConditionCodes.ZERO,
+      extra.isLongBranch,
+    ),
+  { isLongBranch: true },
 );
 addInstructions(
   "bra",
   [[0x20, "pc", "relative", "3"]],
-  () => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    branching(cpu, "bra", cpuInfo, stateInfo, addr, regs, () => true),
+  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    branching(cpu, "bra", cpuInfo, stateInfo, addr, regs, () => true, extra.isLongBranch),
 );
 
 // clr(accumulator)
