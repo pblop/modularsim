@@ -229,10 +229,10 @@ function branching<M extends "relative">(
   if (instructionCtx.taken === undefined) instructionCtx.taken = condition(regs.cc);
 
   // LONG BRANCH LOGIC
-  // If the branch is taken, we only take one cycle, and we don't branch, so
+  // If the branch is NOT taken, we only take one cycle, and we don't branch, so
   // we're done.
   if (isLongBranch && !instructionCtx.taken) return true;
-  // If the branch is not taken, we take TWO cycles.
+  // If the branch is taken, we take TWO cycles.
   if (isLongBranch && ticksOnState === 0) return false;
 
   if (instructionCtx.taken) {
