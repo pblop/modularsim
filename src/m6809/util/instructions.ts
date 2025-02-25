@@ -437,6 +437,21 @@ addInstructions(
   (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
     branching(cpu, "bra", cpuInfo, stateInfo, addr, regs, () => true, extra.isLongBranch),
 );
+addInstructions(
+  "bne",
+  [[0x26, "pc", "relative", "3"]],
+  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
+    branching(
+      cpu,
+      "bne",
+      cpuInfo,
+      stateInfo,
+      addr,
+      regs,
+      (cc) => !(cc & ConditionCodes.ZERO),
+      extra.isLongBranch,
+    ),
+);
 
 // clr(accumulator)
 addInstructions(
