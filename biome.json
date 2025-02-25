@@ -8,7 +8,8 @@
     "rules": {
       "style": {
         "noUselessElse": "off",
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noParameterAssign": "off"
       },
       "complexity": {
         "useSimpleNumberKeys": "off"
