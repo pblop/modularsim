@@ -235,9 +235,9 @@ class InstructionUI implements IModule {
     // address.
     // TODO: There should be a button that locks/unlocks the scroll to the PC.
 
-    const groups = this.history.getAllConsecutiveEntryGroups();
+    const groups = this.history.getAllConsecutiveEntryGroups(true);
     for (let i = 0; i < groups.length; i++) {
-      // TODO:
+      // TODO: Add a clear cache button.
       // We disassemble instructions from the current group start backwards (
       // overwriting if already disassembled), and then we populate the panel.
       const group = groups[i];

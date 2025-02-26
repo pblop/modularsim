@@ -36,6 +36,7 @@ export class InstructionHistory {
   }
 
   #addToSortedAddresses(address: number): void {
+    if (this.sortedAddresses.includes(address)) return;
     this.sortedAddresses.push(address);
     this.sortedAddresses.sort((a, b) => a - b);
   }
@@ -46,40 +47,57 @@ export class InstructionHistory {
 
   /**
    * Retrieves a group of consecutive instructions starting from a specified
-   * address. In consecutive instructions, the end of one instruction equals
-   * the start of the next instruction.
+   * address. That is, an instruction
    *
    * If the specified address is not the start of an instruction, the function
    * will return an empty array.
    *
    * @param start - The memory address to start retrieving instructions from
+   * @param overlapped - Whether to include overlapped instructions in the
+   *                     group.
    * @returns An object containing the entries and the end address (the address
    *         immediately after the last instruction in the group).
    */
-  getConsecutive(start: number): ConsecutiveEntryGroup {
+  getConsecutive(start: number, overlapped = false): ConsecutiveEntryGroup {
     let i = this.sortedAddresses.indexOf(start);
     if (i === -1) return { entries: [], end: start };
 
+    // Group end is the address immediately after the group.
+    // In a non-overlapped group, the end of the group is the end of the last
+    // instruction in the group.
+    // But, in an overlapped group, the end of the group is the end of the
+    // instruction that ends last. Example:
+    //      AAAA (an instruction)
+    //       BB  (an overlapped instruction)
+    // Here, end, at the end of the loop would be BB's end. But we want it to
+    // be AAAA's end.
+    let groupEnd = start;
     const entries = [];
     let end: number;
     let entry: InstructionHistoryEntry;
+    let isConsecutive: boolean;
     do {
       const addr = this.sortedAddresses[i];
       entry = this.list[addr];
       entries.push(entry);
       end = addr + entry.disass.bytes.length;
-      i++;
-    } while (end === this.sortedAddresses[i] && i < this.sortedAddresses.length);
+      if (end > groupEnd) groupEnd = end;
 
-    return { entries, end };
+      i++;
+      isConsecutive =
+        i < this.sortedAddresses.length &&
+        (overlapped ? end >= this.sortedAddresses[i] : end === this.sortedAddresses[i]);
+    } while (isConsecutive);
+
+    return { entries, end: groupEnd };
   }
 
-  getAllConsecutiveEntryGroups(): ConsecutiveEntryGroup[] {
+  getAllConsecutiveEntryGroups(overlapped = false): ConsecutiveEntryGroup[] {
     const groups = [];
     let i = 0;
 
     while (i !== -1 && i < this.sortedAddresses.length) {
-      const group = this.getConsecutive(this.sortedAddresses[i]);
+      const group = this.getConsecutive(this.sortedAddresses[i], overlapped);
       groups.push(group);
       i = this.sortedAddresses.findIndex((x) => x >= group.end);
     }
