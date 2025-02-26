@@ -13,141 +13,12 @@ import {
   type InstructionRowData,
 } from "../util/decompile.js";
 import { verify } from "../../general/config.js";
+import { InstructionLog } from "./instruction_ui/instructionlog.js";
+import { InstructionHistory } from "./instruction_ui/inst_history.js";
 
 type InstructionUIConfig = {
   lines: number;
 };
-
-class InstructionCache {
-  cache: Record<number, DecompiledInstruction | FailedDecompilation> = {};
-  sortedAddresses: number[] = [];
-
-  /**
-   * Update the cache with the given data.
-   * @param data The decompiled instruction to update the cache with.
-   * @returns Whether the cache was updated.
-   */
-  update(data: DecompiledInstruction | FailedDecompilation): boolean {
-    const address = data.startAddress;
-
-    if (this.cache[address]) {
-      // If this address is already in the cache, and the data is the same, we
-      // don't need to do anything.
-      if (eqDecompilation(this.cache[address], data)) return false;
-      // But if it's different, we need to remove the previous instruction,
-      // and add the new one.
-      else {
-        // We remove the previous instruction here, and add the new one later.
-        this._remove(address);
-      }
-    } else {
-      // If this address is not in the cache per se, we need to check if it's
-      // contained by an instruction in the cache. If it's not, we can just add
-      // it, otherwise, we need to remove the previous instruction.
-      this._removeContaining(address);
-    }
-
-    // We need to remove the instructions that will be overlapped by the new
-    // instruction.
-    const overlapping = this.getWouldOverlap(address, data.bytes.length);
-    for (const addr of overlapping) {
-      this._remove(addr);
-    }
-
-    this.cache[address] = data;
-    this.sortedAddresses.push(address);
-    this.sortedAddresses.sort((a, b) => a - b);
-    return true;
-  }
-
-  /**
-   * Remove the instruction at the given address from the cache, and from the
-   * list of addresses.
-   */
-  _remove(address: number): void {
-    delete this.cache[address];
-    this.sortedAddresses = this.sortedAddresses.filter((a) => a !== address);
-  }
-
-  /**
-   * Returns the address of the instruction that contains the given address.
-   * If the address is not contained by any instruction in the cache, it returns
-   * undefined.
-   * @param address The address to check.
-   * @returns The address of the instruction containing the given address.
-   */
-  getInstructionContaining(address: number): number | undefined {
-    // We use the fact that the largest instruction is, at most 5 bytes long.
-    // (That being, an extended indirect 10-starting instruction).
-    // (2 bytes for the opcode, 1 byte for the postbyte, 2 bytes for the address)
-    for (let i = 0; i < 5; i++) {
-      const cached = this.cache[address - i];
-      if (cached) {
-        if (address < cached.startAddress + cached.bytes.length) return cached.startAddress;
-        else return undefined;
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * Returns the address of the instructions that would be overlapped by an
-   * instruction inserted at the given address with the given size.
-   * @param address The address to insert the instruction at.
-   * @param size The size of the instruction to insert.
-   * @returns The addresses of the instructions that will be overlapped by the
-   * instruction inserted at the given address.
-   */
-  getWouldOverlap(address: number, size: number): number[] {
-    const addresses: number[] = [];
-    for (let i = 0; i < size; i++) {
-      if (this.cache[address + i]) addresses.push(address + i);
-    }
-    return addresses;
-  }
-
-  /**
-   * Get the instruction at the given address.
-   * If the instruction is not in the cache, undefined is returned.
-   * This instruction performs cache invalidation if necessary.
-   * @param address The address of the instruction to get.
-   * @returns The instruction at the given address, or undefined if it's not in
-   * the cache.
-   */
-  get(address: number): DecompiledInstruction | FailedDecompilation | undefined {
-    return this.cache[address];
-  }
-
-  /**
-   * Check if the cache contains an instruction (or failed decompilation) at the
-   * given address.
-   * @param address The address to check.
-   */
-  contains(address: number): boolean {
-    return this.cache[address] !== undefined;
-  }
-
-  /**
-   * Remove the instruction that contains the given address.
-   * If the address is not contained by any instruction in the cache, nothing
-   * happens.
-   */
-  _removeContaining(address: number): void {
-    // The address is not in the cache, now we need to check if the cache is
-    // correct.
-    // If the previous instruction that's in the cache contains the current
-    // address, we probably need to invalidate that.
-    const prevAddr = this.getInstructionContaining(address);
-    if (prevAddr !== undefined) {
-      this._remove(prevAddr);
-    }
-  }
-
-  clear(): void {
-    this.cache = {};
-    this.sortedAddresses = [];
-  }
-}
 
 class InstructionUI implements IModule {
   et: TypedEventTransceiver;
@@ -158,6 +29,10 @@ class InstructionUI implements IModule {
   registers?: Registers;
 
   panel?: HTMLElement;
+
+  // An internal timer to keep track of when the instructions stored in the
+  // cache/history were stored.
+  modificationNumber: number;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -190,6 +65,9 @@ class InstructionUI implements IModule {
         default: 15,
       },
     });
+
+    this.modificationNumber = 0;
+    this.history = new InstructionHistory();
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -228,7 +106,7 @@ class InstructionUI implements IModule {
    * This only happens when an instruction has finished executing, so we can
    * interpret the current value as the start of the an instruction.
    */
-  onRegistersUpdate = (registers: Registers): void => {
+  onRegistersUpdate = async (registers: Registers): Promise<void> => {
     if (!this.panel) return;
 
     const oldRegs = this.registers;
@@ -237,7 +115,17 @@ class InstructionUI implements IModule {
     // If the PC hasn't changed, we don't need to update the panel.
     if (oldRegs !== undefined && oldRegs.pc === registers.pc) return;
 
-    this.populatePanel();
+    this.modificationNumber++;
+
+    // We decompile the instruction at the current PC and store it in the history.
+    const disass = await decompileInstruction(this.read, this.registers!, registers.pc);
+    this.history.add({
+      address: registers.pc,
+      time: this.modificationNumber,
+      disass,
+    });
+
+    await this.populatePanel();
   };
 
   onReset = (): void => {
@@ -248,56 +136,98 @@ class InstructionUI implements IModule {
 
     // Clear the registers.
     this.registers = undefined;
-    this.cache.clear();
+
+    // Clear the caches.
+    this.history.clear();
   };
 
   formatAddress(data: number): string {
     return data.toString(16).padStart(4, "0");
   }
 
-  cache: InstructionCache = new InstructionCache();
+  history: InstructionHistory = new InstructionHistory();
 
   // NOTE: This function requires the registers to be set.
   populateRow = async (row: HTMLDivElement, address: number, isPC: boolean): Promise<number> => {
     const children = Array.from(row.children) as HTMLSpanElement[];
-    const cached = this.cache.get(address);
-    if (cached) {
-      const rowData = generateRowData(cached, this.formatAddress);
-      row.classList.toggle("pc", isPC);
-      generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
-      return cached.bytes.length;
-    } else {
-      throw new Error(`[${this.id}] Cache unpopulated when populating panel.`);
-    }
+
+    const disass =
+      this.history.get(address)?.disass ??
+      (await decompileInstruction(this.read, this.registers!, address));
+
+    row.classList.toggle("pc", isPC);
+
+    const rowData = generateRowData(disass, this.formatAddress);
+    generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
+    return disass.bytes.length;
   };
 
-  decompileFuture = async (start: number, num: number): Promise<void> => {
-    let addr = start;
-    for (let i = 0; i < num; i++) {
-      // We decompile the future instructions and use them to populate the cache.
-      // const cached = this.cache.get(addr);
-      // if (cached) {
-      //   addr += cached.bytes.length;
-      //   continue;
-      // }
+  // decompilePast = async (start: number, num: number): Promise<void> => {
+  //   // To decompile in the past, we will try to decompile instructions, starting
+  //   // from the given address, and going backwards. We will be greedy, meaning
+  //   // that we will prefer a larger instruction over a smaller one.
+  //   // e.g. If our memory is: $86 $4f (lda $4f), and we are at $4f, even though
+  //   // $4f is a valid instruction (clra), we will prefer to decompile $86 $4f
+  //   // as lda $4f.
 
-      const decompiled = await decompileInstruction(this.read, this.registers!, addr);
+  //   let addr = start;
+  //   for (let i = 0; i < num; i++) {
+  //     let largestSuccess: DecompiledInstruction | null = null;
+  //     for (let size = 1; size <= 5; size++) {
+  //       const newAddr = addr - size;
+  //       const decompiled = await decompileInstruction(this.read, this.registers!, newAddr);
+  //       if (decompiled.failed || decompiled.bytes.length !== size) continue;
 
-      // If the instruction is valid, we add it to the cache, otherwise, the
-      // cache will remove it.
-      this.cache.update(decompiled);
-      addr += decompiled.bytes.length;
-    }
+  //       largestSuccess = decompiled;
+  //     }
+
+  //     // If we have not succeeded, we stop.
+  //     if (largestSuccess == null) break;
+
+  //     // If the instruction is valid, we add it to the cache, otherwise, the
+  //     // cache will remove it.
+  //     // this.cache.update(largestSuccess);
+  //     addr -= largestSuccess.bytes.length;
+  //   }
+  // };
+
+  // decompileFuture = async (start: number, num: number): Promise<void> => {
+  //   let addr = start;
+  //   for (let i = 0; i < num; i++) {
+  //     const decompiled = await decompileInstruction(this.read, this.registers!, addr);
+
+  //     // If the instruction is valid, we add it to the cache, otherwise, the
+  //     // cache will remove it.
+  //     this.cache.update(decompiled);
+  //     addr += decompiled.bytes.length;
+  //   }
+  // };
+
+  #createBasicRowElement = (): HTMLDivElement => {
+    const rowElement = element(
+      "div",
+      { className: "row" },
+      element("span", {
+        className: "address",
+        innerText: "....",
+      }),
+      element("span", { className: "raw", innerText: "..." }),
+      element("span", { className: "data", innerText: "..." }),
+      element("span", { className: "extra", innerText: "" }),
+    );
+    return rowElement;
   };
 
   async populatePanel(): Promise<void> {
     if (!this.panel || !this.registers) return;
+    this.panel.innerHTML = "";
 
+    // * Valid means that the PC is on an instruction boundary.
     // For each valid* PC that the CPU is on, we check:
     // - this.config.lines instructions in the future
-    await this.decompileFuture(this.registers.pc, this.config.lines);
-    // - this.config.lines instructions in the past
-    // TODO
+    // await this.decompileFuture(this.registers.pc, this.config.lines);
+    // // - this.config.lines/2 instructions in the past
+    // await this.decompilePast(this.registers.pc, this.config.lines / 2);
     // We are adding these to the cache.
     //
     // Then we are updating the panel with the cache.
@@ -305,24 +235,23 @@ class InstructionUI implements IModule {
     // address.
     // TODO: There should be a button that locks/unlocks the scroll to the PC.
 
-    this.panel.innerHTML = "";
-    for (const addr of this.cache.sortedAddresses) {
-      const rowElement = element(
-        "div",
-        { className: "row" },
-        element("span", {
-          className: "address",
-          innerText: "....",
-        }),
-        element("span", { className: "raw", innerText: "..." }),
-        element("span", { className: "data", innerText: "..." }),
-        element("span", { className: "extra", innerText: "" }),
-      );
-
-      await this.populateRow(rowElement, addr, addr === this.registers.pc);
-      this.panel.appendChild(rowElement);
+    const groups = this.history.getAllConsecutiveEntryGroups();
+    for (let i = 0; i < groups.length; i++) {
+      // TODO:
+      // We disassemble instructions from the current group start backwards (
+      // overwriting if already disassembled), and then we populate the panel.
+      const group = groups[i];
+      const { entries, end } = group;
+      for (const entry of entries) {
+        const rowElement = this.#createBasicRowElement();
+        await this.populateRow(rowElement, entry.address, entry.address === this.registers.pc);
+        this.panel.appendChild(rowElement);
+      }
+      // We disassemble instructions from the current group start forwards (
+      // overwriting if already disassembled), and then we populate the panel,
+      // stopping at the end of the group, or at a maximum of this.config.lines
+      // instructions.
     }
-    // * Valid means that the PC is on an instruction boundary.
   }
 }
 
