@@ -34,6 +34,14 @@
     &.pc {
       background-color: var(--gui-color-highlight);
     }
+    
+    &.overlap {
+      cursor: help;
+      text-decoration: line-through;
+      .data {
+        padding-left: 1em;
+      }
+    }
 
     .address {
       /* I've decided that the addresses are going to be formatted as equal

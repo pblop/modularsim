@@ -104,6 +104,34 @@ export class InstructionHistory {
     return groups;
   }
 
+  /**
+   * Returns whether the given instruction has been overlapped by another
+   * instruction. That is, if part of this instruction is contained in another
+   * instruction, and that one is newer.
+   * @returns
+   */
+  isOverlapped(entry: InstructionHistoryEntry) {
+    const { address, disass } = entry;
+    const end = address + disass.bytes.length;
+
+    for (const addr of this.sortedAddresses) {
+      if (addr === address) continue;
+
+      const other = this.list[addr];
+      if (other.time < entry.time) continue;
+
+      const otherEnd = other.address + other.disass.bytes.length;
+      // Fully contained, begins during, ends during (or exactly at the same time)
+      if (other.address > address && end >= otherEnd) return true;
+      // Partially contained, begins before, ends during or after
+      if (other.address < address && otherEnd > address) return true;
+      // Partially contained, begins during, ends after
+      if (other.address > address && other.address < end && otherEnd > end) return true;
+    }
+
+    return false;
+  }
+
   clear() {
     this.list = {};
     this.sortedAddresses = [];

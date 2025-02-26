@@ -148,7 +148,12 @@ class InstructionUI implements IModule {
   history: InstructionHistory = new InstructionHistory();
 
   // NOTE: This function requires the registers to be set.
-  populateRow = async (row: HTMLDivElement, address: number, isPC: boolean): Promise<number> => {
+  populateRow = async (
+    row: HTMLDivElement,
+    address: number,
+    isPC: boolean,
+    isOverlapped: boolean,
+  ): Promise<number> => {
     const children = Array.from(row.children) as HTMLSpanElement[];
 
     const disass =
@@ -156,6 +161,8 @@ class InstructionUI implements IModule {
       (await decompileInstruction(this.read, this.registers!, address));
 
     row.classList.toggle("pc", isPC);
+    row.classList.toggle("overlap", isOverlapped);
+    row.setAttribute("title", "This instruction is overlapped by another instruction.");
 
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
@@ -234,17 +241,22 @@ class InstructionUI implements IModule {
     // The panel starts at the cache start address, and ends at the cache end
     // address.
     // TODO: There should be a button that locks/unlocks the scroll to the PC.
+    // TODO: Add a clear cache button, in case of too many overlaps.
 
     const groups = this.history.getAllConsecutiveEntryGroups(true);
     for (let i = 0; i < groups.length; i++) {
-      // TODO: Add a clear cache button.
       // We disassemble instructions from the current group start backwards (
       // overwriting if already disassembled), and then we populate the panel.
       const group = groups[i];
       const { entries, end } = group;
       for (const entry of entries) {
         const rowElement = this.#createBasicRowElement();
-        await this.populateRow(rowElement, entry.address, entry.address === this.registers.pc);
+        await this.populateRow(
+          rowElement,
+          entry.address,
+          entry.address === this.registers.pc,
+          this.history.isOverlapped(entry),
+        );
         this.panel.appendChild(rowElement);
       }
       // We disassemble instructions from the current group start forwards (
