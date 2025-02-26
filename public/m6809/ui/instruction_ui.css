@@ -24,6 +24,10 @@
   scroll-snap-type: y mandatory;
 
   .row {
+    &:hover {
+      background-color: var(--gui-color-highlight);
+    }
+
     scroll-snap-align: end;
 
     display: flex;
@@ -64,6 +68,8 @@
     .extra {
       flex: 2;
       color: #888;
+      text-decoration-color: #888;
+      text-decoration-line: inherit;
     }
   }
 }
