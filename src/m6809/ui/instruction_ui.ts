@@ -170,34 +170,34 @@ class InstructionUI implements IModule {
     return disass.bytes.length;
   };
 
-  // decompilePast = async (start: number, num: number): Promise<void> => {
-  //   // To decompile in the past, we will try to decompile instructions, starting
-  //   // from the given address, and going backwards. We will be greedy, meaning
-  //   // that we will prefer a larger instruction over a smaller one.
-  //   // e.g. If our memory is: $86 $4f (lda $4f), and we are at $4f, even though
-  //   // $4f is a valid instruction (clra), we will prefer to decompile $86 $4f
-  //   // as lda $4f.
+  #disassemblePast = async (start: number, num: number): Promise<void> => {
+    // To disassemble in the past, we will start from the given address
+    // and go backwards. We will be greedy, meaning
+    // that we will prefer a larger instruction over a smaller one.
+    // e.g. If our memory is: $86 $4f (lda $4f), and we are at $4f, even though
+    // $4f is a valid instruction (clra), we will prefer to decompile $86 $4f
+    // as lda $4f.
 
-  //   let addr = start;
-  //   for (let i = 0; i < num; i++) {
-  //     let largestSuccess: DecompiledInstruction | null = null;
-  //     for (let size = 1; size <= 5; size++) {
-  //       const newAddr = addr - size;
-  //       const decompiled = await decompileInstruction(this.read, this.registers!, newAddr);
-  //       if (decompiled.failed || decompiled.bytes.length !== size) continue;
+    let addr = start;
+    for (let i = 0; i < num; i++) {
+      let largestSuccess: DecompiledInstruction | null = null;
+      for (let size = 1; size <= 5; size++) {
+        const newAddr = addr - size;
+        const decompiled = await decompileInstruction(this.read, this.registers!, newAddr);
+        if (decompiled.failed || decompiled.bytes.length !== size) continue;
 
-  //       largestSuccess = decompiled;
-  //     }
+        largestSuccess = decompiled;
+      }
 
-  //     // If we have not succeeded, we stop.
-  //     if (largestSuccess == null) break;
+      // If we have not succeeded, we stop.
+      if (largestSuccess == null) break;
 
-  //     // If the instruction is valid, we add it to the cache, otherwise, the
-  //     // cache will remove it.
-  //     // this.cache.update(largestSuccess);
-  //     addr -= largestSuccess.bytes.length;
-  //   }
-  // };
+      // If the instruction is valid, we add it to the cache, otherwise, the
+      // cache will remove it.
+      // this.cache.update(largestSuccess);
+      addr -= largestSuccess.bytes.length;
+    }
+  };
 
   #disassembleFuture = async (
     start: number,
@@ -262,10 +262,14 @@ class InstructionUI implements IModule {
     // TODO: There should be a button that locks/unlocks the scroll to the PC.
     // TODO: Add a clear cache button, in case of too many overlaps.
 
+    // TODO: Make sure that, when speculatively disassembling, we don't disassemble
+    // the same memory address twice!
     const groups = this.history.getAllConsecutiveEntryGroups(true);
     for (let i = 0; i < groups.length; i++) {
       // We disassemble instructions from the current group start backwards (
       // overwriting if already disassembled), and then we populate the panel.
+      if (i === 0) this.#disassemblePast(groups[i].entries[0].address, this.config.lines / 2);
+
       const group = groups[i];
       const { entries, end } = group;
       for (const entry of entries) {
