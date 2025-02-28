@@ -198,17 +198,35 @@ class InstructionUI implements IModule {
   //   }
   // };
 
-  // decompileFuture = async (start: number, num: number): Promise<void> => {
-  //   let addr = start;
-  //   for (let i = 0; i < num; i++) {
-  //     const decompiled = await decompileInstruction(this.read, this.registers!, addr);
+  #disassembleFuture = async (
+    start: number,
+    stop: { address: number } | { number: number },
+  ): Promise<void> => {
+    if (!this.panel || !this.registers) return;
 
-  //     // If the instruction is valid, we add it to the cache, otherwise, the
-  //     // cache will remove it.
-  //     this.cache.update(decompiled);
-  //     addr += decompiled.bytes.length;
-  //   }
-  // };
+    let addr = start;
+    for (let i = 0; "number" in stop ? i < stop.number : addr < stop.address; i++) {
+      const disass = await decompileInstruction(this.read, this.registers!, addr);
+
+      // TODO: Maybe add an optional parameter to the decompileInstruction function
+      // that allows us to stop at a certain address (and that fails if it's too
+      // short).
+
+      // If the instruction takes more bytes than we have left, we stop.
+      if ("address" in stop && addr + disass.bytes.length > stop.address) break;
+
+      const rowElement = this.#createBasicRowElement();
+      await this.populateRow(
+        rowElement,
+        disass.startAddress,
+        disass.startAddress === this.registers.pc,
+        false,
+      );
+      this.panel.appendChild(rowElement);
+
+      addr += disass.bytes.length;
+    }
+  };
 
   #createBasicRowElement = (): HTMLDivElement => {
     const rowElement = element(
@@ -259,10 +277,14 @@ class InstructionUI implements IModule {
         );
         this.panel.appendChild(rowElement);
       }
+
       // We disassemble instructions from the current group start forwards (
       // overwriting if already disassembled), and then we populate the panel,
       // stopping at the end of the group, or at a maximum of this.config.lines
       // instructions.
+      const nextGroup = groups[i + 1];
+      if (nextGroup) this.#disassembleFuture(end, { address: nextGroup.entries[0].address });
+      else this.#disassembleFuture(end, { number: this.config.lines });
     }
   }
 }
