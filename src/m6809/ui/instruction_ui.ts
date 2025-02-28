@@ -162,7 +162,8 @@ class InstructionUI implements IModule {
 
     row.classList.toggle("pc", isPC);
     row.classList.toggle("overlap", isOverlapped);
-    row.setAttribute("title", "This instruction is overlapped by another instruction.");
+    if (isOverlapped)
+      row.setAttribute("title", "This instruction is overlapped by another instruction.");
 
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
