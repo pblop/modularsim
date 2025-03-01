@@ -27,7 +27,10 @@
     --icon: url("icons/playlist-x.svg");
   }
   .gui-icon.lock-icon {
-    --icon: url("icons/playlist-x.svg");
+    --icon: url("icons/lock.svg");
+  }
+  .gui-icon.unlock-icon {
+    --icon: url("icons/lock-open.svg");
   }
 
   position: relative;

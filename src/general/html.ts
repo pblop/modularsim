@@ -32,13 +32,22 @@ export function element<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-export function iconButton(iconClass: string, title: string, onClick: () => void) {
-  return element(
+export function iconButton(
+  iconClass: string,
+  title: string,
+  onClick: (icon: HTMLSpanElement, button: HTMLButtonElement) => void,
+): HTMLButtonElement {
+  const span = element("span", {
+    className: `gui-icon ${iconClass}`,
+    title: title,
+  });
+  const button: HTMLButtonElement = element(
     "button",
-    { className: "gui-icon-button", onclick: onClick },
-    element("span", {
-      className: `gui-icon ${iconClass}`,
-      title: title,
-    }),
+    {
+      className: "gui-icon-button",
+      onclick: () => onClick(span, button),
+    },
+    span,
   );
+  return button;
 }

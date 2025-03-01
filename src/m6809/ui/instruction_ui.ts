@@ -107,7 +107,10 @@ class InstructionUI implements IModule {
       await this.addNewPcToPanel();
       await this.populatePanel();
     });
-    const lockbutton = iconButton("lock-icon", "Lock the instruction cache to the PC", () => {});
+    const lockbutton = iconButton("unlock-icon", "Lock the instruction cache to the PC", (icon) => {
+      icon.classList.toggle("unlock-icon");
+      icon.classList.toggle("lock-icon");
+    });
 
     this.panel.appendChild(element("div", { className: "buttons" }, clearbutton, lockbutton));
     this.instructionsElement = element("div", { className: "instructions" });
