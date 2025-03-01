@@ -6,39 +6,29 @@
     border: 0px;
     border-radius: 4px;
   }
-  .clock-icon {
-    height: 1lh;
-    width: 1lh;
-    background: var(--icon-color, var(--gui-color-text)) center / contain no-repeat;
-    -webkit-mask-image: var(--icon);
-    mask-image: var(--icon);
-    -webkit-mask-size: contain;
-    mask-size: contain;
-    display: block;
-  }
-  .clock-icon.reset {
+  .gui-icon.reset {
     --icon: url("icons/reload.svg")
   }
-  .clock-icon.fast-reset {
+  .gui-icon.fast-reset {
     --icon: url("icons/refresh-dot.svg")
   }
-  .clock-icon.pause {
+  .gui-icon.pause {
     --icon: url("icons/player-pause.svg")
   }
-  .clock-icon.continue{
+  .gui-icon.continue{
     --icon: url("icons/player-play.svg")
   }
-  .clock-icon.step-cycle {
+  .gui-icon.step-cycle {
     --icon: url("icons/arrow-right-circle.svg")
   }
-  .clock-icon.step-instruction {
+  .gui-icon.step-instruction {
     --icon: url("icons/player-skip-forward.svg")
   }
-  .clock-icon.cycle-counter {
+  .gui-icon.cycle-counter {
     --icon: url("icons/stopwatch.svg");
     display: inline-block;
   }
-  .clock-icon.heartbeat {
+  .gui-icon.heartbeat {
     --icon: url("icons/heart.svg");
     --icon-color: var(--gui-color-red-background);
   }
