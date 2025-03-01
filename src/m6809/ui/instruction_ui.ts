@@ -197,6 +197,11 @@ class InstructionUI implements IModule {
     // $4f is a valid instruction (clra), we will prefer to decompile $86 $4f
     // as lda $4f.
 
+    // Because we're disassembling backwards, we need to add the first decompiled
+    // instruction last, so we will store them in an array and add them in reverse
+    // order.
+    const elements = [];
+
     let addr = start;
     for (let i = 0; i < num; i++) {
       let largestSuccess: DecompiledInstruction | null = null;
@@ -219,9 +224,14 @@ class InstructionUI implements IModule {
         largestSuccess.startAddress === this.registers.pc,
         false,
       );
-      this.instructionsElement.appendChild(rowElement);
+      elements.push(rowElement);
 
       addr -= largestSuccess.bytes.length;
+    }
+
+    // Add the elements in reverse order.
+    for (let i = elements.length - 1; i >= 0; i--) {
+      this.instructionsElement.appendChild(elements[i]);
     }
   };
 
@@ -294,7 +304,7 @@ class InstructionUI implements IModule {
     for (let i = 0; i < groups.length; i++) {
       // We disassemble instructions from the current group start backwards (
       // overwriting if already disassembled), and then we populate the panel.
-      if (i === 0) this.#disassemblePast(groups[i].entries[0].address, this.config.lines / 2);
+      if (i === 0) await this.#disassemblePast(groups[i].entries[0].address, this.config.lines / 2);
 
       const group = groups[i];
       const { entries, end } = group;
