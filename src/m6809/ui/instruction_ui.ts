@@ -13,7 +13,6 @@ import {
   type InstructionRowData,
 } from "../util/decompile.js";
 import { verify } from "../../general/config.js";
-import { InstructionLog } from "./instruction_ui/instructionlog.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
 
 type InstructionUIConfig = {
