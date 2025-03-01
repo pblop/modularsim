@@ -1,7 +1,7 @@
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type { Registers } from "../util/cpu_parts.js";
-import { element } from "../../general/html.js";
+import { element, iconButton } from "../../general/html.js";
 import {
   type AllInstructionRowData,
   type DecompiledInstruction,
@@ -101,32 +101,32 @@ class InstructionUI implements IModule {
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
 
-    const clearbutton = element(
-      "button",
-      {
-        className: "gui-icon-button",
-        onclick: () => {},
-      },
-      element("span", {
-        className: "gui-icon clear-icon",
-        title: "Clear the instruction cache",
-      }),
-    );
-    const lockbutton = element(
-      "button",
-      {
-        className: "gui-icon-button",
-        onclick: () => {},
-      },
-      element("span", {
-        className: "gui-icon lock-icon",
-        title: "Lock the scrolling to the current instruction",
-      }),
-    );
+    const clearbutton = iconButton("clear-icon", "Clear the instruction cache", async () => {
+      this.history.clear();
+      this.modificationNumber = 0;
+      await this.addNewPcToPanel();
+      await this.populatePanel();
+    });
+    const lockbutton = iconButton("lock-icon", "Lock the instruction cache to the PC", () => {});
 
     this.panel.appendChild(element("div", { className: "buttons" }, clearbutton, lockbutton));
     this.instructionsElement = element("div", { className: "instructions" });
     this.panel.appendChild(this.instructionsElement);
+  };
+
+  addNewPcToPanel = async (): Promise<void> => {
+    if (!this.registers) return;
+
+    this.modificationNumber++;
+
+    // We decompile the instruction at the current PC and store it in the history.
+    // We decompile the instruction at the current PC and store it in the history.
+    const disass = await decompileInstruction(this.read, this.registers, this.registers.pc);
+    this.history.add({
+      address: this.registers.pc,
+      time: this.modificationNumber,
+      disass,
+    });
   };
 
   /**
@@ -141,18 +141,9 @@ class InstructionUI implements IModule {
     this.registers = registers.copy();
 
     // If the PC hasn't changed, we don't need to update the panel.
-    if (oldRegs !== undefined && oldRegs.pc === registers.pc) return;
+    if (oldRegs !== undefined && oldRegs.pc === this.registers.pc) return;
 
-    this.modificationNumber++;
-
-    // We decompile the instruction at the current PC and store it in the history.
-    const disass = await decompileInstruction(this.read, this.registers!, registers.pc);
-    this.history.add({
-      address: registers.pc,
-      time: this.modificationNumber,
-      disass,
-    });
-
+    await this.addNewPcToPanel();
     await this.populatePanel();
   };
 
@@ -165,6 +156,7 @@ class InstructionUI implements IModule {
 
     // Clear the caches.
     this.history.clear();
+    this.modificationNumber = 0;
   };
 
   formatAddress(data: number): string {

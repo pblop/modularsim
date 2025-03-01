@@ -31,3 +31,14 @@ export function element<K extends keyof HTMLElementTagNameMap>(
   }
   return el;
 }
+
+export function iconButton(iconClass: string, title: string, onClick: () => void) {
+  return element(
+    "button",
+    { className: "gui-icon-button", onclick: onClick },
+    element("span", {
+      className: `gui-icon ${iconClass}`,
+      title: title,
+    }),
+  );
+}
