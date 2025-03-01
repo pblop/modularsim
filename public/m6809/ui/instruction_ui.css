@@ -22,6 +22,21 @@
    * half-rows */
   overscroll-behavior-y:auto;
   scroll-snap-type: y mandatory;
+  
+  .gui-icon.clear-icon {
+    --icon: url("icons/playlist-x.svg");
+  }
+  .gui-icon.lock-icon {
+    --icon: url("icons/playlist-x.svg");
+  }
+
+  position: relative;
+  .buttons {
+    position: absolute;
+    z-index: 10;
+    top: 0;
+    right: 0;
+  }
 
   .row {
     &:hover {

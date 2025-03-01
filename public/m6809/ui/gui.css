@@ -59,6 +59,22 @@ button:hover {
       text-shadow: none;
     }
   }
+
+  .gui-icon {
+    height: 1lh;
+    width: 1lh;
+    background: var(--icon-color, var(--gui-color-text)) center / contain no-repeat;
+    -webkit-mask-image: var(--icon);
+    mask-image: var(--icon);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    display: block;
+  }
+  button.gui-icon-button {
+    margin: 0.25em;
+    border: 0px;
+    border-radius: 4px;
+  }
 }
 
 .gui-panel {

@@ -29,6 +29,7 @@ class InstructionUI implements IModule {
   registers?: Registers;
 
   panel?: HTMLElement;
+  instructionsElement?: HTMLElement;
 
   // An internal timer to keep track of when the instructions stored in the
   // cache/history were stored.
@@ -99,6 +100,33 @@ class InstructionUI implements IModule {
 
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
+
+    const clearbutton = element(
+      "button",
+      {
+        className: "gui-icon-button",
+        onclick: () => {},
+      },
+      element("span", {
+        className: "gui-icon clear-icon",
+        title: "Clear the instruction cache",
+      }),
+    );
+    const lockbutton = element(
+      "button",
+      {
+        className: "gui-icon-button",
+        onclick: () => {},
+      },
+      element("span", {
+        className: "gui-icon lock-icon",
+        title: "Lock the scrolling to the current instruction",
+      }),
+    );
+
+    this.panel.appendChild(element("div", { className: "buttons" }, clearbutton, lockbutton));
+    this.instructionsElement = element("div", { className: "instructions" });
+    this.panel.appendChild(this.instructionsElement);
   };
 
   /**
@@ -129,10 +157,8 @@ class InstructionUI implements IModule {
   };
 
   onReset = (): void => {
-    if (!this.panel) return;
-
     // Clear the panel.
-    this.panel.innerHTML = "";
+    if (this.instructionsElement) this.instructionsElement.innerHTML = "";
 
     // Clear the registers.
     this.registers = undefined;
@@ -171,6 +197,7 @@ class InstructionUI implements IModule {
   };
 
   #disassemblePast = async (start: number, num: number): Promise<void> => {
+    if (!this.instructionsElement || !this.registers) return;
     // To disassemble in the past, we will start from the given address
     // and go backwards. We will be greedy, meaning
     // that we will prefer a larger instruction over a smaller one.
@@ -192,9 +219,16 @@ class InstructionUI implements IModule {
       // If we have not succeeded, we stop.
       if (largestSuccess == null) break;
 
-      // If the instruction is valid, we add it to the cache, otherwise, the
-      // cache will remove it.
-      // this.cache.update(largestSuccess);
+      // If we have succeeded, we add the instruction to the panel.
+      const rowElement = this.#createBasicRowElement();
+      await this.populateRow(
+        rowElement,
+        largestSuccess.startAddress,
+        largestSuccess.startAddress === this.registers.pc,
+        false,
+      );
+      this.instructionsElement.appendChild(rowElement);
+
       addr -= largestSuccess.bytes.length;
     }
   };
@@ -203,7 +237,7 @@ class InstructionUI implements IModule {
     start: number,
     stop: { address: number } | { number: number },
   ): Promise<void> => {
-    if (!this.panel || !this.registers) return;
+    if (!this.instructionsElement || !this.registers) return;
 
     let addr = start;
     for (let i = 0; "number" in stop ? i < stop.number : addr < stop.address; i++) {
@@ -223,7 +257,7 @@ class InstructionUI implements IModule {
         disass.startAddress === this.registers.pc,
         false,
       );
-      this.panel.appendChild(rowElement);
+      this.instructionsElement.appendChild(rowElement);
 
       addr += disass.bytes.length;
     }
@@ -245,8 +279,8 @@ class InstructionUI implements IModule {
   };
 
   async populatePanel(): Promise<void> {
-    if (!this.panel || !this.registers) return;
-    this.panel.innerHTML = "";
+    if (!this.instructionsElement || !this.registers) return;
+    this.instructionsElement.innerHTML = "";
 
     // * Valid means that the PC is on an instruction boundary.
     // For each valid* PC that the CPU is on, we check:
@@ -280,7 +314,7 @@ class InstructionUI implements IModule {
           entry.address === this.registers.pc,
           this.history.isOverlapped(entry),
         );
-        this.panel.appendChild(rowElement);
+        this.instructionsElement.appendChild(rowElement);
       }
 
       // We disassemble instructions from the current group start forwards (
