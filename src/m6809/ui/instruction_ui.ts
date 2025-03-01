@@ -113,7 +113,7 @@ class InstructionUI implements IModule {
     });
 
     this.panel.appendChild(element("div", { className: "buttons" }, clearbutton, lockbutton));
-    this.instructionsElement = element("div", { className: "instructions" });
+    this.instructionsElement = element("div", { className: "instruction-container" });
     this.panel.appendChild(this.instructionsElement);
   };
 
@@ -298,11 +298,12 @@ class InstructionUI implements IModule {
     // Then we are updating the panel with the cache.
     // The panel starts at the cache start address, and ends at the cache end
     // address.
-    // TODO: There should be a button that locks/unlocks the scroll to the PC.
-    // TODO: Add a clear cache button, in case of too many overlaps.
 
     // TODO: Make sure that, when speculatively disassembling, we don't disassemble
     // the same memory address twice!
+    // TODO: Make it so disassembling in the future stops on the first failed
+    // disassembly, and then, disassemblePast in the next group correctly
+    // disassembles until the last successful disassembly.
     const groups = this.history.getAllConsecutiveEntryGroups(true);
     for (let i = 0; i < groups.length; i++) {
       // We disassemble instructions from the current group start backwards (

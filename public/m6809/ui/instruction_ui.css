@@ -4,25 +4,7 @@
 
   font-family: 'Courier New', Courier, monospace;
 
-  display: flex;
-  flex-direction: column;
-
-  /* I want the screen to follow scrolling behaviour, similar to a terminal. I'm currently using JS.
-   * But I've tried to use CSS to do it. I've tried using CSS solutions from
-   * https://stackoverflow.com/questions/18614301/keep-overflow-div-scrolled-to-bottom-unless-user-scrolls-up
-   * such as: 
-   * - using scroll snap (but I want to use snap for this other use case, so I can't use it that way).
-   *   also, in firefox, it only allows scrolling with a trackpad/scrollbar, not with the mouse wheel.
-   *   (i think this is https://bugzilla.mozilla.org/show_bug.cgi?id=1753188).
-   * - using overflow-anchor and a div at the end of the page (but I couldn't get it to work, at least on FF).
-   * - using flex-direction: column-reverse (but it only works on its own, not with scroll-snap-type: y mandatory).
-   */
-
-  /* This is for snapping the scroll to the nearest row (so the user can't see
-   * half-rows */
-  overscroll-behavior-y:auto;
-  scroll-snap-type: y mandatory;
-  
+ 
   .gui-icon.clear-icon {
     --icon: url("icons/playlist-x.svg");
   }
@@ -33,12 +15,37 @@
     --icon: url("icons/lock-open.svg");
   }
 
+  overflow: hidden;
   position: relative;
   .buttons {
     position: absolute;
     z-index: 10;
     top: 0;
     right: 0;
+  }
+  
+  .instruction-container {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+
+    /* I want the screen to follow scrolling behaviour, similar to a terminal. I'm currently using JS.
+     * But I've tried to use CSS to do it. I've tried using CSS solutions from
+     * https://stackoverflow.com/questions/18614301/keep-overflow-div-scrolled-to-bottom-unless-user-scrolls-up
+     * such as: 
+     * - using scroll snap (but I want to use snap for this other use case, so I can't use it that way).
+     *   also, in firefox, it only allows scrolling with a trackpad/scrollbar, not with the mouse wheel.
+     *   (i think this is https://bugzilla.mozilla.org/show_bug.cgi?id=1753188).
+     * - using overflow-anchor and a div at the end of the page (but I couldn't get it to work, at least on FF).
+     * - using flex-direction: column-reverse (but it only works on its own, not with scroll-snap-type: y mandatory).
+     */
+  
+    /* This is for snapping the scroll to the nearest row (so the user can't see
+     * half-rows */
+    overscroll-behavior-y:auto;
+    scroll-snap-type: y mandatory;
   }
 
   .row {
