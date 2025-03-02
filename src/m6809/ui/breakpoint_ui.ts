@@ -72,29 +72,54 @@ class BreakpointUI implements IModule {
     this.panel.appendChild(this.list);
   };
 
+  addRowOrdered = (row: HTMLElement) => {
+    if (!this.list) return;
+
+    const address = Number.parseInt(row.getAttribute("data-address") ?? "0");
+    const rows = this.list.querySelectorAll(".row");
+    let inserted = false;
+
+    for (const r of Array.from(rows)) {
+      const raddress = Number.parseInt(r.getAttribute("data-address") ?? "0");
+      if (address < raddress) {
+        this.list.insertBefore(row, r);
+        inserted = true;
+        break;
+      }
+    }
+
+    if (!inserted) {
+      this.list.appendChild(row);
+    }
+  };
+
   addBreakpoint = (address: number, internal = true) => {
     if (!this.list) return;
 
     if (this.breakpoints.includes(address)) return;
     this.breakpoints.push(address);
+    this.breakpoints.sort((a, b) => a - b);
 
-    this.list.appendChild(
+    const newRow = element(
+      "div",
+      {
+        className: "row",
+        customAttributes: { "data-address": address.toString() },
+      },
       element(
         "div",
-        {
-          className: "row",
-          customAttributes: { "data-address": address.toString() },
-        },
-        element(
-          "div",
-          { className: "row-buttons" },
-          iconButton("remove-one", "Remove breakpoint", () => this.removeBreakpoint(address)),
-        ),
-        element("div", { className: "address", textContent: address.toString(16) }),
+        { className: "row-buttons" },
+        iconButton("remove-one", "Remove breakpoint", () => this.removeBreakpoint(address)),
       ),
+      element("div", { className: "address", textContent: this.formatAddress(address) }),
     );
+    this.addRowOrdered(newRow);
 
     if (internal) this.event_transceiver.emit("ui:breakpoint:add", address);
+  };
+
+  formatAddress = (data: number): string => {
+    return data.toString(16).padStart(4, "0");
   };
 
   onBreakpointAdd = (address: number, ctx: EventContext) => {
