@@ -69,8 +69,15 @@ class BreakpointUI implements IModule {
       element(
         "div",
         { className: "breakpoint-buttons" },
-        iconButton("remove-all", "Remove all breakpoints", () => {}),
-        iconButton("add", "Add breakpoint", () => {}),
+        iconButton("remove-all", "Remove all breakpoints", () => {
+          for (const address of this.breakpoints) {
+            this.removeBreakpoint(address);
+          }
+        }),
+        iconButton("add", "Add breakpoint", () => {
+          const address = prompt("Enter address to add breakpoint to:");
+          if (address) this.addBreakpoint(Number(address));
+        }),
       ),
     );
     this.list = element("div", { className: "breakpoint-list" });
