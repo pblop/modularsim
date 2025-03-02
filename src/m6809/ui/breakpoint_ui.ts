@@ -4,6 +4,7 @@ import type { TypedEventTransceiver, EventDeclaration, EventContext } from "../.
 import { element, iconButton } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { verify } from "../../general/config.js";
+import { Registers } from "../util/cpu_parts";
 
 type BreakpointUIConfig = {
   frequency: number;
@@ -20,15 +21,19 @@ class BreakpointUI implements IModule {
 
   breakpoints: number[] = [];
 
+  registers?: Registers;
+
   // language!: string;
   // localeStrings!: typeof BreakpointsConfig.en;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["ui:breakpoint:add", "ui:breakpoint:remove"],
+        provided: ["ui:breakpoint:add", "ui:breakpoint:remove", "ui:clock:pause"],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
+          "cpu:registers_update": this.onRegistersUpdate,
+          "cpu:instruction_finish": this.onInstructionFinish,
         },
         optional: {
           "ui:breakpoint:add": this.onBreakpointAdd,
@@ -141,6 +146,18 @@ class BreakpointUI implements IModule {
 
   onBreakpointRemove = (address: number, ctx: EventContext) => {
     this.removeBreakpoint(address, false);
+  };
+
+  onRegistersUpdate = (registers: Registers) => {
+    if (!this.panel) return;
+
+    this.registers = registers.copy();
+  };
+
+  onInstructionFinish = () => {
+    if (!this.registers) return;
+
+    if (this.breakpoints.includes(this.registers.pc)) this.event_transceiver.emit("ui:clock:pause");
   };
 }
 
