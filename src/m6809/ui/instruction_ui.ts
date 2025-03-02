@@ -390,8 +390,9 @@ class InstructionUI implements IModule {
     if (addressElement) {
       addressElement.classList.add("breakpoint");
       addressElement.classList.add("contrast-color");
-      this.breakpoints.push(address);
     }
+
+    this.breakpoints.push(address);
   };
 
   onBreakpointRemove = (address: number, ctx: EventContext): void => {
@@ -403,8 +404,9 @@ class InstructionUI implements IModule {
     if (addressElement) {
       addressElement.classList.remove("breakpoint");
       addressElement.classList.remove("contrast-color");
-      this.breakpoints = this.breakpoints.filter((a) => a !== address);
     }
+
+    this.breakpoints = this.breakpoints.filter((a) => a !== address);
   };
 }
 
