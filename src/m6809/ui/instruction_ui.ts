@@ -14,10 +14,24 @@ import {
 } from "../util/decompile.js";
 import { verify } from "../../general/config.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
+import { createLanguageStrings } from "../../general/lang.js";
 
 type InstructionUIConfig = {
   lines: number;
 };
+
+const InstructionUIStrings = createLanguageStrings({
+  en: {
+    clearAlt: "Clear the instruction cache",
+    lockAlt: "Scroll with PC",
+    overlappedInfo: "This instruction is overlapped by another instruction.",
+  },
+  es: {
+    clearAlt: "Limpiar la caché de instrucciones",
+    lockAlt: "Desplazarse con el PC",
+    overlappedInfo: "Esta instrucción está superpuesta por otra instrucción.",
+  },
+});
 
 class InstructionUI implements IModule {
   et: TypedEventTransceiver;
@@ -29,6 +43,9 @@ class InstructionUI implements IModule {
 
   panel?: HTMLElement;
   instructionsElement?: HTMLElement;
+
+  language!: string;
+  localeStrings!: typeof InstructionUIStrings.en;
 
   // An internal timer to keep track of when the instructions stored in the
   // cache/history were stored.
@@ -75,6 +92,11 @@ class InstructionUI implements IModule {
     console.log(`[${this.id}] Memory Initializing module.`);
   }
 
+  setLanguage(language: string): void {
+    this.language = language;
+    this.localeStrings = InstructionUIStrings[this.language] || InstructionUIStrings.en;
+  }
+
   /**
    * Wrapper around the event emitter to read bytes from memory (big-endian).
    */
@@ -96,20 +118,22 @@ class InstructionUI implements IModule {
     return val;
   };
 
-  onGuiPanelCreated = (panel_id: string, panel: HTMLElement): void => {
+  onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
     if (this.id !== panel_id) return;
     console.log(`[${this.id}] obtained GUI panel`);
 
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
 
-    const clearbutton = iconButton("clear-icon", "Clear the instruction cache", async () => {
+    this.setLanguage(language);
+
+    const clearbutton = iconButton("clear-icon", this.localeStrings.clearAlt, async () => {
       this.history.clear();
       this.modificationNumber = 0;
       await this.addNewPcToPanel();
       await this.populatePanel();
     });
-    const lockbutton = iconButton("unlock-icon", "Lock the instruction cache to the PC", (icon) => {
+    const lockbutton = iconButton("unlock-icon", this.localeStrings.lockAlt, (icon) => {
       icon.classList.toggle("unlock-icon");
       icon.classList.toggle("lock-icon");
     });
@@ -186,8 +210,7 @@ class InstructionUI implements IModule {
 
     row.classList.toggle("pc", isPC);
     row.classList.toggle("overlap", isOverlapped);
-    if (isOverlapped)
-      row.setAttribute("title", "This instruction is overlapped by another instruction.");
+    if (isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
 
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
