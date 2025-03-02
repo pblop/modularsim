@@ -1,0 +1,57 @@
+.breakpoint-ui {
+  font-family: 'Courier New', Courier, monospace;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  .breakpoint-buttons {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+  }
+  .breakpoint-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+
+  .row {
+    scroll-snap-align: end;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    /* The height of a button is ~1.5lh (1lh icon + 0.5em margin + some other
+     * magical padding/margin I cannot find.)
+     */
+    height: 1.5lh;
+
+    .row-buttons {
+      /* empty */
+    }
+    .address {
+      /* font-size: 1.25em; */
+      padding-left: 0.5em;
+      /* empty */
+    }
+    
+    &:hover {
+      background-color: var(--gui-color-highlight);
+    }
+  }
+
+  .gui-icon.add {
+    --icon: url("icons/plus.svg");
+  }
+  .gui-icon.remove-all {
+    --icon: url("icons/playlist-x.svg");
+  }
+  .gui-icon.remove-one {
+    --icon: url("icons/trash-x.svg");
+  }
+}

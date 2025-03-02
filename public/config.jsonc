@@ -55,7 +55,7 @@
             },
             {
               "id": "main_memory_ui",
-              "column": "4 / span 3",
+              "column": "5 / span 3",
               "row": "3 / span 6"
             },
             {
@@ -67,6 +67,11 @@
               "id": "history_ui",
               "column": "4 / span 3",
               "row": "9 / span 2"
+            },
+            {
+              "id": "breakpoint_ui",
+              "column": "4 / span 1",
+              "row": "3 / span 6"
             },
             // {
             //   "id": "ui2",
@@ -121,6 +126,13 @@
         "type": "ui",
         "url": "./m6809/ui/instruction_ui.js",
         "css": ["./m6809/ui/instruction_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "breakpoint_ui",
+        "type": "ui",
+        "url": "./m6809/ui/breakpoint_ui.js",
+        "css": ["./m6809/ui/breakpoint_ui.css"],
         "config": {}
       },
       {

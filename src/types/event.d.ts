@@ -34,6 +34,9 @@ export interface EventMap {
   "ui:memory:write:result": [address: number, data: number];
   "ui:memory:bulk:write": [address: number, data: Uint8Array];
   "ui:memory:bulk:write:result": [address: number, data: Uint8Array];
+
+  "ui:breakpoint:add": [address: number];
+  "ui:breakpoint:remove": [address: number];
   // Add more events here.
 }
 

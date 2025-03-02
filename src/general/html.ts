@@ -12,9 +12,13 @@ function setProperties<T>(target: T, properties: T) {
   }
 }
 
+type ExtraFields = {
+  customAttributes?: Record<string, string>;
+};
+
 export function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
-  properties: DeepPartial<HTMLElementTagNameMap[K]> = {},
+  properties: DeepPartial<HTMLElementTagNameMap[K]> & ExtraFields = {},
   ...children: HTMLElement[]
 ): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
@@ -23,7 +27,17 @@ export function element<K extends keyof HTMLElementTagNameMap>(
   if (properties instanceof HTMLElement) {
     children.unshift(properties);
   } else {
-    setProperties(el, properties);
+    // Remove customAttributes from properties and set them separately.
+    const customAttributes = properties.customAttributes;
+    properties.customAttributes = undefined;
+
+    setProperties(el, properties as DeepPartial<HTMLElementTagNameMap[K]>);
+
+    if (customAttributes) {
+      for (const key in customAttributes) {
+        el.setAttribute(key, customAttributes[key]);
+      }
+    }
   }
 
   for (const child of children) {
