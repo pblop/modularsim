@@ -169,6 +169,7 @@ class InstructionUI implements IModule {
   }
 
   history: InstructionHistory = new InstructionHistory();
+  breakpoints: number[] = [];
 
   // NOTE: This function requires the registers to be set.
   populateRow = async (
@@ -191,6 +192,11 @@ class InstructionUI implements IModule {
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
     row.setAttribute("data-address", address.toString());
+    if (this.breakpoints.includes(address)) {
+      children[0].classList.add("breakpoint");
+      children[0].classList.add("contrast-color");
+    }
+
     return disass.bytes.length;
   };
 
@@ -285,8 +291,10 @@ class InstructionUI implements IModule {
 
           if (el.classList.contains("breakpoint")) {
             this.et.emit("ui:breakpoint:remove", address);
+            this.breakpoints = this.breakpoints.filter((a) => a !== address);
           } else {
             this.et.emit("ui:breakpoint:add", address);
+            this.breakpoints.push(address);
           }
 
           el.classList.toggle("breakpoint");
@@ -353,8 +361,14 @@ class InstructionUI implements IModule {
   onBreakpointAdd = (address: number, ctx: EventContext): void => {
     if (ctx.emitter === this.id) return;
 
-    const row = this.instructionsElement?.querySelector(`.row[data-address="${address}"]`);
-    if (row) row.classList.add("breakpoint");
+    const addressElement = this.instructionsElement?.querySelector(
+      `.row[data-address="${address}"] > .address`,
+    );
+    if (addressElement) {
+      addressElement.classList.add("breakpoint");
+      addressElement.classList.add("contrast-color");
+      this.breakpoints.push(address);
+    }
   };
 
   onBreakpointRemove = (address: number, ctx: EventContext): void => {
@@ -366,6 +380,7 @@ class InstructionUI implements IModule {
     if (addressElement) {
       addressElement.classList.remove("breakpoint");
       addressElement.classList.remove("contrast-color");
+      this.breakpoints = this.breakpoints.filter((a) => a !== address);
     }
   };
 }
