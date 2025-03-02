@@ -4,11 +4,26 @@ import type { TypedEventTransceiver, EventDeclaration, EventContext } from "../.
 import { element, iconButton } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { verify } from "../../general/config.js";
-import { Registers } from "../util/cpu_parts";
+import type { Registers } from "../util/cpu_parts";
 
 type BreakpointUIConfig = {
   frequency: number;
 };
+
+const BreakpointUIStrings = createLanguageStrings({
+  en: {
+    removeAllBreakpoint: "Remove all breakpoints",
+    addBreakpoint: "Add breakpoint",
+    removeBreakpoint: "Remove breakpoint",
+    enterAddress: "Enter address to add the breakpoint to:",
+  },
+  es: {
+    removeAllBreakpoint: "Eliminar todos los puntos de ruptura",
+    addBreakpoint: "Añadir punto de ruptura",
+    removeBreakpoint: "Eliminar punto de ruptura",
+    enterAddress: "Introduce la dirección en la que añadir el punto de ruptura:",
+  },
+});
 
 class BreakpointUI implements IModule {
   id: string;
@@ -23,8 +38,8 @@ class BreakpointUI implements IModule {
 
   registers?: Registers;
 
-  // language!: string;
-  // localeStrings!: typeof BreakpointsConfig.en;
+  language!: string;
+  localeStrings!: typeof BreakpointUIStrings.en;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -59,23 +74,30 @@ class BreakpointUI implements IModule {
     console.log(`[${this.id}] Module initialized.`);
   }
 
+  setLanguage(language: string): void {
+    this.language = language;
+    this.localeStrings = BreakpointUIStrings[this.language] || BreakpointUIStrings.en;
+  }
+
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string) => {
     if (panel_id !== this.id) return;
 
     this.panel = panel;
     this.panel.classList.add("breakpoint-ui");
 
+    this.setLanguage(language);
+
     this.panel.appendChild(
       element(
         "div",
         { className: "breakpoint-buttons" },
-        iconButton("remove-all", "Remove all breakpoints", () => {
+        iconButton("remove-all", this.localeStrings.removeAllBreakpoint, () => {
           for (const address of this.breakpoints) {
             this.removeBreakpoint(address);
           }
         }),
-        iconButton("add", "Add breakpoint", () => {
-          const address = prompt("Enter address to add breakpoint to:");
+        iconButton("add", this.localeStrings.addBreakpoint, () => {
+          const address = prompt(this.localeStrings.enterAddress);
           if (address) this.addBreakpoint(Number(address));
         }),
       ),
@@ -121,7 +143,9 @@ class BreakpointUI implements IModule {
       element(
         "div",
         { className: "row-buttons" },
-        iconButton("remove-one", "Remove breakpoint", () => this.removeBreakpoint(address)),
+        iconButton("remove-one", this.localeStrings.removeBreakpoint, () =>
+          this.removeBreakpoint(address),
+        ),
       ),
       element("div", { className: "address", textContent: this.formatAddress(address) }),
     );
