@@ -50,6 +50,7 @@
 
   .row {
     &:hover {
+      --current-bg: var(--gui-color-highlight);
       background-color: var(--gui-color-highlight);
     }
 
@@ -78,6 +79,9 @@
        * A padding works well enough */
       /* flex-basis: 10%; */ 
       padding-right: 1em;
+    }
+    .address.breakpoint {
+      --current-bg: var(--gui-color-red-background);
     }
 
     .raw {

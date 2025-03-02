@@ -26,7 +26,7 @@ class BreakpointUI implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: [],
+        provided: ["ui:breakpoint:add", "ui:breakpoint:remove"],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
         },
@@ -72,7 +72,7 @@ class BreakpointUI implements IModule {
     this.panel.appendChild(this.list);
   };
 
-  onBreakpointAdd = (address: number) => {
+  addBreakpoint = (address: number, internal = true) => {
     if (!this.list) return;
 
     if (this.breakpoints.includes(address)) return;
@@ -88,14 +88,21 @@ class BreakpointUI implements IModule {
         element(
           "div",
           { className: "row-buttons" },
-          iconButton("remove-one", "Remove breakpoint", () => this.onBreakpointRemove(address)),
+          iconButton("remove-one", "Remove breakpoint", () => this.removeBreakpoint(address)),
         ),
         element("div", { className: "address", textContent: address.toString(16) }),
       ),
     );
+
+    if (internal) this.event_transceiver.emit("ui:breakpoint:add", address);
   };
 
-  onBreakpointRemove = (address: number) => {
+  onBreakpointAdd = (address: number, ctx: EventContext) => {
+    if (ctx.emitter === this.id) return;
+    this.addBreakpoint(address, false);
+  };
+
+  removeBreakpoint = (address: number, internal = true) => {
     if (!this.list) return;
 
     if (!this.breakpoints.includes(address)) return;
@@ -103,6 +110,12 @@ class BreakpointUI implements IModule {
 
     const row = this.list.querySelector(`.row[data-address="${address}"]`);
     if (row) row.remove();
+
+    if (internal) this.event_transceiver.emit("ui:breakpoint:remove", address);
+  };
+
+  onBreakpointRemove = (address: number, ctx: EventContext) => {
+    this.removeBreakpoint(address, false);
   };
 }
 

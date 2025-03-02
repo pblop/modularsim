@@ -1,5 +1,5 @@
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type { Registers } from "../util/cpu_parts.js";
 import { element, iconButton } from "../../general/html.js";
 import {
@@ -37,14 +37,17 @@ class InstructionUI implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["ui:memory:read"],
+        provided: ["ui:memory:read", "ui:breakpoint:add", "ui:breakpoint:remove"],
         required: {
           "ui:memory:read:result": null,
           "gui:panel_created": this.onGuiPanelCreated,
           "cpu:registers_update": this.onRegistersUpdate,
           "signal:reset": this.onReset,
         },
-        optional: {},
+        optional: {
+          "ui:breakpoint:add": this.onBreakpointAdd,
+          "ui:breakpoint:remove": this.onBreakpointRemove,
+        },
       },
     };
   }
@@ -187,6 +190,7 @@ class InstructionUI implements IModule {
 
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
+    row.setAttribute("data-address", address.toString());
     return disass.bytes.length;
   };
 
@@ -273,7 +277,21 @@ class InstructionUI implements IModule {
       { className: "row" },
       element("span", {
         className: "address",
-        innerText: "....",
+        innerText: "0000",
+        onClick: (el) => {
+          const addressStr = rowElement.getAttribute("data-address");
+          if (!addressStr) return;
+          const address = Number.parseInt(addressStr);
+
+          if (el.classList.contains("breakpoint")) {
+            this.et.emit("ui:breakpoint:remove", address);
+          } else {
+            this.et.emit("ui:breakpoint:add", address);
+          }
+
+          el.classList.toggle("breakpoint");
+          el.classList.toggle("contrast-color");
+        },
       }),
       element("span", { className: "raw", innerText: "..." }),
       element("span", { className: "data", innerText: "..." }),
@@ -331,6 +349,25 @@ class InstructionUI implements IModule {
       else this.#disassembleFuture(end, { number: this.config.lines });
     }
   }
+
+  onBreakpointAdd = (address: number, ctx: EventContext): void => {
+    if (ctx.emitter === this.id) return;
+
+    const row = this.instructionsElement?.querySelector(`.row[data-address="${address}"]`);
+    if (row) row.classList.add("breakpoint");
+  };
+
+  onBreakpointRemove = (address: number, ctx: EventContext): void => {
+    if (ctx.emitter === this.id) return;
+
+    const addressElement = this.instructionsElement?.querySelector(
+      `.row[data-address="${address}"] > .address`,
+    );
+    if (addressElement) {
+      addressElement.classList.remove("breakpoint");
+      addressElement.classList.remove("contrast-color");
+    }
+  };
 }
 
 export default InstructionUI;
