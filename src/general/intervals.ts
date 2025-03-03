@@ -4,6 +4,28 @@
 const breakInterval: { [key: number]: boolean } = {};
 const MIN_TIME = 0.001;
 
+function calculateAnimationFrameTime(callback: (time: number) => void, amount = 100) {
+  let sum = 0;
+  let count = 0;
+
+  const calculateOnce = (nestedness: number) => {
+    if (nestedness > amount) {
+      callback(sum / count);
+      return;
+    }
+
+    requestAnimationFrame((ts0) => {
+      requestAnimationFrame((ts1) => {
+        sum += ts1 - ts0;
+        count++;
+        calculateOnce(nestedness + 1);
+      });
+    });
+  };
+
+  calculateOnce(0);
+}
+
 // NOTA: Esto tiene el problema de que ahora que hay varios ciclos por cada
 // Task de JavaScript. Y ahora las partes del código que utilizan Promises se
 // van a desincronizar, porque se ejecutan una vez por cada varios ciclos.
@@ -26,6 +48,7 @@ function setFastInterval<A extends unknown[]>(
   // of a Promise, we use this variable.
   let hasLastIntervalFinished = true;
 
+  let lastIntervalEndTime = performance.now();
   const intervalCode = setInterval(async () => {
     if (!hasLastIntervalFinished) return;
 
@@ -38,10 +61,20 @@ function setFastInterval<A extends unknown[]>(
         break;
       }
 
+      const now = performance.now();
+      // If we have already taken more than 16ms (1/60Hz), we stop the loop, and
+      // allow the browser to do other stuff (like rendering).
+      if (now - lastIntervalEndTime > 16) break;
+
       const ret = func(...args);
       // If the function returns a Promise, we wait for it to resolve
       if (ret instanceof Promise) await ret;
     }
+
+    const now = performance.now();
+    console.log(`Interval took: ${now - lastIntervalEndTime}ms`);
+    lastIntervalEndTime = now;
+
     hasLastIntervalFinished = true;
   }, 10);
 
