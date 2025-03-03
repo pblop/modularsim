@@ -196,7 +196,8 @@ class M6809Simulator implements ISimulator {
     this.emit("system", "system:load_finish");
   }
 
-  performCycle() {
+  prev = performance.now();
+  async performCycle() {
     console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycle}`);
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
@@ -208,6 +209,13 @@ class M6809Simulator implements ISimulator {
         throw new Error(`[${this.constructor.name}] callback for cycle is undefined`);
       }
       callback(this.queue.cycle, this.queue.subcycle);
+
+      let now = performance.now();
+      console.log(`[${this.constructor.name}] Cycle ${this.queue.cycle} took ${now - this.prev}ms`);
+      if (now - this.prev > 100) {
+        this.prev = now;
+        await await new Promise((r) => setTimeout(r, 0));
+      }
     }
   }
   onCycle(callback: CycleCallback, priority: SubcyclePriority = {}) {
@@ -421,7 +429,7 @@ class M6809Simulator implements ISimulator {
               `[${module}] Module is not a cycle initiator but is trying to perform a cycle`,
             );
         }
-        this.performCycle();
+        return this.performCycle();
       },
       onCycle: this.onCycle.bind(this),
       onceCycle: this.onceCycle.bind(this),

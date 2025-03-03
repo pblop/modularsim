@@ -25,7 +25,7 @@ export type ListenerPriority = SubcyclePriority & CyclePriority;
 export type FinalListenerPriority = { cycle: number; subcycle: number };
 
 export interface CycleManager {
-  performCycle(): void;
+  performCycle(): Promise<void>;
 
   onCycle(callback: CycleCallback, priority?: SubcyclePriority): void;
   onceCycle(callback: CycleCallback, priority?: ListenerPriority): void;

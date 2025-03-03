@@ -1,6 +1,7 @@
 import type { IModule, ModuleDeclaration, SimulationModuleInteraction } from "../../types/module";
 import type { ISimulator } from "../../types/simulator";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event";
+import { clearFastInterval, setFastInterval } from "../../general/intervals.js";
 
 type ClockConfig = {
   // Frequency of the clock in Hz.
@@ -60,19 +61,19 @@ class Clock implements IModule {
     console.log(`[${this.id}] Module initialized.`);
   }
 
-  sendCycleEvent = (): void => {
+  sendCycleEvent = (): Promise<void> => {
     const now = performance.now();
     console.info(`[${this.id}] Clock cycle started ${now - this.prevCycle}ms after the last cycle`);
     this.prevCycle = now;
 
     // The function that will be called every clock cycle.
-    this.simulation.performCycle();
+    return this.simulation.performCycle();
   };
 
   stopInterval(): void {
     if (this.interval_id == null) return;
 
-    clearInterval(this.interval_id);
+    clearFastInterval(this.interval_id);
     this.interval_id = undefined;
   }
 
@@ -82,7 +83,7 @@ class Clock implements IModule {
     this.sendCycleEvent();
 
     // Send a clock cycle start event every 1/frequency seconds.
-    this.interval_id = setInterval(this.sendCycleEvent, 1000 / this.config.frequency);
+    this.interval_id = setFastInterval(this.sendCycleEvent, 1000 / this.config.frequency);
   }
 
   onResetSignal = (): void => {

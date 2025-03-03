@@ -118,7 +118,7 @@
         "type": "extra",
         "url": "./m6809/extra/loader.js",
         "config": {
-          "file": "./m6809/programs/hola.bin"
+          "file": "./m6809/programs/loop.bin"
         }
       },
       {
