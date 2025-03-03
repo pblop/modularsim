@@ -22,7 +22,14 @@ function setFastInterval<A extends unknown[]>(
   // guarantee exact time either, so there's no need to be extremely precise).
   const callsPer10ms = 10 / time;
 
+  // To avoid calling the function while another call is waiting for the result
+  // of a Promise, we use this variable.
+  let hasLastIntervalFinished = true;
+
   const intervalCode = setInterval(async () => {
+    if (!hasLastIntervalFinished) return;
+
+    hasLastIntervalFinished = false;
     // Calls function 'callsPer10ms' times for every 10ms
     for (let i = 0; i < callsPer10ms; i++) {
       // Stops for loop when 'clearInterval' is called
@@ -35,6 +42,7 @@ function setFastInterval<A extends unknown[]>(
       // If the function returns a Promise, we wait for it to resolve
       if (ret instanceof Promise) await ret;
     }
+    hasLastIntervalFinished = true;
   }, 10);
 
   breakInterval[intervalCode] = false;
