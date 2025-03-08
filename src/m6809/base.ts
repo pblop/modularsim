@@ -196,6 +196,7 @@ class M6809Simulator implements ISimulator {
     this.emit("system", "system:load_finish");
   }
 
+  promises: Promise<unknown>[] = [];
   prev = performance.now();
   async performCycle() {
     // console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycle}`);
@@ -209,10 +210,12 @@ class M6809Simulator implements ISimulator {
         throw new Error(`[${this.constructor.name}] callback for cycle is undefined`);
       }
       callback(this.queue.cycle, this.queue.subcycle);
+      await Promise.all(this.promises);
+      this.promises = [];
     }
 
     // Wait for the microtask queue to be empty before continuing.
-    await new Promise((r) => setTimeout(r, 0));
+    // await new Promise((r) => setTimeout(r, 0));
   }
   onCycle(callback: CycleCallback, priority: SubcyclePriority = {}) {
     const wrappedCallback = (...args: Parameters<CycleCallback>) => {
@@ -304,7 +307,10 @@ class M6809Simulator implements ISimulator {
     //   - call them in this iteration
     //   - iterate wrong because of the new elements
     for (const listener of subscribers.slice()) {
-      listener(...args, context);
+      const ret = listener(...args, context);
+      if (ret instanceof Promise) {
+        this.promises.push(ret);
+      }
     }
   }
 

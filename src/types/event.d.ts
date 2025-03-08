@@ -63,7 +63,9 @@ export type EventCallbackArgs<B extends EventBaseName> = [
   ...args: EventParams<B>,
   context: EventContext,
 ];
-type EventCallback<B extends EventBaseName> = (...args: EventCallbackArgs<B>) => void;
+type EventCallback<B extends EventBaseName> = (
+  ...args: EventCallbackArgs<B>
+) => void | Promise<void>;
 
 type ModuleID = string | "*";
 
