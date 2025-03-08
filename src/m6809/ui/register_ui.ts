@@ -4,6 +4,7 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.
 import { isNumber, parseNumber } from "../../general/config.js";
 import { element } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 type RegisterInfoConfig = {
   bits: number;
@@ -105,6 +106,9 @@ class RegisterUI implements IModule {
   language!: string;
   localeStrings!: typeof RegisterUIStrings.en;
 
+  updateQueue: UpdateQueue;
+  updatedRegisters: Set<string> = new Set();
+
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
@@ -136,6 +140,8 @@ class RegisterUI implements IModule {
 
     this.setLanguage("en");
 
+    this.updateQueue = new UpdateQueue(this.refreshUI);
+
     console.log(`[${this.id}] Initializing module.`);
   }
 
@@ -152,6 +158,27 @@ class RegisterUI implements IModule {
     if (!cell) return;
 
     this.registerValues[register] = value;
+
+    this.updatedRegisters.add(register);
+    this.updateQueue.queueUpdate();
+  };
+
+  refreshUI = () => {
+    if (!this.panel) return;
+
+    for (const register of this.updatedRegisters) {
+      this.updateRegisterCell(register);
+    }
+  };
+
+  updateRegisterCell(register: string): void {
+    if (!this.panel) return;
+    this.updatedRegisters.delete(register);
+
+    const cell = this.panel.querySelector(`.register-${register}`);
+    if (!cell) return;
+
+    const value = this.registerValues[register];
 
     // Display flags if they exist, otherwise just display the value.
     const flags = this.config.registers[register].flags;
@@ -184,7 +211,7 @@ class RegisterUI implements IModule {
       this.registerValues[name] = mirroredValue;
       mirroredCell.textContent = this.formatRegister(name, mirroredValue);
     }
-  };
+  }
 
   formatRegister(register: string, data: number): string {
     const numBytes = Math.ceil(this.config.registers[register].bits / 8);
