@@ -198,7 +198,7 @@ class M6809Simulator implements ISimulator {
 
   prev = performance.now();
   async performCycle() {
-    console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycle}`);
+    // console.log(`[${this.constructor.name}] Performing cycle ${this.queue.cycle}`);
     // We're emitting an event, so we increment the index of the event queue (all the
     // new listeners will be added to the index following this one).
     this.queue.incrementCycle();
@@ -286,7 +286,7 @@ class M6809Simulator implements ISimulator {
   emit<B extends EventBaseName>(caller: string, event: EventName<B>, ...args: EventParams<B>) {
     const [base, group] = separateEventName(event);
     if (!base.startsWith("ui:")) {
-      console.log(`(event) ${caller}: ${base} -> ${group ? group : "all"} with args: `, args);
+      // console.log(`(event) ${caller}: ${base} -> ${group ? group : "all"} with args: `, args);
     }
     const subscribers = this.subscribers[event] as EventCallback<B>[] | undefined;
 

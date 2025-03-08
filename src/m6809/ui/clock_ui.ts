@@ -101,7 +101,7 @@ class ClockUI implements IModule {
   }
 
   onCycleStart = (): void => {
-    console.log(`[${this.id}] Clock cycle started`);
+    // console.log(`[${this.id}] Clock cycle started`);
     this.setState({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
   };
 

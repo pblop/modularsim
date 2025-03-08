@@ -18,9 +18,9 @@ const start: CycleStartFn<"execute"> = (cpuInfo, stateInfo) => {
     return;
   }
 
-  console.log(
-    `[${cpu.id}] Executing instruction ${cpu.instruction.mnemonic} ${cpu.addressing.mode}`,
-  );
+  // console.log(
+  //   `[${cpu.id}] Executing instruction ${cpu.instruction.mnemonic} ${cpu.addressing.mode}`,
+  // );
 
   performInstructionLogic("start", cpuInfo, stateInfo, cpu.instruction, cpu.addressing);
 };

@@ -72,7 +72,11 @@ function setFastInterval<A extends unknown[]>(
     }
 
     const now = performance.now();
-    console.log(`Interval took: ${now - lastIntervalEndTime}ms`);
+    const diff = now - lastIntervalEndTime;
+    const isAhead = diff < time;
+    console.log(
+      `Interval took: ${diff}ms (${Math.abs(diff - time)}ms ${isAhead ? "ahead" : "behind"} of ${time}ms target)`,
+    );
     lastIntervalEndTime = now;
 
     hasLastIntervalFinished = true;
