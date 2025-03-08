@@ -52,7 +52,7 @@ class InstructionUI implements IModule {
   // cache/history were stored.
   modificationNumber: number;
 
-  updateQueue: UpdateQueue<number>;
+  updateQueue: UpdateQueue<Registers>;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -139,7 +139,7 @@ class InstructionUI implements IModule {
     const clearbutton = iconButton("clear-icon", this.localeStrings.clearAlt, async () => {
       this.history.clear();
       this.modificationNumber = 0;
-      this.updateQueue.queueUpdate(this.registers?.pc);
+      this.updateQueue.queueUpdate(this.registers);
     });
     const lockbutton = iconButton("unlock-icon", this.localeStrings.lockAlt, (icon) => {
       icon.classList.toggle("unlock-icon");
@@ -151,13 +151,13 @@ class InstructionUI implements IModule {
     this.panel.appendChild(this.instructionsElement);
   };
 
-  addNewPcToPanel = async (pc: number): Promise<void> => {
+  addNewPcToPanel = async (registers: Registers, pc: number): Promise<void> => {
     if (!this.registers) return;
 
     this.modificationNumber++;
 
     // We decompile the instruction at the current PC and store it in the history.
-    const disass = await decompileInstruction(this.read, this.registers, pc);
+    const disass = await decompileInstruction(this.read, registers, pc);
     this.history.add({
       address: pc,
       time: this.modificationNumber,
@@ -179,7 +179,7 @@ class InstructionUI implements IModule {
     // If the PC hasn't changed, we don't need to update the panel.
     if (oldRegs !== undefined && oldRegs.pc === this.registers.pc) return;
 
-    this.updateQueue.queueUpdate(this.registers.pc);
+    this.updateQueue.queueUpdate(this.registers);
   };
 
   onReset = (): void => {
@@ -337,11 +337,11 @@ class InstructionUI implements IModule {
     return rowElement;
   };
 
-  async refreshUI(pcs?: number[]): Promise<void> {
-    if (pcs !== undefined) {
+  async refreshUI(regsQueue?: Registers[]): Promise<void> {
+    if (regsQueue !== undefined) {
       // We need to add the new PCs to the panel.
-      for (const pc of pcs) {
-        await this.addNewPcToPanel(pc);
+      for (const regs of regsQueue) {
+        await this.addNewPcToPanel(regs, regs.pc);
       }
     }
     await this.populatePanel();
