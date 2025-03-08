@@ -210,8 +210,10 @@ class M6809Simulator implements ISimulator {
         throw new Error(`[${this.constructor.name}] callback for cycle is undefined`);
       }
       callback(this.queue.cycle, this.queue.subcycle);
-      await Promise.all(this.promises);
-      this.promises = [];
+      if (this.promises.length > 0) {
+        await Promise.all(this.promises);
+        this.promises = [];
+      }
     }
 
     // Wait for the microtask queue to be empty before continuing.
