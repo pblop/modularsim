@@ -15,6 +15,7 @@ import {
 import { verify } from "../../general/config.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
 import { createLanguageStrings } from "../../general/lang.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 type InstructionUIConfig = {
   lines: number;
@@ -50,6 +51,8 @@ class InstructionUI implements IModule {
   // An internal timer to keep track of when the instructions stored in the
   // cache/history were stored.
   modificationNumber: number;
+
+  updateQueue: UpdateQueue<number>;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -89,6 +92,8 @@ class InstructionUI implements IModule {
     this.modificationNumber = 0;
     this.history = new InstructionHistory();
 
+    this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
+
     console.log(`[${this.id}] Memory Initializing module.`);
   }
 
@@ -105,11 +110,15 @@ class InstructionUI implements IModule {
 
     for (let i = 0; i < bytes; i++) {
       // TODO: Maybe do some comparison that the read address is the correct one?
-      const [_, data] = await this.et.emitAndWait(
+      console.log(`[${this.id}] reading from ${address + i}`);
+      const [addr, data] = await this.et.emitAndWait(
         "ui:memory:read:result",
+        (args) => args[0] === address + i,
         "ui:memory:read",
         address + i,
       );
+      console.log(`[${this.id}] read ${data.toString(16)} from ${addr.toString(16)}`);
+      if (addr !== address + i) throw new Error(`[${this.id}] read an unexpected byte!`);
       if (data == null) throw new Error(`[${this.id}] read an undefined byte!1!!`);
 
       val = (val << 8) | data;
@@ -130,8 +139,7 @@ class InstructionUI implements IModule {
     const clearbutton = iconButton("clear-icon", this.localeStrings.clearAlt, async () => {
       this.history.clear();
       this.modificationNumber = 0;
-      await this.addNewPcToPanel();
-      await this.populatePanel();
+      this.updateQueue.queueUpdate(this.registers?.pc);
     });
     const lockbutton = iconButton("unlock-icon", this.localeStrings.lockAlt, (icon) => {
       icon.classList.toggle("unlock-icon");
@@ -143,16 +151,15 @@ class InstructionUI implements IModule {
     this.panel.appendChild(this.instructionsElement);
   };
 
-  addNewPcToPanel = async (): Promise<void> => {
+  addNewPcToPanel = async (pc: number): Promise<void> => {
     if (!this.registers) return;
 
     this.modificationNumber++;
 
     // We decompile the instruction at the current PC and store it in the history.
-    // We decompile the instruction at the current PC and store it in the history.
-    const disass = await decompileInstruction(this.read, this.registers, this.registers.pc);
+    const disass = await decompileInstruction(this.read, this.registers, pc);
     this.history.add({
-      address: this.registers.pc,
+      address: pc,
       time: this.modificationNumber,
       disass,
     });
@@ -172,8 +179,7 @@ class InstructionUI implements IModule {
     // If the PC hasn't changed, we don't need to update the panel.
     if (oldRegs !== undefined && oldRegs.pc === this.registers.pc) return;
 
-    await this.addNewPcToPanel();
-    await this.populatePanel();
+    this.updateQueue.queueUpdate(this.registers.pc);
   };
 
   onReset = (): void => {
@@ -330,6 +336,16 @@ class InstructionUI implements IModule {
     );
     return rowElement;
   };
+
+  async refreshUI(pcs?: number[]): Promise<void> {
+    if (pcs !== undefined) {
+      // We need to add the new PCs to the panel.
+      for (const pc of pcs) {
+        await this.addNewPcToPanel(pc);
+      }
+    }
+    await this.populatePanel();
+  }
 
   async populatePanel(): Promise<void> {
     if (!this.instructionsElement || !this.registers) return;
