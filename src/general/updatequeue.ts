@@ -8,15 +8,17 @@ export class UpdateQueue {
 
   queueUpdate = (): void => {
     if (this.updateQueued) return;
-
     this.updateQueued = true;
-    const res = this.fn();
-    if (res instanceof Promise) {
-      res.then(() => {
+
+    requestAnimationFrame(() => {
+      const res = this.fn();
+      if (res instanceof Promise) {
+        res.then(() => {
+          this.updateQueued = false;
+        });
+      } else {
         this.updateQueued = false;
-      });
-    } else {
-      this.updateQueued = false;
-    }
+      }
+    });
   };
 }
