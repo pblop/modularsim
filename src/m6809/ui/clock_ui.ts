@@ -3,6 +3,7 @@ import type { ISimulator } from "../../types/simulator";
 import type { TypedEventTransceiver, EventDeclaration, EventContext } from "../../types/event";
 import { element, iconButton } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 type ClockUIConfig = {
   frequency: number;
@@ -49,6 +50,7 @@ class ClockUI implements IModule {
 
   language!: string;
   localeStrings!: typeof ClockUIStrings.en;
+  updateQueue: UpdateQueue<Partial<ClockUIState>>;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -92,6 +94,7 @@ class ClockUI implements IModule {
       cycles: 0,
     };
 
+    this.updateQueue = new UpdateQueue(this.refreshUI);
     console.log(`[${this.id}] Module initialized.`);
   }
 
@@ -113,10 +116,14 @@ class ClockUI implements IModule {
     this.setState({ machineState: "paused" });
   };
 
-  setState(state: Partial<ClockUIState>): void {
-    this.state = { ...this.state, ...state };
-    this.draw(state);
+  setState(stateChange: Partial<ClockUIState>): void {
+    this.state = { ...this.state, ...stateChange };
+    this.updateQueue.queueUpdate(stateChange);
   }
+
+  refreshUI = (changes: Partial<ClockUIState>[]): void => {
+    this.draw(Object.assign({}, ...changes));
+  };
 
   draw(changes?: Partial<ClockUIState>): void {
     if (this.panel == null) return;
