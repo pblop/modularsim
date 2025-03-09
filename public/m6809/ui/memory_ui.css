@@ -35,6 +35,11 @@
     .read-highlight.pc-highlight.write-highlight {
       --current-bg: var(--crwp);
     }
+    
+    input {
+      width: 2ch;
+      height: 1lh;
+    }
   }
   .memory-grid {
     /* display: table */
