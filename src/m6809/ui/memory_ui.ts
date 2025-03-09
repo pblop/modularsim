@@ -170,31 +170,6 @@ class MemoryUI implements IModule {
   createMemoryUI(): void {
     if (!this.panel) return;
 
-    const addrinput = element("input", { type: "text", placeholder: this.localeStrings.address });
-    const valinput = element("input", { type: "text", placeholder: this.localeStrings.value });
-    const writebutton = element("button", {
-      textContent: this.localeStrings.write,
-      onclick: () => {
-        const address = Number.parseInt(addrinput.value, 16);
-        const data = Number.parseInt(valinput.value, 16);
-        if (Number.isNaN(address)) return;
-        if (Number.isNaN(data)) return;
-        this.event_transceiver.emit("ui:memory:write", address, data);
-      },
-    });
-    const readbutton = element("button", {
-      textContent: this.localeStrings.read,
-      onclick: () => {
-        const address = Number.parseInt(addrinput.value, 16);
-        if (Number.isNaN(address)) return;
-        this.event_transceiver.emit("ui:memory:read", address);
-      },
-    });
-
-    const output = element("div", { className: "memory-output" });
-
-    this.panel.appendChild(element("div", addrinput, valinput, writebutton, readbutton, output));
-
     this.memoryTable = element(
       "table",
       { className: "memory-table" },
@@ -216,6 +191,47 @@ class MemoryUI implements IModule {
           element("td", {
             className: `byte-${j} contrast-color`,
             textContent: this.formatMemoryData(0),
+            title: `0x${j.toString(16).padStart(4, "0")}`,
+            onClick: (el) => {
+              // If the cell already has a child element, we will ignore the click.
+              if (el.childElementCount > 0) return;
+
+              const text = el.textContent!;
+
+              // Create an input element to edit the memory value (in place)
+              const input = element("input", {
+                innerText: text,
+                onblur: () => {
+                  // When the input loses focus, we will remove the input element
+                  // and restore the text content of the cell.
+                  // This happens when the user clicks outside the input element
+                  // or presses Enter!
+                  input.remove();
+                  el.textContent = text;
+                },
+                onkeyup: ({ key }) => {
+                  if (key === "Enter") {
+                    // When the user presses Enter, we will parse the input value,
+                    // and emit a memory write event.
+                    const data = Number.parseInt(input.value, 16);
+                    if (Number.isNaN(data)) return;
+
+                    // We will receive the result of the write operation in the
+                    // `ui:memory:write:result` event, and will update the memory
+                    // cell accordingly, then.
+                    this.event_transceiver.emit("ui:memory:write", j, data);
+                  } else if (key === "Escape") {
+                    input.blur();
+                  }
+                },
+              });
+
+              // Clear the text content of the cell and append the input element.
+              el.textContent = "";
+              el.appendChild(input);
+
+              input.focus();
+            },
           }),
         );
       }
