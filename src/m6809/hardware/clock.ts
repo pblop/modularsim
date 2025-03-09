@@ -90,13 +90,16 @@ class Clock implements IModule {
     this.stopInterval();
   };
 
+  startTime = 0;
   onStartRequested = (): void => {
     // If the interval is already running, do nothing.
     if (this.interval_id != null) return;
 
+    this.startTime = performance.now();
     this.createInterval();
   };
   onPauseRequested = (): void => {
+    console.log(`[${this.id}] Clock paused after ${performance.now() - this.startTime}ms`);
     this.stopInterval();
     this.mode = "normal";
   };
