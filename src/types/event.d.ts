@@ -115,7 +115,7 @@ export interface TypedEventTransceiver {
   wait<B extends EventBaseName>(
     event: EventName<B>,
     when?: (args: EventCallbackArgs<B>) => boolean,
-  ): Thenable<EventParams<B>>;
+  ): Promise<EventParams<B>>;
 
   // TODO: add waitAny, waitAll?
   // Emits an event, and waits for another
