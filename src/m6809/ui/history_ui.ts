@@ -7,6 +7,7 @@ import {
   generateInstructionElement,
   generateRowData,
 } from "../util/decompile.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 // biome-ignore lint/complexity/noBannedTypes: <explanation>
 type InstructionUIConfig = {};
@@ -24,6 +25,8 @@ class HistoryUI implements IModule {
   registers?: Registers;
 
   panel?: HTMLElement;
+
+  updateQueue: UpdateQueue<Registers | null>;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -52,6 +55,8 @@ class HistoryUI implements IModule {
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
     this.config = validateMemoryUIConfig(config);
 
+    this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
+
     console.log(`[${this.id}] Memory Initializing module.`);
   }
 
@@ -63,8 +68,9 @@ class HistoryUI implements IModule {
 
     for (let i = 0; i < bytes; i++) {
       // TODO: Maybe do some comparison that the read address is the correct one?
-      const [_, data] = await this.et.emitAndWait(
+      const [addr, data] = await this.et.emitAndWait(
         "ui:memory:read:result",
+        (args) => args[0] === address + i,
         "ui:memory:read",
         address + i,
       );
@@ -96,25 +102,39 @@ class HistoryUI implements IModule {
     // If the PC hasn't changed, we don't need to update the panel.
     if (oldRegs !== undefined && oldRegs.pc === registers.pc) return;
 
-    this.populatePanel();
+    this.updateQueue.queueUpdate(this.registers);
+  };
+
+  refreshUI = async (regsQueue: (Registers | null)[]) => {
+    if (!this.panel) return;
+    if (regsQueue.length === 0) return;
+
+    for (const regs of regsQueue) {
+      if (regs === null) {
+        this.panel.innerHTML = "";
+        this.registers = undefined;
+      } else {
+        await this.populatePanel(regs);
+      }
+    }
   };
 
   onReset = (): void => {
     if (!this.panel) return;
 
     // Clear the panel.
-    this.panel.innerHTML = "";
     this.registers = undefined;
+    this.updateQueue.queueUpdate(null);
   };
 
   formatAddress(data: number): string {
     return data.toString(16).padStart(4, "0");
   }
 
-  async populatePanel(): Promise<void> {
-    if (!this.panel || !this.registers) return;
+  async populatePanel(regs: Registers): Promise<void> {
+    if (!this.panel) return;
 
-    const startAddress = this.registers.pc;
+    const startAddress = regs.pc;
     let currentAddress = startAddress;
 
     const row = element(
@@ -129,7 +149,7 @@ class HistoryUI implements IModule {
       element("span", { className: "extra", innerText: "" }),
     );
 
-    const decompiled = await decompileInstruction(this.read, this.registers, currentAddress);
+    const decompiled = await decompileInstruction(this.read, regs, currentAddress);
     const rowData = generateRowData(decompiled, this.formatAddress);
     generateInstructionElement(
       rowData,
