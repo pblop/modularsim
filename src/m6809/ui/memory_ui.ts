@@ -231,6 +231,10 @@ class MemoryUI implements IModule {
                     input.blur();
                   }
                 },
+                onfocus: () => {
+                  // Select all text by default.
+                  input.select();
+                },
               });
 
               // Clear the text content of the cell and append the input element.
