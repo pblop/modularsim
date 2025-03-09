@@ -39,6 +39,7 @@
     input {
       width: 2ch;
       height: 1lh;
+      text-align: center;
     }
   }
   .memory-grid {
