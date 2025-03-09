@@ -212,7 +212,7 @@ class MemoryUI implements IModule {
                 onkeyup: ({ key }) => {
                   if (key === "Enter") {
                     // If the text hasn't changed, we don't have to do anything.
-                    if (text === input.value) {
+                    if (text.toLowerCase() === input.value.toLowerCase()) {
                       input.blur();
                       return;
                     }
