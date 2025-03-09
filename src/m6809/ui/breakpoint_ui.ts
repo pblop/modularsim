@@ -5,6 +5,7 @@ import { element, iconButton } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { verify } from "../../general/config.js";
 import type { Registers } from "../util/cpu_parts";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 type BreakpointUIConfig = {
   frequency: number;
@@ -25,6 +26,10 @@ const BreakpointUIStrings = createLanguageStrings({
   },
 });
 
+type UpdateQueueElement = {
+  type: "add" | "remove";
+  address: number;
+};
 class BreakpointUI implements IModule {
   id: string;
   event_transceiver: TypedEventTransceiver;
@@ -40,6 +45,8 @@ class BreakpointUI implements IModule {
 
   language!: string;
   localeStrings!: typeof BreakpointUIStrings.en;
+
+  updateQueue: UpdateQueue<UpdateQueueElement>;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -70,6 +77,8 @@ class BreakpointUI implements IModule {
     this.event_transceiver = eventTransceiver;
 
     this.config = verify(config, {}, `[${this.id}] configuration error: `);
+
+    this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -127,33 +136,6 @@ class BreakpointUI implements IModule {
     }
   };
 
-  addBreakpoint = (address: number, internal = true) => {
-    if (!this.list) return;
-
-    if (this.breakpoints.includes(address)) return;
-    this.breakpoints.push(address);
-    this.breakpoints.sort((a, b) => a - b);
-
-    const newRow = element(
-      "div",
-      {
-        className: "row",
-        customAttributes: { "data-address": address.toString() },
-      },
-      element(
-        "div",
-        { className: "row-buttons" },
-        iconButton("remove-one", this.localeStrings.removeBreakpoint, () =>
-          this.removeBreakpoint(address),
-        ),
-      ),
-      element("div", { className: "address", textContent: this.formatAddress(address) }),
-    );
-    this.addRowOrdered(newRow);
-
-    if (internal) this.event_transceiver.emit("ui:breakpoint:add", address);
-  };
-
   formatAddress = (data: number): string => {
     return data.toString(16).padStart(4, "0");
   };
@@ -162,21 +144,31 @@ class BreakpointUI implements IModule {
     if (ctx.emitter === this.id) return;
     this.addBreakpoint(address, false);
   };
+  onBreakpointRemove = (address: number, ctx: EventContext) => {
+    if (ctx.emitter === this.id) return;
+    this.removeBreakpoint(address, false);
+  };
 
+  addBreakpoint = (address: number, internal = true) => {
+    if (!this.list) return;
+
+    if (this.breakpoints.includes(address)) return;
+    this.breakpoints.push(address);
+    this.breakpoints.sort((a, b) => a - b);
+
+    this.updateQueue.queueUpdate({ type: "add", address });
+
+    if (internal) this.event_transceiver.emit("ui:breakpoint:add", address);
+  };
   removeBreakpoint = (address: number, internal = true) => {
     if (!this.list) return;
 
     if (!this.breakpoints.includes(address)) return;
     this.breakpoints = this.breakpoints.filter((a) => a !== address);
 
-    const row = this.list.querySelector(`.row[data-address="${address}"]`);
-    if (row) row.remove();
+    this.updateQueue.queueUpdate({ type: "remove", address });
 
     if (internal) this.event_transceiver.emit("ui:breakpoint:remove", address);
-  };
-
-  onBreakpointRemove = (address: number, ctx: EventContext) => {
-    this.removeBreakpoint(address, false);
   };
 
   onRegistersUpdate = (registers: Registers) => {
@@ -189,6 +181,34 @@ class BreakpointUI implements IModule {
     if (!this.registers) return;
 
     if (this.breakpoints.includes(this.registers.pc)) this.event_transceiver.emit("ui:clock:pause");
+  };
+
+  refreshUI = async (queue: UpdateQueueElement[]) => {
+    if (!this.list) return;
+
+    for (const update of queue) {
+      if (update.type === "add") {
+        const newRow = element(
+          "div",
+          {
+            className: "row",
+            customAttributes: { "data-address": update.address.toString() },
+          },
+          element(
+            "div",
+            { className: "row-buttons" },
+            iconButton("remove-one", this.localeStrings.removeBreakpoint, () =>
+              this.removeBreakpoint(update.address),
+            ),
+          ),
+          element("div", { className: "address", textContent: this.formatAddress(update.address) }),
+        );
+        this.addRowOrdered(newRow);
+      } else if (update.type === "remove") {
+        const row = this.list.querySelector(`.row[data-address="${update.address}"]`);
+        if (row) row.remove();
+      }
+    }
   };
 }
 
