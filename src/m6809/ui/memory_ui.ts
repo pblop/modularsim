@@ -3,6 +3,7 @@ import type { ISimulator } from "../../types/simulator.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 type MemoryUIConfig = {
   start: number;
@@ -31,6 +32,11 @@ const MemoryUIStrings = createLanguageStrings({
   },
 });
 
+type UpdateQueueElement =
+  | { address: number | undefined; type: "read" | "pc" | "write" }
+  | { address: number; type: "write_result"; data: number }
+  | { address: number; type: "bulk_write"; data: Uint8Array };
+
 class MemoryUI implements IModule {
   event_transceiver: TypedEventTransceiver;
   id: string;
@@ -47,14 +53,16 @@ class MemoryUI implements IModule {
   language!: string;
   localeStrings!: typeof MemoryUIStrings.en;
 
+  updateQueue: UpdateQueue<UpdateQueueElement>;
+
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
         provided: ["ui:memory:read", "ui:memory:write"],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
-          "memory:read": this.updateLastMemoryRead,
-          "memory:write": this.updateLastMemoryWrite,
+          "memory:read": this.onMemoryRead,
+          "memory:write": this.onMemoryWrite,
           "memory:write:result": this.onMemoryWriteResult,
           "ui:memory:write:result": this.onMemoryWriteResult,
           "ui:memory:bulk:write:result": this.onMemoryBulkWriteResult,
@@ -81,6 +89,8 @@ class MemoryUI implements IModule {
 
     // Set the default language.
     this.setLanguage("en");
+
+    this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -110,49 +120,26 @@ class MemoryUI implements IModule {
     if (!this.panel || !this.memoryTable) return;
 
     if (pc < this.config.start || pc >= this.config.start + this.config.size) return;
-    const cell = this.panel.querySelector(`.byte-${pc}`);
-    if (!cell) return;
 
-    if (this.pc !== undefined) {
-      const lastCell = this.panel.querySelector(`.byte-${this.pc}`);
-      if (lastCell) lastCell.classList.remove("pc-highlight");
-    }
-
-    cell.classList.add("pc-highlight");
-    this.pc = pc;
+    this.updateQueue.queueUpdate({ type: "pc", address: pc });
   };
-  updateLastMemoryRead = (address: number): void => {
+  onMemoryRead = (address: number): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;
 
     if (address < this.config.start || address >= this.config.start + this.config.size) return;
-    const cell = this.panel.querySelector(`.byte-${address}`);
-    if (!cell) return;
 
-    if (this.lastMemoryRead !== undefined) {
-      const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryRead}`);
-      if (lastCell) lastCell.classList.remove("read-highlight");
-    }
-
-    cell.classList.add("read-highlight");
-    this.lastMemoryRead = address;
+    this.updateQueue.queueUpdate({ type: "read", address });
   };
-  updateLastMemoryWrite = (address: number): void => {
+  onMemoryWrite = (address: number): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;
 
     if (address < this.config.start || address >= this.config.start + this.config.size) return;
-    const cell = this.panel.querySelector(`.byte-${address}`);
-    if (!cell) return;
 
-    if (this.lastMemoryWrite !== undefined) {
-      const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryWrite}`);
-      if (lastCell) lastCell.classList.remove("write-highlight");
-    }
-
-    cell.classList.add("write-highlight");
-    this.lastMemoryWrite = address;
+    this.updateQueue.queueUpdate({ type: "write", address });
   };
+
   onMemoryBulkWriteResult = (dataStart: number, data: Uint8Array): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;
@@ -160,26 +147,8 @@ class MemoryUI implements IModule {
     // If the bulk write is completely outside the memory table, we can ignore
     // it.
     if (dataStart >= this.config.start + this.config.size) return;
-    const dataEnd = dataStart + data.length;
 
-    // If the start of the bulk write is before the start of the memory table,
-    // we will start from the start of the memory table.
-    // Otherwise, if the start of the bulk write is after the start of the
-    // memory table, we will start from the start of the bulk write.
-    const initial = Math.max(dataStart, this.config.start);
-
-    for (
-      let address = initial;
-      // We will iterate until the end of the memory table or the end of the
-      // bulk write, whichever comes first.
-      address < this.config.start + this.config.size && address < dataEnd;
-      address++
-    ) {
-      const cell = this.panel.querySelector(`.byte-${address}`);
-      if (!cell) continue;
-
-      cell.textContent = this.formatMemoryData(data[address - dataStart]);
-    }
+    this.updateQueue.queueUpdate({ type: "bulk_write", address: dataStart, data });
   };
   onMemoryWriteResult = (address: number, data: number): void => {
     if (!this.panel) return;
@@ -187,27 +156,15 @@ class MemoryUI implements IModule {
 
     if (address < this.config.start || address >= this.config.start + this.config.size) return;
 
-    const cell = this.panel.querySelector(`.byte-${address}`);
-    if (!cell) return;
-
-    cell.textContent = this.formatMemoryData(data);
+    this.updateQueue.queueUpdate({ type: "write_result", address, data });
   };
   onReset = (): void => {
     if (!this.panel) return;
     if (!this.memoryTable) return;
 
-    if (this.pc !== undefined) {
-      const lastCell = this.panel.querySelector(`.byte-${this.pc}`);
-      if (lastCell) lastCell.classList.remove("pc-highlight");
-    }
-    if (this.lastMemoryRead !== undefined) {
-      const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryRead}`);
-      if (lastCell) lastCell.classList.remove("read-highlight");
-    }
-    if (this.lastMemoryWrite !== undefined) {
-      const lastCell = this.panel.querySelector(`.byte-${this.lastMemoryWrite}`);
-      if (lastCell) lastCell.classList.remove("write-highlight");
-    }
+    this.updateQueue.queueUpdate({ type: "pc", address: undefined });
+    this.updateQueue.queueUpdate({ type: "read", address: undefined });
+    this.updateQueue.queueUpdate({ type: "write", address: undefined });
   };
 
   createMemoryUI(): void {
@@ -266,6 +223,78 @@ class MemoryUI implements IModule {
     }
 
     this.panel.appendChild(this.memoryTable);
+  }
+
+  refreshUI = async (queue: UpdateQueueElement[]) => {
+    // We only need the last update of each type.
+    const updates = new Map<string, UpdateQueueElement>();
+    for (const update of queue) {
+      updates.set(update.type, update);
+    }
+
+    for (const [_, update] of updates) {
+      switch (update.type) {
+        case "read":
+          this.updateHighlight(update.address, "read-highlight");
+          break;
+        case "write":
+          this.updateHighlight(update.address, "write-highlight");
+          break;
+        case "write_result":
+          this.updateMemory(update.address, update.data);
+          break;
+        case "pc":
+          this.updateHighlight(update.address, "pc-highlight");
+          break;
+        case "bulk_write":
+          this.bulkUpdateMemory(update.address, update.data);
+          break;
+      }
+    }
+  };
+
+  updateHighlight(address: number | undefined, highlightClassName: string): void {
+    if (!this.panel || !this.memoryTable) return;
+
+    // Clear the previous address highlight.
+    this.panel.querySelector(`.${highlightClassName}`)?.classList.remove(highlightClassName);
+
+    if (address === undefined) return;
+
+    // Find the cell corresponding to the new address and highlight it.
+    this.panel.querySelector(`.byte-${address}`)?.classList.add(highlightClassName);
+  }
+  bulkUpdateMemory(dataStart: number, data: Uint8Array): void {
+    if (!this.panel) return;
+
+    const dataEnd = dataStart + data.length;
+
+    // If the start of the bulk write is before the start of the memory table,
+    // we will start from the start of the memory table.
+    // Otherwise, if the start of the bulk write is after the start of the
+    // memory table, we will start from the start of the bulk write.
+    const initial = Math.max(dataStart, this.config.start);
+
+    for (
+      let address = initial;
+      // We will iterate until the end of the memory table or the end of the
+      // bulk write, whichever comes first.
+      address < this.config.start + this.config.size && address < dataEnd;
+      address++
+    ) {
+      const cell = this.panel.querySelector(`.byte-${address}`);
+      if (!cell) continue;
+
+      cell.textContent = this.formatMemoryData(data[address - dataStart]);
+    }
+  }
+  updateMemory(address: number, data: number): void {
+    if (!this.panel) return;
+
+    const cell = this.panel.querySelector(`.byte-${address}`);
+    if (!cell) return;
+
+    cell.textContent = this.formatMemoryData(data);
   }
 }
 
