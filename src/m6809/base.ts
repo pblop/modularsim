@@ -338,10 +338,14 @@ class M6809Simulator implements ISimulator {
     caller: ModuleID,
     event: EventName<B>,
     callback: EventCallback<B>,
+    when?: (args: EventCallbackArgs<B>) => boolean,
   ): void {
     if (!this.subscribers[event]) this.subscribers[event] = [];
 
     const wrappedCallback: EventCallback<B> = (...args: EventCallbackArgs<B>) => {
+      // The event might want to run only if a condition is met (e.g. an argument
+      // is the expected address).
+      if (when && !when(args)) return;
       // This quickly raised alarm bells in my head, because it looks like there could
       // be a read-write race condition here.
       // - I get the event list
@@ -361,20 +365,33 @@ class M6809Simulator implements ISimulator {
   wait<E extends EventBaseName>(
     caller: ModuleID,
     event: EventName<E>,
+    when?: (args: EventCallbackArgs<E>) => boolean,
   ): Promise<EventCallbackArgs<E>> {
-    return new Promise((resolve, reject) => {
-      this.once(caller, event, (...args: EventCallbackArgs<E>) => resolve(args));
+    return new Promise((resolve) => {
+      this.once(caller, event, (...args: EventCallbackArgs<E>) => resolve(args), when);
     });
   }
 
   emitAndWait<L extends EventBaseName, E extends EventBaseName>(
     caller: ModuleID,
     listened: EventName<L>,
-    emitted: EventName<E>,
-    ...args: EventParams<E>
+    ...args: unknown[]
   ): Promise<EventCallbackArgs<L>> {
-    const promise = this.wait(caller, listened);
-    this.emit(caller, emitted, ...args);
+    let when: ((args: EventCallbackArgs<L>) => boolean) | undefined;
+    let emitted: EventName<E>;
+    let eventParams: EventParams<E>;
+
+    if (args[0] instanceof Function) {
+      when = args[0] as (args: EventCallbackArgs<L>) => boolean;
+      emitted = args[1] as EventName<E>;
+      eventParams = args.slice(2) as EventParams<E>;
+    } else {
+      emitted = args[0] as EventName<E>;
+      eventParams = args.slice(1) as EventParams<E>;
+    }
+
+    const promise = this.wait(caller, listened, when);
+    this.emit(caller, emitted, ...eventParams);
     return promise;
   }
 
@@ -469,10 +486,11 @@ class M6809Simulator implements ISimulator {
       // This is a special case, as we need to get the name of the event being
       // emitted and listened to.
       // biome-ignore lint/suspicious/noExplicitAny: <above>
-      return (listened: EventName, emitted: EventName, ...args: any) => {
+      return (listened: EventName, ...args: any) => {
+        const emitted = args[0] instanceof Function ? args[1] : args[0];
         if (actions.includes("listen")) this.permissionsCheckListen(caller, listened);
         if (actions.includes("emit")) this.permissionsCheckEmit(caller, emitted);
-        return fun.bind(this)(caller, listened, emitted, ...args);
+        return fun.bind(this)(caller, listened, ...args);
       };
     }
   };

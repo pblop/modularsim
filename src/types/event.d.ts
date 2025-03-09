@@ -98,7 +98,11 @@ export interface TypedEventTransceiver {
    * @param listener The callback function to call when the event is emitted (
    * the arguments to the callback function are the event parameters).
    */
-  once<B extends EventBaseName>(event: EventName<B>, listener: EventCallback<B>): void;
+  once<B extends EventBaseName>(
+    event: EventName<B>,
+    listener: EventCallback<B>,
+    when?: (args: EventCallbackArgs<B>) => boolean,
+  ): void;
 
   /**
    * Await an event, returning a promise that, when resolved, returns the event
@@ -108,7 +112,10 @@ export interface TypedEventTransceiver {
    * will be called in within the cycle).
    * @param event The event name to wait for.
    */
-  wait<B extends EventBaseName>(event: EventName<B>): Promise<EventParams<B>>;
+  wait<B extends EventBaseName>(
+    event: EventName<B>,
+    when?: (args: EventCallbackArgs<B>) => boolean,
+  ): Thenable<EventParams<B>>;
 
   // TODO: add waitAny, waitAll?
   // Emits an event, and waits for another
@@ -123,6 +130,12 @@ export interface TypedEventTransceiver {
    * @param emittedEvent The event name to emit.
    * @param args The event parameters.
    */
+  emitAndWait<L extends EventBaseName, E extends EventBaseName>(
+    listenedEvent: EventName<L>,
+    when: (args: EventCallbackArgs<L>) => boolean,
+    emittedEvent: EventName<E>,
+    ...args: EventParams<E>
+  ): Promise<EventCallbackArgs<L>>;
   emitAndWait<L extends EventBaseName, E extends EventBaseName>(
     listenedEvent: EventName<L>,
     emittedEvent: EventName<E>,
