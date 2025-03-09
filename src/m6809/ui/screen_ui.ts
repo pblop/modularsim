@@ -4,6 +4,7 @@ import { element } from "../../general/html.js";
 import { verify } from "../../general/config.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { joinEventName } from "../../general/event.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
 
 type ScreenConfig = {
   multiplexer?: string;
@@ -29,6 +30,8 @@ class ScreenUI implements IModule {
 
   language!: string;
   localeStrings!: typeof ScreenUIStrings.en;
+
+  updateQueue: UpdateQueue<number>;
 
   getModuleDeclaration(): ModuleDeclaration {
     const eventAsMultiplexedInput = (event: EventBaseName) =>
@@ -64,6 +67,8 @@ class ScreenUI implements IModule {
       },
     });
 
+    this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
+
     console.log(`[${this.id}] Module initialized.`);
   }
 
@@ -73,14 +78,11 @@ class ScreenUI implements IModule {
   }
 
   onReset = (): void => {
-    if (!this.textElement) return;
-    this.textElement.textContent = "";
+    this.updateQueue.queueUpdate(-1);
   };
 
   onMemoryWrite = (address: number, data: number): void => {
-    if (!this.textElement) return;
-
-    this.textElement.textContent += String.fromCharCode(data);
+    this.updateQueue.queueUpdate(data);
 
     const event = this.config.multiplexer
       ? joinEventName("memory:write:result", this.config.multiplexer)
@@ -101,6 +103,20 @@ class ScreenUI implements IModule {
 
     this.panel.appendChild(this.textElement);
   };
+
+  refreshUI(charCodes: number[]): void {
+    if (!this.textElement) return;
+
+    let text = this.textElement.textContent ?? "";
+    for (const charCode of charCodes) {
+      if (charCode === -1) {
+        text = "";
+      } else {
+        text += String.fromCharCode(charCode);
+      }
+    }
+    this.textElement.textContent = text;
+  }
 }
 
 export default ScreenUI;
