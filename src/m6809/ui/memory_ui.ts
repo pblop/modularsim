@@ -23,12 +23,14 @@ const MemoryUIStrings = createLanguageStrings({
     value: "Value",
     write: "Write",
     read: "Read",
+    onlyHex: "Only 1-byte hex values are allowed.",
   },
   es: {
     address: "Dirección de memoria",
     value: "Valor",
     write: "Escribir",
     read: "Leer",
+    onlyHex: "Sólo se permiten valores hexadecimales de 1 byte",
   },
 });
 
@@ -201,6 +203,8 @@ class MemoryUI implements IModule {
               // Create an input element to edit the memory value (in place)
               const input = element("input", {
                 value: text,
+                type: "text",
+                pattern: "[0-9a-fA-F]{0,2}",
                 onblur: () => {
                   // When the input loses focus, we will remove the input element
                   // and restore the text content of the cell.
@@ -208,6 +212,13 @@ class MemoryUI implements IModule {
                   // or presses Enter!
                   input.remove();
                   el.textContent = text;
+                },
+                oninput: () => {
+                  input.setCustomValidity("");
+                  if (!input.checkValidity()) {
+                    input.setCustomValidity(this.localeStrings.onlyHex);
+                  }
+                  input.reportValidity();
                 },
                 onkeyup: ({ key }) => {
                   if (key === "Enter") {
@@ -220,8 +231,11 @@ class MemoryUI implements IModule {
                     // When the user presses Enter, we will parse the input value,
                     // and emit a memory write event.
                     const data = Number.parseInt(input.value, 16);
-                    if (Number.isNaN(data)) return;
-                    if (data < 0 || data > 0xff) return;
+                    if (Number.isNaN(data) || data < 0 || data > 0xff) {
+                      input.setCustomValidity(this.localeStrings.onlyHex);
+                      input.reportValidity();
+                      return;
+                    }
 
                     // We will receive the result of the write operation in the
                     // `ui:memory:write:result` event, and will update the memory
