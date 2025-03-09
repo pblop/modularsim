@@ -200,7 +200,7 @@ class MemoryUI implements IModule {
 
               // Create an input element to edit the memory value (in place)
               const input = element("input", {
-                innerText: text,
+                value: text,
                 onblur: () => {
                   // When the input loses focus, we will remove the input element
                   // and restore the text content of the cell.
@@ -211,10 +211,17 @@ class MemoryUI implements IModule {
                 },
                 onkeyup: ({ key }) => {
                   if (key === "Enter") {
+                    // If the text hasn't changed, we don't have to do anything.
+                    if (text === input.value) {
+                      input.blur();
+                      return;
+                    }
+
                     // When the user presses Enter, we will parse the input value,
                     // and emit a memory write event.
                     const data = Number.parseInt(input.value, 16);
                     if (Number.isNaN(data)) return;
+                    if (data < 0 || data > 0xff) return;
 
                     // We will receive the result of the write operation in the
                     // `ui:memory:write:result` event, and will update the memory
