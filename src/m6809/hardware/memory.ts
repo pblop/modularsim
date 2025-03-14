@@ -113,7 +113,7 @@ class Memory implements IModule {
       throw new Error(`[${this.id}] Attempted to write more data than memory size.`);
     }
 
-    this.memory.set(data);
+    this.memory.set(data, address);
     this.emitMultiplexed("ui:memory:bulk:write:result", address, data);
   };
   onMemoryRead = (address: number) => {
