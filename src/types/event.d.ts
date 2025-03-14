@@ -9,6 +9,7 @@ export interface EventMap {
   // GUI events.
   "gui:panel_created": [id: string, panel: HTMLElement, language: string];
 
+  "dbg:symbol:add": [symbol: string, address: number, type: "global"];
   // System syncronisation events. These act as a barrier.
   "system:load_finish": [];
 
@@ -65,7 +66,7 @@ export type EventCallbackArgs<B extends EventBaseName> = [
 ];
 type EventCallback<B extends EventBaseName> = (
   ...args: EventCallbackArgs<B>
-) => void | Promise<void>;
+) => unknown | Promise<unknown>;
 
 type ModuleID = string | "*";
 

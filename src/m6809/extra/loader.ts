@@ -1,9 +1,11 @@
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { truncate } from "../../general/numbers.js";
+import { verify } from "../../general/config.js";
 
 type LoaderConfig = {
   file: string;
+  symbolsFile?: string;
 };
 
 function validateLoaderConfig(config: Record<string, unknown>): LoaderConfig {
@@ -36,12 +38,14 @@ class Loader implements IModule {
   evt: TypedEventTransceiver;
   id: string;
   config: LoaderConfig;
+
   fileType: "bin" | "s19";
+  symbolsType: "noice" | undefined;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["ui:memory:write", "ui:memory:bulk:write"],
+        provided: ["ui:memory:write", "ui:memory:bulk:write", "dbg:symbol:add"],
         required: {
           "system:load_finish": this.onLoadFinish,
         },
@@ -61,8 +65,20 @@ class Loader implements IModule {
     console.log(`[${this.id}] Initializing module.`);
 
     // Verify that configuration is ok.
-    if (!config) throw new Error(`[${this.id}] No configuration provided`);
-    this.config = validateLoaderConfig(config);
+    this.config = verify(
+      config,
+      {
+        file: {
+          type: "string",
+          required: true,
+        },
+        symbolsFile: {
+          type: "string",
+          required: false,
+        },
+      },
+      `[${this.id}] configuration error: `,
+    );
 
     if (this.config.file.endsWith(".bin")) {
       this.fileType = "bin";
@@ -72,16 +88,24 @@ class Loader implements IModule {
       throw new Error(`[${this.id}] Invalid file extension. Must be .bin or .s19`);
     }
 
+    if (this.config.symbolsFile !== undefined) {
+      if (this.config.symbolsFile.endsWith(".noi")) {
+        this.symbolsType = "noice";
+      } else {
+        throw new Error(`[${this.id}] Invalid symbols file extension. Must be .noi`);
+      }
+    }
+
     console.log(`[${this.id}] Initialized with config:`, this.config);
   }
 
-  onLoadFinish = async (): Promise<void> => {
-    const r = await fetch(this.config.file);
-    if (this.fileType === "bin") {
+  loadFile = async (file: string, fileType: "s19" | "bin"): Promise<void> => {
+    const r = await fetch(file);
+    if (fileType === "bin") {
       const buffer = await r.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       this.evt.emit("ui:memory:bulk:write", 0, bytes);
-    } else if (this.fileType === "s19") {
+    } else if (fileType === "s19") {
       const text = await r.text();
       const lines = text.trim().split("\n");
       for (const line of lines) {
@@ -131,6 +155,48 @@ class Loader implements IModule {
         }
       }
     }
+  };
+
+  loadSymbols = async (file: string, fileType: "noice"): Promise<void> => {
+    const r = await fetch(file);
+    const text = await r.text();
+    if (fileType === "noice") {
+      /* NOICE symbols contain the following types of lines:
+       * (https://github.com/pblop/asxxxx/blob/bb548e30b92d9e2a918acf92596bf0b3c614632f/asxv5pxx/linksrc/lknoice.c)
+       * -    global symbols: DEF <symbol> <address>
+       * -    scoped symbols: DEFS <symbol> <address>
+       * -             files: FILE <filename> <address>
+       *             (or just FILE <filename>, if no address present)
+       * -         functions: DEF <symbol> <address> & FUNC <symbol> <address>
+       *             (or just FUNC <symbol>, if no address present)
+       * -  static functions: DEFS <symbol> <address> & SFUNC <symbol> <address>
+       *             (or just SFUNC <symbol>, if no address present)
+       * -     end functions: ENDF <symbol> <address>
+       * -             lines: LINE <line> <address>
+       *
+       * But, so far, only the DEFs are relevant to us.
+       */
+      const lines = text.trim().split("\n");
+      for (const line of lines) {
+        const words = line.trim().split(" ");
+        switch (words[0]) {
+          case "DEF": {
+            const symbol = words[1];
+            const address = Number.parseInt(words[2], 16);
+            this.evt.emit("dbg:symbol:add", symbol, address, "global");
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  onLoadFinish = () => {
+    const promises = [this.loadFile(this.config.file, this.fileType)];
+    if (this.config.symbolsFile !== undefined) {
+      promises.push(this.loadSymbols(this.config.symbolsFile, this.symbolsType!));
+    }
+    return Promise.all(promises);
   };
 }
 
