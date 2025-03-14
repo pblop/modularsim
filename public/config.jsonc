@@ -25,16 +25,16 @@
           "size": 256
         }
       },
-      {
-        "id": "ui2",
-        "type": "ui",
-        "url": "./m6809/ui/memory_ui.js",
-        "css": ["./m6809/ui/memory_ui.css"],
-        "config": {
-          "start": 200,
-          "size": 100
-        }
-      },
+      // {
+      //   "id": "ui2",
+      //   "type": "ui",
+      //   "url": "./m6809/ui/memory_ui.js",
+      //   "css": ["./m6809/ui/memory_ui.css"],
+      //   "config": {
+      //     "start": 200,
+      //     "size": 100
+      //   }
+      // },
       {
         "id": "gui",
         "type": "gui",
@@ -118,7 +118,9 @@
         "type": "extra",
         "url": "./m6809/extra/loader.js",
         "config": {
-          "file": "./m6809/programs/hola.bin"
+          "file": "./m6809/programs/hola.s19",
+          "symbolsFile": "./m6809/programs/hola.noi"
+          // "file": "http://localhost:6809/m6809/programs/loop.bin"
         }
       },
       {

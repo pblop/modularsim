@@ -6,7 +6,7 @@ ASFLAGS =
 LINK = aslink
 LINKFLAGS =
 
-all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard *.asm))
+all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard *.asm)) $(patsubst %.asm,%.noi,$(wildcard *.asm))
 
 # Assemble .asm file
 %.rel: %.asm
@@ -17,6 +17,12 @@ all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard
 
 %.s19: %.rel
 	$(LINK) $(LINKFLAGS) -s $<
+
+%.noi: %.rel
+	$(LINK) $(LINKFLAGS) -j $<
+
+%.cdb: %.rel
+	$(LINK) $(LINKFLAGS) -y $<
 
 %.bin: %.s19
 	$(SELF_DIR)/../scripts/s19reader.py $< $@
