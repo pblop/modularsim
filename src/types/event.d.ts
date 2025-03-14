@@ -16,6 +16,7 @@ export interface EventMap {
   "dbg:breakpoint:enable": [address: number];
   "dbg:breakpoint:disable": [address: number];
   "dbg:symbol:add": [symbol: string, address: number, type: "global"];
+  "dbg:symbol:clear": [];
 
   // System syncronisation events. These act as a barrier.
   "system:load_finish": [];
