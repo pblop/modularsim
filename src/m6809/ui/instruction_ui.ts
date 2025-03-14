@@ -109,15 +109,12 @@ class InstructionUI implements IModule {
     let val = 0;
 
     for (let i = 0; i < bytes; i++) {
-      // TODO: Maybe do some comparison that the read address is the correct one?
-      console.log(`[${this.id}] reading from ${address + i}`);
       const [addr, data] = await this.et.emitAndWait(
         "ui:memory:read:result",
         (args) => args[0] === address + i,
         "ui:memory:read",
         address + i,
       );
-      console.log(`[${this.id}] read ${data.toString(16)} from ${addr.toString(16)}`);
       if (addr !== address + i) throw new Error(`[${this.id}] read an unexpected byte!`);
       if (data == null) throw new Error(`[${this.id}] read an undefined byte!1!!`);
 

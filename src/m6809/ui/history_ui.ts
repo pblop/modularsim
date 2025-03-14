@@ -67,7 +67,6 @@ class HistoryUI implements IModule {
     let val = 0;
 
     for (let i = 0; i < bytes; i++) {
-      // TODO: Maybe do some comparison that the read address is the correct one?
       const [addr, data] = await this.et.emitAndWait(
         "ui:memory:read:result",
         (args) => args[0] === address + i,
