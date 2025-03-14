@@ -97,6 +97,12 @@ class Loader implements IModule {
 
         // Check the byte count.
         // The byte count is the number of bytes in the rest of the record
+        if (byteCount < 3) {
+          console.error(
+            `[${this.id}] Invalid record length: byte count is ${byteCount}, and it cannot be less than 3`,
+          );
+          continue;
+        }
         if (byteCount * 2 !== line.length - 4) {
           console.error(
             `[${this.id}] Invalid record length: count is ${byteCount}, but the record has ${(line.length - 4) / 2} bytes`,
