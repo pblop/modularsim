@@ -2,6 +2,7 @@ import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { truncate } from "../../general/numbers.js";
 import { verify } from "../../general/config.js";
+import { element } from "../../general/html.js";
 
 type LoaderConfig = {
   file: string;
@@ -45,8 +46,9 @@ class Loader implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["ui:memory:write", "ui:memory:bulk:write", "dbg:symbol:add"],
+        provided: ["ui:memory:write", "ui:memory:bulk:write", "dbg:symbol:add", "dbg:symbol:clear"],
         required: {
+          "gui:panel_created": this.onPanelCreated,
           "system:load_finish": this.onLoadFinish,
         },
         optional: {},
@@ -98,6 +100,57 @@ class Loader implements IModule {
 
     console.log(`[${this.id}] Initialized with config:`, this.config);
   }
+
+  onPanelCreated = (id: string, panel: HTMLElement, language: string) => {
+    if (id !== this.id) return;
+    panel.classList.add("loader");
+    panel.appendChild(
+      element("label", {
+        innerText: "Load machine code file",
+        htmlFor: `${this.id}-file`,
+      }),
+    );
+    panel.appendChild(element("br"));
+    panel.appendChild(
+      element("input", {
+        id: `${this.id}-file`,
+        type: "file",
+        accept: ".s19,.bin",
+        onchange: (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          if (target.files === null) return;
+          const file = target.files[0];
+          const url = URL.createObjectURL(file);
+          this.loadFile(url, file.name.endsWith(".bin") ? "bin" : "s19");
+        },
+      }),
+    );
+    panel.appendChild(element("br"));
+    panel.appendChild(
+      element(
+        "label",
+        {
+          innerText: "Load symbol file",
+          htmlFor: `${this.id}-symbols`,
+        },
+        element("br"),
+      ),
+    );
+    panel.appendChild(
+      element("input", {
+        id: `${this.id}-symbols`,
+        type: "file",
+        accept: ".noi",
+        onchange: (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          if (target.files === null) return;
+          const file = target.files[0];
+          const url = URL.createObjectURL(file);
+          this.loadSymbols(url, "noice");
+        },
+      }),
+    );
+  };
 
   loadFile = async (file: string, fileType: "s19" | "bin"): Promise<void> => {
     const r = await fetch(file);
@@ -158,6 +211,8 @@ class Loader implements IModule {
   };
 
   loadSymbols = async (file: string, fileType: "noice"): Promise<void> => {
+    this.evt.emit("dbg:symbol:clear");
+
     const r = await fetch(file);
     const text = await r.text();
     if (fileType === "noice") {

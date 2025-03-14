@@ -9,7 +9,14 @@ export interface EventMap {
   // GUI events.
   "gui:panel_created": [id: string, panel: HTMLElement, language: string];
 
+  // Debugging events (most not used yet).
+  "dbg:breakpoint_hit": [address: number];
+  "dbg:breakpoint:remove": [address: number];
+  "dbg:breakpoint:add": [address: number];
+  "dbg:breakpoint:enable": [address: number];
+  "dbg:breakpoint:disable": [address: number];
   "dbg:symbol:add": [symbol: string, address: number, type: "global"];
+
   // System syncronisation events. These act as a barrier.
   "system:load_finish": [];
 
