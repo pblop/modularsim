@@ -1,5 +1,6 @@
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import { truncate } from "../../general/numbers.js";
 
 type LoaderConfig = {
   file: string;
@@ -19,6 +20,16 @@ function hexStringToBytes(hexString = ""): Uint8Array {
   }
 
   return bytes;
+}
+
+function calculateSRECChecksum(...byteArrs: Uint8Array[]): number {
+  // the least significant byte of ones' complement of the sum of the values
+  // represented by the two hex digit pairs for the Byte Count, Address and Data fields
+  let checksum = 0;
+  for (const arr of byteArrs) {
+    for (let i = 0; i < arr.length; i++) checksum = (checksum + arr[i]) & 0xffff;
+  }
+  return 0xff - (checksum & 0xff);
 }
 
 class Loader implements IModule {
@@ -72,17 +83,45 @@ class Loader implements IModule {
       this.evt.emit("ui:memory:bulk:write", 0, bytes);
     } else if (this.fileType === "s19") {
       const text = await r.text();
-      const lines = text.split("\n");
+      const lines = text.trim().split("\n");
       for (const line of lines) {
+        // .s19 files have 16-bit addresses (s0, s1, s5, s9 records)
         const recordType = line.slice(0, 2);
-        // const byteCount = Number.parseInt(line.slice(2, 4), 16);
-        const address = Number.parseInt(line.slice(4, 8), 16);
-        const data = line.slice(8, line.length - 2);
-        // const checksum = Number.parseInt(line.slice(line.length - 2), 16);
+        const byteCountStr = line.slice(2, 4);
+        const addressStr = line.slice(4, 8);
+        const dataStr = line.slice(8, line.length - 2);
+
+        const byteCount = Number.parseInt(byteCountStr, 16);
+        const address = Number.parseInt(addressStr, 16);
+        const checksum = Number.parseInt(line.slice(line.length - 2), 16);
+
+        // Check the byte count.
+        // The byte count is the number of bytes in the rest of the record
+        if (byteCount * 2 !== line.length - 4) {
+          console.error(
+            `[${this.id}] Invalid record length: count is ${byteCount}, but the record has ${(line.length - 4) / 2} bytes`,
+          );
+          continue;
+        }
+
+        const data = hexStringToBytes(dataStr);
+
+        // Check the checksum.
+        const calculatedChecksum = calculateSRECChecksum(
+          hexStringToBytes(byteCountStr),
+          hexStringToBytes(addressStr),
+          data,
+        );
+        if (calculatedChecksum !== checksum) {
+          console.error(
+            `[${this.id}] Invalid checksum: expected ${checksum}, but got ${calculatedChecksum}`,
+          );
+          continue;
+        }
+
+        // Write the data to memory.
         if (recordType === "S1") {
-          const bytes = hexStringToBytes(data);
-          console.log(`[${this.id}] Writing ${bytes.length} bytes to address ${address}`);
-          this.evt.emit("ui:memory:bulk:write", address, bytes);
+          this.evt.emit("ui:memory:bulk:write", address, data);
         }
       }
     }
