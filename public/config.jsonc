@@ -82,6 +82,11 @@
               "id": "clock_ui",
               "column": "-3 / -1",
               "row": "1 / span 2"
+            },
+            {
+              "id": "loader",
+              "column": "-3 / -1",
+              "row": "3 / span 2"
             }
           ]
         }
@@ -117,6 +122,7 @@
         "id": "loader",
         "type": "extra",
         "url": "./m6809/extra/loader.js",
+        "css": ["./m6809/extra/loader.css"],
         "config": {
           "file": "./m6809/programs/hola.s19",
           "symbolsFile": "./m6809/programs/hola.noi"
