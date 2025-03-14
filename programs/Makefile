@@ -6,7 +6,7 @@ ASFLAGS =
 LINK = aslink
 LINKFLAGS =
 
-all: $(patsubst %.asm,%.bin,$(wildcard *.asm))
+all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard *.asm))
 
 # Assemble .asm file
 %.rel: %.asm

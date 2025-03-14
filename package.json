@@ -7,7 +7,7 @@
     "clean": "rm -rf ./dist/",
     "build-ts": "tsc && cp -r ./src/ ./dist/source/",
     "build-programs": "cd ./programs/ && make",
-    "copy-static": "cp -r ./public/* ./dist/ && mkdir -p ./dist/m6809/programs/ && cp ./programs/*.bin ./dist/m6809/programs/",
+    "copy-static": "cp -r ./public/* ./dist/ && mkdir -p ./dist/m6809/programs/ && cp ./programs/*.bin ./dist/m6809/programs/ && cp ./programs/*.s19 ./dist/m6809/programs/",
     "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static",
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'"
