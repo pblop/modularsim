@@ -4,11 +4,12 @@
         .globl programa
 programa:
 	ldx #0xEF00
-  	lda #1
+  	lda #0
 bucle:
-        beq acabar
         sta ,x+
 	adda #0x01
+	cmpx #0xFF00
+        beq acabar
         bra bucle
 acabar: clra
         sta 0xFF01
