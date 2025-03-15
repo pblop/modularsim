@@ -53,6 +53,7 @@ class InstructionUI implements IModule {
   modificationNumber: number;
 
   updateQueue: UpdateQueue<Registers>;
+  cache: Map<number, DecompiledInstruction | FailedDecompilation>;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -93,6 +94,7 @@ class InstructionUI implements IModule {
     this.history = new InstructionHistory();
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
+    this.cache = new Map();
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -154,7 +156,7 @@ class InstructionUI implements IModule {
     this.modificationNumber++;
 
     // We decompile the instruction at the current PC and store it in the history.
-    const disass = await decompileInstruction(this.read, registers, pc);
+    const disass = await this.cachedDecompilation(pc);
     this.history.add({
       address: pc,
       time: this.modificationNumber,
@@ -188,6 +190,7 @@ class InstructionUI implements IModule {
 
     // Clear the caches.
     this.history.clear();
+    this.cache.clear();
     this.modificationNumber = 0;
   };
 
@@ -198,6 +201,17 @@ class InstructionUI implements IModule {
   history: InstructionHistory = new InstructionHistory();
   breakpoints: number[] = [];
 
+  cachedDecompilation = async (
+    address: number,
+  ): Promise<DecompiledInstruction | FailedDecompilation> => {
+    const cached = this.cache.get(address);
+    if (cached) return cached;
+
+    const decomp = await decompileInstruction(this.read, this.registers!, address);
+    this.cache.set(address, decomp);
+    return decomp;
+  };
+
   // NOTE: This function requires the registers to be set.
   populateRow = async (
     row: HTMLDivElement,
@@ -207,9 +221,7 @@ class InstructionUI implements IModule {
   ): Promise<number> => {
     const children = Array.from(row.children) as HTMLSpanElement[];
 
-    const disass =
-      this.history.get(address)?.disass ??
-      (await decompileInstruction(this.read, this.registers!, address));
+    const disass = this.history.get(address)?.disass ?? (await this.cachedDecompilation(address));
 
     row.classList.toggle("pc", isPC);
     row.classList.toggle("overlap", isOverlapped);
@@ -245,7 +257,7 @@ class InstructionUI implements IModule {
       let largestSuccess: DecompiledInstruction | null = null;
       for (let size = 1; size <= 5; size++) {
         const newAddr = addr - size;
-        const decompiled = await decompileInstruction(this.read, this.registers!, newAddr);
+        const decompiled = await this.cachedDecompilation(newAddr);
         if (decompiled.failed || decompiled.bytes.length !== size) continue;
 
         largestSuccess = decompiled;
@@ -281,7 +293,7 @@ class InstructionUI implements IModule {
 
     let addr = start;
     for (let i = 0; "number" in stop ? i < stop.number : addr < stop.address; i++) {
-      const disass = await decompileInstruction(this.read, this.registers!, addr);
+      const disass = await this.cachedDecompilation(addr);
 
       // TODO: Maybe add an optional parameter to the decompileInstruction function
       // that allows us to stop at a certain address (and that fails if it's too
