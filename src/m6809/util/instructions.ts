@@ -311,6 +311,8 @@ function add<M extends GeneralAddressingMode>(
   const untruncated = a + b + carry;
   const result = truncate(untruncated, size * 8);
 
+  regs[reg] = result;
+
   if (size === 1) {
     // 8-bit
     // CC: H, N, Z, V, C
