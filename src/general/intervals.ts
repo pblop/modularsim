@@ -48,11 +48,10 @@ function setFastInterval<A extends unknown[]>(
   // of a Promise, we use this variable.
   let hasLastIntervalFinished = true;
 
-  let lastIntervalEndTime = performance.now();
   const intervalCode = setInterval(async () => {
     if (!hasLastIntervalFinished) return;
-
     hasLastIntervalFinished = false;
+    const intervalStartTime = performance.now();
     // Calls function 'callsPer10ms' times for every 10ms
     for (let i = 0; i < callsPer10ms; i++) {
       // Stops for loop when 'clearInterval' is called
@@ -64,20 +63,19 @@ function setFastInterval<A extends unknown[]>(
       const now = performance.now();
       // If we have already taken more than 16ms (1/60Hz), we stop the loop, and
       // allow the browser to do other stuff (like rendering).
-      if (now - lastIntervalEndTime > 16) break;
+      if (now - intervalStartTime > 16) break;
 
       const ret = func(...args);
       // If the function returns a Promise, we wait for it to resolve
       if (ret instanceof Promise) await ret;
     }
 
-    const now = performance.now();
-    const diff = now - lastIntervalEndTime;
+    const intervalEndTime = performance.now();
+    const diff = intervalEndTime - intervalStartTime;
     const isAhead = diff < time;
     console.log(
       `Interval took: ${diff}ms (${Math.abs(diff - time)}ms ${isAhead ? "ahead" : "behind"} of ${time}ms target)`,
     );
-    lastIntervalEndTime = now;
 
     hasLastIntervalFinished = true;
   }, 10);
