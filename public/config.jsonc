@@ -87,6 +87,11 @@
               "id": "loader",
               "column": "-3 / -1",
               "row": "3 / span 2"
+            },
+            {
+              "id": "2d_screen",
+              "column": "8 / span 3",
+              "row": "3 / span 6"
             }
           ]
         }
@@ -244,8 +249,25 @@
               "module": "main_memory",
               "size": 65536,
               "priority": 1
+            },
+            {
+              "start": "0xEF00",
+              "module": "2d_screen",
+              "size": "0x1000",
+              "priority": 0
             }
           ]
+        }
+      },
+      {
+        "id": "2d_screen",
+        "type": "extra",
+        "url": "./m6809/ui/screen2d_ui.js",
+        "css": ["./m6809/ui/screen2d_ui.css"],
+        "config": {
+          "multiplexer": "multiplexer",
+          "width": 64,
+          "height": 64
         }
       }
     ]

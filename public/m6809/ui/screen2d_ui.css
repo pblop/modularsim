@@ -1,0 +1,15 @@
+.screen2d-ui {
+  display: flex;
+  flex-direction: column;
+  
+  .canvas-container {
+    flex-grow: 1;
+
+    canvas {
+      width: auto;
+      height: 100%;
+      margin: auto;
+      border: 1px solid var(--gui-color-border);
+    }
+  }
+}
