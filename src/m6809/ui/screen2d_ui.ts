@@ -41,11 +41,12 @@ class ScreenUI implements IModule {
   config: Screen2DConfig;
 
   canvasContext?: CanvasRenderingContext2D;
+  pixels: number[];
 
   language!: string;
   localeStrings!: typeof Screen2DUIStrings.en;
 
-  updateQueue: UpdateQueue<PixelUpdateQueueItem>;
+  updateQueue: UpdateQueue;
 
   getModuleDeclaration(): ModuleDeclaration {
     const eventAsMultiplexedInput = (event: EventBaseName) =>
@@ -55,7 +56,10 @@ class ScreenUI implements IModule {
 
     return {
       events: {
-        provided: [eventAsMultiplexedOutput("memory:write:result")],
+        provided: [
+          eventAsMultiplexedOutput("memory:write:result"),
+          eventAsMultiplexedOutput("memory:read:result"),
+        ],
         required: {
           "signal:reset": this.onReset,
           [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
@@ -89,6 +93,8 @@ class ScreenUI implements IModule {
       },
     });
 
+    this.pixels = new Array(this.config.width * this.config.height).fill(0);
+
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
 
     console.log(`[${this.id}] Module initialized.`);
@@ -100,19 +106,26 @@ class ScreenUI implements IModule {
   }
 
   onReset = (): void => {
-    this.updateQueue.queueUpdate({ x: -1, y: -1, grayscale: 0 });
+    this.pixels.fill(0);
+    this.updateQueue.queueUpdate();
   };
 
   onMemoryWrite = (address: number, data: number): void => {
-    const x = address % this.config.width;
-    const y = Math.floor(address / this.config.width);
-    const set = data !== 0;
-    this.updateQueue.queueUpdate({ x, y, grayscale: data });
+    if (address < 0 || address >= this.pixels.length) return;
+
+    this.pixels[address] = data;
+    this.updateQueue.queueUpdate();
 
     const event = this.config.multiplexer
       ? joinEventName("memory:write:result", this.config.multiplexer)
       : "memory:write:result";
     this.event_transceiver.emit(event, address, data);
+  };
+  onMemoryRead = (address: number): void => {
+    const event = this.config.multiplexer
+      ? joinEventName("memory:read:result", this.config.multiplexer)
+      : "memory:read:result";
+    this.event_transceiver.emit(event, address, this.pixels[address]);
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
@@ -131,32 +144,20 @@ class ScreenUI implements IModule {
     panel.appendChild(element("div", { className: "canvas-container" }, canvas));
 
     this.canvasContext = canvas.getContext("2d") ?? undefined;
-    this.clearScreen();
+    this.pixels.fill(0);
+    this.updateQueue.queueUpdate();
   };
 
-  clearScreen(): void {
+  refreshUI(): void {
     if (!this.canvasContext) return;
-
-    this.canvasContext.fillStyle = "black";
-    this.canvasContext.fillRect(0, 0, this.config.width, this.config.height);
-  }
-
-  refreshUI(pixels: PixelUpdateQueueItem[]): void {
-    if (!this.canvasContext) return;
-
-    // If there's a clear command, clear the screen and ignore all pixels before it.
-    const lastClear = findLastIndex(pixels, (pixel) => pixel.x === -1 && pixel.y === -1);
-    if (lastClear !== -1) {
-      pixels = pixels.slice(lastClear + 1);
-      this.clearScreen();
-    }
 
     const imageData = this.canvasContext.getImageData(0, 0, this.config.width, this.config.height);
-    for (const pixel of pixels) {
-      const index = (pixel.y * this.config.width + pixel.x) * 4;
-      imageData.data[index] = pixel.grayscale;
-      imageData.data[index + 1] = pixel.grayscale;
-      imageData.data[index + 2] = pixel.grayscale;
+    for (let i = 0; i < this.pixels.length; i++) {
+      const index = i * 4;
+      const grayscale = this.pixels[i];
+      imageData.data[index] = grayscale;
+      imageData.data[index + 1] = grayscale;
+      imageData.data[index + 2] = grayscale;
       imageData.data[index + 3] = 255;
     }
 
