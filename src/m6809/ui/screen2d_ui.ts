@@ -41,7 +41,7 @@ class ScreenUI implements IModule {
   config: Screen2DConfig;
 
   canvasContext?: CanvasRenderingContext2D;
-  pixels: number[];
+  image: ImageData;
 
   language!: string;
   localeStrings!: typeof Screen2DUIStrings.en;
@@ -93,8 +93,7 @@ class ScreenUI implements IModule {
       },
     });
 
-    this.pixels = new Array(this.config.width * this.config.height).fill(0);
-
+    this.image = new ImageData(this.config.width, this.config.height);
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
 
     console.log(`[${this.id}] Module initialized.`);
@@ -106,14 +105,18 @@ class ScreenUI implements IModule {
   }
 
   onReset = (): void => {
-    this.pixels.fill(0);
+    this.image = new ImageData(this.config.width, this.config.height);
     this.updateQueue.queueUpdate();
   };
 
   onMemoryWrite = (address: number, data: number): void => {
-    if (address < 0 || address >= this.pixels.length) return;
+    if (address < 0 || address >= this.config.height * this.config.width) return;
 
-    this.pixels[address] = data;
+    this.image.data[address * 4] = data;
+    this.image.data[address * 4 + 1] = data;
+    this.image.data[address * 4 + 2] = data;
+    this.image.data[address * 4 + 3] = 255;
+
     this.updateQueue.queueUpdate();
 
     const event = this.config.multiplexer
@@ -125,7 +128,7 @@ class ScreenUI implements IModule {
     const event = this.config.multiplexer
       ? joinEventName("memory:read:result", this.config.multiplexer)
       : "memory:read:result";
-    this.event_transceiver.emit(event, address, this.pixels[address]);
+    this.event_transceiver.emit(event, address, this.image.data[address * 4]);
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
@@ -144,24 +147,14 @@ class ScreenUI implements IModule {
     panel.appendChild(element("div", { className: "canvas-container" }, canvas));
 
     this.canvasContext = canvas.getContext("2d") ?? undefined;
-    this.pixels.fill(0);
+    this.image = new ImageData(this.config.width, this.config.height);
     this.updateQueue.queueUpdate();
   };
 
   refreshUI(): void {
     if (!this.canvasContext) return;
 
-    const imageData = this.canvasContext.getImageData(0, 0, this.config.width, this.config.height);
-    for (let i = 0; i < this.pixels.length; i++) {
-      const index = i * 4;
-      const grayscale = this.pixels[i];
-      imageData.data[index] = grayscale;
-      imageData.data[index + 1] = grayscale;
-      imageData.data[index + 2] = grayscale;
-      imageData.data[index + 3] = 255;
-    }
-
-    this.canvasContext.putImageData(imageData, 0, 0);
+    this.canvasContext.putImageData(this.image, 0, 0);
   }
 }
 
