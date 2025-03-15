@@ -72,12 +72,14 @@ class Clock implements IModule {
 
   stopInterval(): void {
     if (this.interval_id == null) return;
+    console.log(`[${this.id}] Clock paused after ${performance.now() - this.startTime}ms`);
 
     clearFastInterval(this.interval_id);
     this.interval_id = undefined;
   }
 
   createInterval(): void {
+    this.startTime = performance.now();
     // Emit a cycle start event immediately, because setInterval will wait for
     // the delay before calling the function the first time.
     this.sendCycleEvent();
@@ -95,11 +97,9 @@ class Clock implements IModule {
     // If the interval is already running, do nothing.
     if (this.interval_id != null) return;
 
-    this.startTime = performance.now();
     this.createInterval();
   };
   onPauseRequested = (): void => {
-    console.log(`[${this.id}] Clock paused after ${performance.now() - this.startTime}ms`);
     this.stopInterval();
     this.mode = "normal";
   };
