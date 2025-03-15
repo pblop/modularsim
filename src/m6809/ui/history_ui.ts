@@ -3,18 +3,18 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.
 import type { Registers } from "../util/cpu_parts.js";
 import { element } from "../../general/html.js";
 import {
+  DecompiledInstruction,
   decompileInstruction,
+  FailedDecompilation,
   generateInstructionElement,
   generateRowData,
 } from "../util/decompile.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import { verify } from "../../general/config.js";
 
-// biome-ignore lint/complexity/noBannedTypes: <explanation>
-type InstructionUIConfig = {};
-
-function validateMemoryUIConfig(config: Record<string, unknown>): InstructionUIConfig {
-  return config as InstructionUIConfig;
-}
+type InstructionUIConfig = {
+  maxRows: number;
+};
 
 class HistoryUI implements IModule {
   et: TypedEventTransceiver;
@@ -27,6 +27,7 @@ class HistoryUI implements IModule {
   panel?: HTMLElement;
 
   updateQueue: UpdateQueue<Registers | null>;
+  cache: Map<number, DecompiledInstruction | FailedDecompilation> = new Map();
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -53,9 +54,12 @@ class HistoryUI implements IModule {
     this.id = id;
 
     if (!config) throw new Error(`[${this.id}] No configuration provided`);
-    this.config = validateMemoryUIConfig(config);
+    this.config = verify(config, {
+      maxRows: { type: "number", default: 20 },
+    });
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
+    this.cache = new Map();
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -114,6 +118,7 @@ class HistoryUI implements IModule {
         this.registers = undefined;
       } else {
         await this.populatePanel(regs);
+        this.removeTooOldRows();
       }
     }
   };
@@ -124,10 +129,22 @@ class HistoryUI implements IModule {
     // Clear the panel.
     this.registers = undefined;
     this.updateQueue.queueUpdate(null);
+    this.cache.clear();
   };
 
   formatAddress(data: number): string {
     return data.toString(16).padStart(4, "0");
+  }
+
+  removeTooOldRows() {
+    if (!this.panel) return;
+
+    const rows = this.panel.children;
+    if (rows.length > this.config.maxRows) {
+      for (let i = 0; i < rows.length - this.config.maxRows; i++) {
+        this.panel.removeChild(rows[i]);
+      }
+    }
   }
 
   async populatePanel(regs: Registers): Promise<void> {
@@ -148,7 +165,11 @@ class HistoryUI implements IModule {
       element("span", { className: "extra", innerText: "" }),
     );
 
-    const decompiled = await decompileInstruction(this.read, regs, currentAddress);
+    let decompiled = this.cache.get(currentAddress);
+    if (!decompiled) {
+      decompiled = await decompileInstruction(this.read, regs, currentAddress);
+      this.cache.set(currentAddress, decompiled);
+    }
     const rowData = generateRowData(decompiled, this.formatAddress);
     generateInstructionElement(
       rowData,
