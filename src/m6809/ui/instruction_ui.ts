@@ -149,6 +149,7 @@ class InstructionUI implements IModule {
 
     const clearbutton = iconButton("clear-icon", this.localeStrings.clearAlt, async () => {
       this.history.clear();
+      this.cache.clear();
       this.modificationNumber = 0;
       this.updateQueue.queueUpdate(this.registers);
     });
