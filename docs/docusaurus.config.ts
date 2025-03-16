@@ -64,6 +64,7 @@ const config: Config = {
       {
         entryPoints: ["../src/main.ts", "../src/m6809/**/*.ts"],
         tsconfig: "../tsconfig.json",
+        formatWithPrettier: true,
       },
     ],
   ],
