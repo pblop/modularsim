@@ -16,6 +16,7 @@ import { verify } from "../../general/config.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import { InstructionCache } from "./instruction_ui/inst_cache.js";
 
 type InstructionUIConfig = {
   lines: number;
@@ -26,11 +27,13 @@ const InstructionUIStrings = createLanguageStrings({
     clearAlt: "Clear the instruction cache",
     lockAlt: "Scroll with PC",
     overlappedInfo: "This instruction is overlapped by another instruction.",
+    overwrittenInfo: "This instruction was overwritten.",
   },
   es: {
     clearAlt: "Limpiar la caché de instrucciones",
     lockAlt: "Desplazarse con el PC",
     overlappedInfo: "Esta instrucción está superpuesta por otra instrucción.",
+    overwrittenInfo: "Esta instrucción fue sobrescrita.",
   },
 });
 
@@ -53,7 +56,7 @@ class InstructionUI implements IModule {
   modificationNumber: number;
 
   updateQueue: UpdateQueue<Registers>;
-  cache: Map<number, DecompiledInstruction | FailedDecompilation>;
+  cache: InstructionCache;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -68,6 +71,8 @@ class InstructionUI implements IModule {
         optional: {
           "ui:breakpoint:add": this.onBreakpointAdd,
           "ui:breakpoint:remove": this.onBreakpointRemove,
+          "memory:write": this.onMemoryWrite,
+          "ui:memory:write": this.onMemoryWrite,
         },
       },
     };
@@ -94,7 +99,9 @@ class InstructionUI implements IModule {
     this.history = new InstructionHistory();
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
-    this.cache = new Map();
+    this.cache = new InstructionCache((addr) =>
+      decompileInstruction(this.read, this.registers!, addr),
+    );
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -124,6 +131,11 @@ class InstructionUI implements IModule {
     }
 
     return val;
+  };
+
+  onMemoryWrite = (address: number, data: number): void => {
+    this.cache.invalidate(address);
+    this.history.markOverwritten(address);
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
@@ -156,7 +168,7 @@ class InstructionUI implements IModule {
     this.modificationNumber++;
 
     // We decompile the instruction at the current PC and store it in the history.
-    const disass = await this.cachedDecompilation(pc);
+    const disass = await this.cache.getOrGenerate(pc);
     this.history.add({
       address: pc,
       time: this.modificationNumber,
@@ -201,31 +213,23 @@ class InstructionUI implements IModule {
   history: InstructionHistory = new InstructionHistory();
   breakpoints: number[] = [];
 
-  cachedDecompilation = async (
-    address: number,
-  ): Promise<DecompiledInstruction | FailedDecompilation> => {
-    const cached = this.cache.get(address);
-    if (cached) return cached;
-
-    const decomp = await decompileInstruction(this.read, this.registers!, address);
-    this.cache.set(address, decomp);
-    return decomp;
-  };
-
   // NOTE: This function requires the registers to be set.
   populateRow = async (
     row: HTMLDivElement,
-    address: number,
+    disass: DecompiledInstruction | FailedDecompilation,
     isPC: boolean,
-    isOverlapped: boolean,
+    isOverlapped = false,
+    isOverwritten = false,
   ): Promise<number> => {
     const children = Array.from(row.children) as HTMLSpanElement[];
 
-    const disass = this.history.get(address)?.disass ?? (await this.cachedDecompilation(address));
+    const address = disass.startAddress;
 
     row.classList.toggle("pc", isPC);
     row.classList.toggle("overlap", isOverlapped);
+    row.classList.toggle("overwritten", isOverwritten);
     if (isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
+    else if (isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
 
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
@@ -257,7 +261,7 @@ class InstructionUI implements IModule {
       let largestSuccess: DecompiledInstruction | null = null;
       for (let size = 1; size <= 5; size++) {
         const newAddr = addr - size;
-        const decompiled = await this.cachedDecompilation(newAddr);
+        const decompiled = await this.cache.getOrGenerate(newAddr);
         if (decompiled.failed || decompiled.bytes.length !== size) continue;
 
         largestSuccess = decompiled;
@@ -270,9 +274,8 @@ class InstructionUI implements IModule {
       const rowElement = this.#createBasicRowElement();
       await this.populateRow(
         rowElement,
-        largestSuccess.startAddress,
+        largestSuccess,
         largestSuccess.startAddress === this.registers.pc,
-        false,
       );
       elements.push(rowElement);
 
@@ -293,7 +296,7 @@ class InstructionUI implements IModule {
 
     let addr = start;
     for (let i = 0; "number" in stop ? i < stop.number : addr < stop.address; i++) {
-      const disass = await this.cachedDecompilation(addr);
+      const disass = await this.cache.getOrGenerate(addr);
 
       // TODO: Maybe add an optional parameter to the decompileInstruction function
       // that allows us to stop at a certain address (and that fails if it's too
@@ -303,12 +306,7 @@ class InstructionUI implements IModule {
       if ("address" in stop && addr + disass.bytes.length > stop.address) break;
 
       const rowElement = this.#createBasicRowElement();
-      await this.populateRow(
-        rowElement,
-        disass.startAddress,
-        disass.startAddress === this.registers.pc,
-        false,
-      );
+      await this.populateRow(rowElement, disass, disass.startAddress === this.registers.pc);
       this.instructionsElement.appendChild(rowElement);
 
       addr += disass.bytes.length;
@@ -389,9 +387,10 @@ class InstructionUI implements IModule {
         const rowElement = this.#createBasicRowElement();
         await this.populateRow(
           rowElement,
-          entry.address,
+          entry.disass,
           entry.address === this.registers.pc,
           this.history.isOverlapped(entry),
+          this.history.isOverwritten(entry),
         );
         this.instructionsElement.appendChild(rowElement);
       }
