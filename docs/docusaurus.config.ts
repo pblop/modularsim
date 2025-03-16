@@ -62,7 +62,7 @@ const config: Config = {
       // Plugin for generating API documentation from TypeScript source code
       "docusaurus-plugin-typedoc",
       {
-        entryPoints: ["../src/main.ts"],
+        entryPoints: ["../src/main.ts", "../src/m6809/**/*.ts"],
         tsconfig: "../tsconfig.json",
       },
     ],
