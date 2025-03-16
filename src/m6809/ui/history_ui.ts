@@ -11,6 +11,7 @@ import {
 } from "../util/decompile.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
 import { verify } from "../../general/config.js";
+import { InstructionCache } from "./instruction_ui/inst_cache.js";
 
 type InstructionUIConfig = {
   maxRows: number;
@@ -27,7 +28,7 @@ class HistoryUI implements IModule {
   panel?: HTMLElement;
 
   updateQueue: UpdateQueue<Registers | null>;
-  cache: Map<number, DecompiledInstruction | FailedDecompilation> = new Map();
+  cache: InstructionCache;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -59,7 +60,7 @@ class HistoryUI implements IModule {
     });
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
-    this.cache = new Map();
+    this.cache = new InstructionCache();
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -94,6 +95,11 @@ class HistoryUI implements IModule {
 
     // this.anchor = element("div", { properties: { className: "scroll-anchor" } });
     // this.panel.appendChild(this.anchor);
+  };
+
+  onMemoryWrite = (address: number, data: number): void => {
+    if (!this.panel) return;
+    this.cache.invalidate(address);
   };
 
   onRegistersUpdate = (registers: Registers): void => {
