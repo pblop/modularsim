@@ -60,7 +60,9 @@ class HistoryUI implements IModule {
     });
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
-    this.cache = new InstructionCache();
+    this.cache = new InstructionCache((addr) =>
+      decompileInstruction(this.read, this.registers!, addr),
+    );
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -171,11 +173,7 @@ class HistoryUI implements IModule {
       element("span", { className: "extra", innerText: "" }),
     );
 
-    let decompiled = this.cache.get(currentAddress);
-    if (!decompiled) {
-      decompiled = await decompileInstruction(this.read, regs, currentAddress);
-      this.cache.set(currentAddress, decompiled);
-    }
+    const decompiled = await this.cache.getOrGenerate(currentAddress);
     const rowData = generateRowData(decompiled, this.formatAddress);
     generateInstructionElement(
       rowData,

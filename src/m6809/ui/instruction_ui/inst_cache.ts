@@ -6,10 +6,21 @@ export class InstructionCache {
   private firstAddress: number;
   private lastAddress: number;
 
-  constructor() {
+  constructor(
+    private generator: (address: number) => Promise<DecompiledInstruction | FailedDecompilation>,
+  ) {
     this.cache = new Map();
     this.firstAddress = 0;
     this.lastAddress = 0;
+  }
+  async getOrGenerate(address: number): Promise<DecompiledInstruction | FailedDecompilation> {
+    if (!this.cache.has(address)) {
+      const instr = await this.generator(address);
+      this.set(address, instr);
+      return instr;
+    }
+
+    return this.cache.get(address)!;
   }
   get(address: number) {
     return this.cache.get(address);
