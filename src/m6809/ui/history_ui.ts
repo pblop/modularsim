@@ -40,7 +40,10 @@ class HistoryUI implements IModule {
           "cpu:registers_update": this.onRegistersUpdate,
           "signal:reset": this.onReset,
         },
-        optional: {},
+        optional: {
+          "memory:write": this.onMemoryWrite,
+          "ui:memory:write": this.onMemoryWrite,
+        },
       },
     };
   }
