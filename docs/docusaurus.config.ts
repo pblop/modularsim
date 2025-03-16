@@ -57,7 +57,16 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-
+  plugins: [
+    [
+      // Plugin for generating API documentation from TypeScript source code
+      "docusaurus-plugin-typedoc",
+      {
+        entryPoints: ["../src/main.ts"],
+        tsconfig: "../tsconfig.json",
+      },
+    ],
+  ],
   themeConfig: {
     // Replace with your project's social card
     image: "./img/MC6809EP.jpg",
@@ -100,7 +109,7 @@ const config: Config = {
             },
             {
               label: "API",
-              to: "/docs/intro",
+              to: "/docs/api",
             },
           ],
         },
