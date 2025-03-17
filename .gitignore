@@ -1,5 +1,6 @@
 dist
 node_modules
+.env
 
 # ignore binary programs (very big files)
 *.bin

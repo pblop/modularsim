@@ -2,6 +2,7 @@
 
 GIST_KEY="$1"
 GIST_ID="$2"
+FILES="$3"
 
 if [ -z "$GIST_KEY" ]; then
   echo "GIST_KEY is required"
@@ -11,6 +12,11 @@ fi
 if [ -z "$GIST_ID" ]; then
   echo "GIST_ID is required"
   echo "Usage: $0 <GIST_KEY> <GIST_ID>"
+  exit 1
+fi
+if [ -z "$FILES" ]; then
+  echo "FILES is required"
+  echo "Usage: $0 <GIST_KEY> <GIST_ID> <FILES>"
   exit 1
 fi
 
@@ -24,7 +30,7 @@ resp=$(curl \
   --silent \
   --output /dev/null \
   "https://api.github.com/gists/$GIST_ID" \
-  -d '{"files":{"instruction-coverage.json":{"content":"Hello World from GitHub"}}}')
+  -d "{\"files\":${FILES}")
 
 if [ $resp -eq 200 ]; then
   echo "Gist updated successfully"
