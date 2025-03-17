@@ -631,7 +631,7 @@ addInstructions(
       add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
   }),
 );
-// adc8 (adca, adcb) and adc16 (adcd)
+// adc8 (adca, adcb)
 addInstructions(
   "adc{register}",
   [
@@ -643,10 +643,6 @@ addInstructions(
     [0xd9, "B", "direct", "4"],
     [0xe9, "B", "indexed", "4+"],
     [0xf9, "B", "extended", "5"],
-    [0x1089, "D", "immediate", "5"],
-    [0x1099, "D", "direct", "7"],
-    [0x10a9, "D", "indexed", "7+"],
-    [0x10b9, "D", "extended", "8"],
   ],
   (reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
