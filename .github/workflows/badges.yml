@@ -1,4 +1,4 @@
-name: Test
+name: Badges
 
 on:
   push:
@@ -21,9 +21,5 @@ jobs:
       - name: Build programs
         shell: bash
         env:
-          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-        run: ./scripts/update-badges-gist.sh $GIST_TOKEN 11b83a561dc49ff1b6cd9882e035ce4b
-      - run: |
-          bun test --timeout 5000
-        env:
-          FORCE_COLOR: 3
+          GIST_SECRET: ${{ secrets.GIST_SECRET }}
+        run: ./scripts/update-badges-gist.sh "$GIST_SECRET" "11b83a561dc49ff1b6cd9882e035ce4b"
