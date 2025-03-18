@@ -120,9 +120,9 @@ export default function (addInstructions: typeof addInstructionsType) {
   addInstructions(
     "clr",
     [
-      [0x0f, undefined, "direct", "6/5"],
+      [0x0f, undefined, "direct", "6"],
       [0x1f, undefined, "indexed", "6+"],
-      [0x2f, undefined, "extended", "7/6"],
+      [0x2f, undefined, "extended", "7"],
     ],
     (_, __, ___, ____) => ({
       start: clrmempart1,
