@@ -390,6 +390,13 @@ export type InstructionData<T extends AddressingMode = AddressingMode> = {
   end?: InstructionEndFn<T>;
   extra: ExtraInstructionData;
 };
+export type FunGen<R extends Accumulator | Register | "pc", M extends AddressingMode> = (
+  mnemonic: string,
+  register: R,
+  mode: M,
+  cycles: string,
+  extra: ExtraInstructionData,
+) => { start?: InstructionStartFn<M>; end?: InstructionEndFn<M> } | InstructionEndFn<M>;
 export const INSTRUCTIONS: Record<number, InstructionData> = {};
 /**
  * Helper function to add instructions to the INSTRUCTIONS object in a more readable way.
@@ -402,25 +409,20 @@ export const INSTRUCTIONS: Record<number, InstructionData> = {};
  * or just an `end` function.
  */
 export function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
-  mnemonic: string,
+  mnemonicPattern: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
-  funGen: (
-    register: R,
-    mode: M,
-    cycles: string,
-    extra: ExtraInstructionData,
-  ) => { start?: InstructionStartFn<M>; end?: InstructionEndFn<M> } | InstructionEndFn<M>,
+  funGen: FunGen<R, M>,
   extraIn?: ExtraInstructionData,
 ) {
   // Default extra information.
   const extra = { isLongBranch: false, ...extraIn };
 
   for (const [opcode, register, mode, cycles] of modes) {
-    const replaced = mnemonic.replace("{register}", register.toLowerCase());
+    const mnemonic = mnemonicPattern.replace("{register}", register.toLowerCase());
 
-    const fun = funGen(register, mode, cycles, extra);
+    const fun = funGen(mnemonic, register, mode, cycles, extra);
     INSTRUCTIONS[opcode] = {
-      mnemonic: replaced,
+      mnemonic,
       register,
       mode,
       cycles,
@@ -438,7 +440,7 @@ addInstructions(
     [0x4f, "A", "inherent", "1"],
     [0x5f, "B", "inherent", "1"],
   ],
-  (reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
+  (_, reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
 );
 
 // ld8 (lda, ldb) and ld16 (ldd, lds, ldu, ldx, ldy)
@@ -478,7 +480,7 @@ addInstructions(
     [0xbe, "X", "extended", "6"],
     [0x10be, "Y", "extended", "7"],
   ],
-  (reg, mode, cycles) => ({
+  (_, reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
       queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
@@ -514,7 +516,7 @@ addInstructions(
     [0xbf, "X", "extended", "6"],
     [0x10bf, "Y", "extended", "7"],
   ],
-  (reg, mode, cycles) => ({
+  (_, reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
       queryWrite(REGISTER_SIZE[reg], regs[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
@@ -539,7 +541,7 @@ addInstructions(
     [0xe3, "D", "indexed", "6+"],
     [0xf3, "D", "extended", "7"],
   ],
-  (reg, mode, cycles) => ({
+  (_, reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
       queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
@@ -559,7 +561,7 @@ addInstructions(
     [0xe9, "B", "indexed", "4+"],
     [0xf9, "B", "extended", "5"],
   ],
-  (reg, mode, cycles) => ({
+  (_, reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
       queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>
@@ -599,7 +601,7 @@ addInstructions(
     [0x10ac, "Y", "indexed", "7+"],
     [0x10bc, "Y", "extended", "8"],
   ],
-  (reg, mode, cycles) => ({
+  (_, reg, mode, cycles) => ({
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
       queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) =>

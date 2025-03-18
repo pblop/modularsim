@@ -62,6 +62,16 @@ export const REGISTER_SIZE = {
   dp: 1,
 };
 
+/**
+ * E = Entire Flag,
+ * F = FIRQ Mask,
+ * H = Half Carry,
+ * I = IRQ Mask,
+ * N = Negative,
+ * Z = Zero,
+ * V = Overflow,
+ * C = Carry
+ */
 export enum ConditionCodes {
   CARRY = 1 << 0, // Carry
   OVERFLOW = 1 << 1, // Overflow
