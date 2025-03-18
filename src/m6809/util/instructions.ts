@@ -11,6 +11,9 @@ import {
 } from "../../general/numbers.js";
 import M6809Simulator from "../base.js";
 import branching from "./instructions/branching.js";
+import test from "./instructions/test.js";
+import loadStore from "./instructions/loadstore.js";
+import arithmetic from "./instructions/arithmetic.js";
 
 export type ExecuteStateInfo = StateInfo<"execute">;
 
@@ -34,7 +37,7 @@ type InstructionEndFn<M extends AddressingMode = AddressingMode> = (
 ) => boolean;
 
 export type AddressingMode = AddressableAddressingMode | "inherent";
-type GeneralAddressingMode = "immediate" | "direct" | "indexed" | "extended";
+export type GeneralAddressingMode = "immediate" | "direct" | "indexed" | "extended";
 export type AddressableAddressingMode =
   | "immediate"
   | "direct"
@@ -124,7 +127,7 @@ export type FetchableAddress = number | "pc";
  * @param cpuInfo The CPU information.
  * @param stateInfo The state information.
  */
-function queryReadAddressing(
+export function queryReadAddressing(
   bytes: number,
   addr: CpuAddressingData<GeneralAddressingMode>,
   { queryMemoryRead, memoryAction, memoryPending }: CpuInfo,
@@ -139,7 +142,7 @@ function queryReadAddressing(
     instructionCtx.memory = null;
   }
 }
-function retrieveReadAddressing(
+export function retrieveReadAddressing(
   addr: CpuAddressingData<GeneralAddressingMode>,
   { memoryAction, memoryPending }: CpuInfo,
   { ctx: { instructionCtx } }: ExecuteStateInfo,
@@ -155,7 +158,7 @@ function retrieveReadAddressing(
  * @param value The value to write.
  * @returns Whether the memory has been fully written to.
  */
-function queryWrite(
+export function queryWrite(
   size: number,
   value: number,
   addr: CpuAddressingData<"direct" | "indexed" | "extended">,
@@ -188,188 +191,14 @@ const SHORT_CC_NAME_MAP: Record<ShortCCNames, ConditionCodes> = {
   V: ConditionCodes.OVERFLOW,
   C: ConditionCodes.CARRY,
 };
-function updateConditionCodes(regs: Registers, ccs: { [K in ShortCCNames]?: boolean | number }) {
+export function updateConditionCodes(
+  regs: Registers,
+  ccs: { [K in ShortCCNames]?: boolean | number },
+) {
   for (const [cc, value] of Object.entries(ccs)) {
     if (value) regs.cc |= SHORT_CC_NAME_MAP[cc as ShortCCNames];
     else regs.cc &= ~SHORT_CC_NAME_MAP[cc as ShortCCNames];
   }
-}
-
-function ld<M extends GeneralAddressingMode>(
-  reg: Accumulator | Register,
-  mode: M,
-  cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-) {
-  const size = REGISTER_SIZE[reg];
-
-  const val = retrieveReadAddressing(addr, cpuInfo, stateInfo);
-  if (val === null) return false;
-  regs[reg] = val;
-
-  updateConditionCodes(regs, {
-    N: val & (size === 1 ? 0x80 : 0x8000),
-    Z: val === 0,
-    V: 0,
-  });
-
-  return true;
-}
-
-function st<M extends "direct" | "indexed" | "extended">(
-  reg: Accumulator | Register,
-  mode: M,
-  cpu: Cpu,
-  { memoryPending }: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-): boolean {
-  if (memoryPending) return false;
-
-  const size = REGISTER_SIZE[reg];
-  const val = regs[reg];
-
-  updateConditionCodes(regs, {
-    N: isNegative(val, size * 8),
-    Z: val === 0,
-    V: 0,
-  });
-
-  return true;
-}
-
-function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers): boolean {
-  regs[reg] = 0;
-
-  // Clear N,V,C, set Z
-  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
-  regs.cc |= ConditionCodes.ZERO;
-
-  return true;
-}
-
-function add<M extends GeneralAddressingMode>(
-  reg: Register | Accumulator,
-  mode: M,
-  cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-  withCarry = false,
-) {
-  // The size of the register (in bytes).
-  const size = REGISTER_SIZE[reg];
-  const { ticksOnState, ctx } = stateInfo;
-
-  if (ticksOnState === 0) {
-    // add16 takes 1 cycle to do internal calculations, after the read.
-    ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
-  }
-
-  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo);
-  if (b === null) return false;
-
-  // the remaining cycles are for the add16 operation.
-  if (ctx.instructionCtx.remainingCycles !== 0) {
-    ctx.instructionCtx.remainingCycles--;
-    return false;
-  }
-
-  const a = regs[reg];
-  const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
-  const untruncated = a + b + carry;
-  const result = truncate(untruncated, size * 8);
-
-  regs[reg] = result;
-
-  if (size === 1) {
-    // 8-bit
-    // CC: H, N, Z, V, C
-    updateConditionCodes(regs, {
-      // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
-      H: truncate(a, 4) + truncate(b, 4) > 0xf,
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      // For carry, we check if the result "overflowed".
-      C: untruncated > 0xff,
-      // For carry, we add the bits up to 7 and check if the result overflowed.
-      V: truncate(a, 7) + truncate(b, 7) > 0x7f,
-    });
-  } else {
-    // 16-bit
-    // CC: N, Z, V, C
-    updateConditionCodes(regs, {
-      // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      // For carry, we check if the result "overflowed".
-      C: untruncated > 0xffff,
-      // For overflow, we add the bits up to 15 and check if the result overflowed.
-      V: truncate(a, 15) + truncate(b, 15) > 0x7fff,
-    });
-  }
-
-  return true;
-}
-function cmp<M extends GeneralAddressingMode>(
-  reg: Register | Accumulator,
-  mode: M,
-  cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-) {
-  // The size of the register (in bytes).
-  const size = REGISTER_SIZE[reg];
-  const { ticksOnState, ctx } = stateInfo;
-
-  if (ticksOnState === 0) {
-    // cmp16 takes 1 cycle to do internal calculations, after the read.
-    ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
-  }
-
-  const M = retrieveReadAddressing(addr, cpuInfo, stateInfo);
-  if (M === null) return false;
-
-  // the remaining cycles are for the cmp16 operation.
-  if (ctx.instructionCtx.remainingCycles !== 0) {
-    ctx.instructionCtx.remainingCycles--;
-    return false;
-  }
-
-  const a = regs[reg];
-  const negM = twosComplement(M, size * 8);
-  const untruncated = a + negM;
-  const result = truncate(untruncated, size * 8);
-
-  if (size === 1) {
-    // 8-bit
-    // CC: N, Z, V, C
-    updateConditionCodes(regs, {
-      /* TODO: The effect on the Half-Carry flag is undefined for cmp8 */
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      V: truncate(a, 7) + truncate(negM, 7) > 0x7f,
-      C: untruncated > 0xff,
-    });
-  } else {
-    // 16-bit
-    // CC: N, Z, V, C
-    updateConditionCodes(regs, {
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      C: untruncated > 0xffff,
-      V: truncate(a, 15) + truncate(negM, 15) > 0x7fff,
-    });
-  }
-
-  return true;
 }
 
 /**
@@ -433,182 +262,6 @@ export function addInstructions<R extends Accumulator | Register | "pc", M exten
   }
 }
 
-// clr(accumulator)
-addInstructions(
-  "clr{register}",
-  [
-    [0x4f, "A", "inherent", "1"],
-    [0x5f, "B", "inherent", "1"],
-  ],
-  (_, reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
-);
-
-// ld8 (lda, ldb) and ld16 (ldd, lds, ldu, ldx, ldy)
-addInstructions(
-  "ld{register}",
-  [
-    [0x86, "A", "immediate", "2"],
-    [0x96, "A", "direct", "4"],
-    [0xa6, "A", "indexed", "4+"],
-    [0xb6, "A", "extended", "5"],
-    [0xc6, "B", "immediate", "2"],
-    [0xd6, "B", "direct", "4"],
-    [0xe6, "B", "indexed", "4+"],
-    [0xf6, "B", "extended", "5"],
-
-    [0xcc, "D", "immediate", "3"],
-    [0x10ce, "S", "immediate", "4"],
-    [0xce, "U", "immediate", "3"],
-    [0x8e, "X", "immediate", "3"],
-    [0x108e, "Y", "immediate", "4"],
-
-    [0xdc, "D", "direct", "5"],
-    [0x10de, "S", "direct", "6"],
-    [0xde, "U", "direct", "5"],
-    [0x9e, "X", "direct", "5"],
-    [0x109e, "Y", "direct", "6"],
-
-    [0xec, "D", "indexed", "5+"],
-    [0x10ee, "S", "indexed", "6+"],
-    [0xee, "U", "indexed", "5+"],
-    [0xae, "X", "indexed", "5+"],
-    [0x10ae, "Y", "indexed", "6+"],
-
-    [0xfc, "D", "extended", "6"],
-    [0x10fe, "S", "extended", "7"],
-    [0xfe, "U", "extended", "6"],
-    [0xbe, "X", "extended", "6"],
-    [0x10be, "Y", "extended", "7"],
-  ],
-  (_, reg, mode, cycles) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      ld(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
-  }),
-);
-// st8 (sta, stb) and st16 (std, sts, stu, stx, sty)
-addInstructions(
-  "st{register}",
-  [
-    [0x97, "A", "direct", "4"],
-    [0xa7, "A", "indexed", "4+"],
-    [0xb7, "A", "extended", "5"],
-    [0xd7, "B", "direct", "4"],
-    [0xe7, "B", "indexed", "4+"],
-    [0xf7, "B", "extended", "5"],
-
-    [0xdd, "D", "direct", "5"],
-    [0x10df, "S", "direct", "6"],
-    [0xdf, "U", "direct", "5"],
-    [0x9f, "X", "direct", "5"],
-    [0x109f, "Y", "direct", "6"],
-
-    [0xed, "D", "indexed", "5+"],
-    [0x10ef, "S", "indexed", "6+"],
-    [0xef, "U", "indexed", "5+"],
-    [0xaf, "X", "indexed", "5+"],
-    [0x10af, "Y", "indexed", "6+"],
-
-    [0xfd, "D", "extended", "6"],
-    [0x10ff, "S", "extended", "7"],
-    [0xff, "U", "extended", "6"],
-    [0xbf, "X", "extended", "6"],
-    [0x10bf, "Y", "extended", "7"],
-  ],
-  (_, reg, mode, cycles) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryWrite(REGISTER_SIZE[reg], regs[reg], addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
-  }),
-);
-
-// add8 (adda, addb) and add16 (addd)
-addInstructions(
-  "add{register}",
-  [
-    [0x8b, "A", "immediate", "2"],
-    [0x9b, "A", "direct", "4"],
-    [0xab, "A", "indexed", "4+"],
-    [0xbb, "A", "extended", "5"],
-    [0xcb, "B", "immediate", "2"],
-    [0xdb, "B", "direct", "4"],
-    [0xeb, "B", "indexed", "4+"],
-    [0xfb, "B", "extended", "5"],
-    [0xc3, "D", "immediate", "4"],
-    [0xd3, "D", "direct", "6"],
-    [0xe3, "D", "indexed", "6+"],
-    [0xf3, "D", "extended", "7"],
-  ],
-  (_, reg, mode, cycles) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
-  }),
-);
-// adc8 (adca, adcb)
-addInstructions(
-  "adc{register}",
-  [
-    [0x89, "A", "immediate", "2"],
-    [0x99, "A", "direct", "4"],
-    [0xa9, "A", "indexed", "4+"],
-    [0xb9, "A", "extended", "5"],
-    [0xc9, "B", "immediate", "2"],
-    [0xd9, "B", "direct", "4"],
-    [0xe9, "B", "indexed", "4+"],
-    [0xf9, "B", "extended", "5"],
-  ],
-  (_, reg, mode, cycles) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
-  }),
-);
-
-addInstructions(
-  "cmp{register}",
-  [
-    [0x81, "A", "immediate", "2"],
-    [0x91, "A", "direct", "4"],
-    [0xa1, "A", "indexed", "4+"],
-    [0xb1, "A", "extended", "5"],
-    [0xc1, "B", "immediate", "2"],
-    [0xd1, "B", "direct", "4"],
-    [0xe1, "B", "indexed", "4+"],
-    [0xf1, "B", "extended", "5"],
-    [0x1083, "D", "immediate", "3"],
-    [0x1093, "D", "direct", "7"],
-    [0x10a3, "D", "indexed", "7+"],
-    [0x10b3, "D", "extended", "8"],
-    [0x118c, "S", "immediate", "3"],
-    [0x119c, "S", "direct", "7"],
-    [0x11ac, "S", "indexed", "7+"],
-    [0x11bc, "S", "extended", "8"],
-    [0x1183, "U", "immediate", "5"],
-    [0x1193, "U", "direct", "7"],
-    [0x11a3, "U", "indexed", "7+"],
-    [0x11b3, "U", "extended", "8"],
-    [0x8c, "X", "immediate", "4"],
-    [0x9c, "X", "direct", "6"],
-    [0xac, "X", "indexed", "6+"],
-    [0xbc, "X", "extended", "7"],
-    [0x108c, "Y", "immediate", "5"],
-    [0x109c, "Y", "direct", "7"],
-    [0x10ac, "Y", "indexed", "7+"],
-    [0x10bc, "Y", "extended", "8"],
-  ],
-  (_, reg, mode, cycles) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      cmp(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
-  }),
-);
-
 export function performInstructionLogic<M extends AddressingMode>(
   part: "start" | "end",
   cpuInfo: CpuInfo,
@@ -629,3 +282,6 @@ export function performInstructionLogic<M extends AddressingMode>(
 
 // Add the branching instructions.
 branching(addInstructions);
+loadStore(addInstructions);
+test(addInstructions);
+arithmetic(addInstructions);
