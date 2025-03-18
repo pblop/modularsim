@@ -8,6 +8,8 @@ const start: CycleStartFn<"immediate"> = (
   // Fetch the immediate value.
   if (ticksOnState === 0) {
     const reg = cpu.instruction!.register;
+    if (reg === undefined) throw new Error("Register not defined for immediate instruction.");
+
     const regSize = REGISTER_SIZE[reg];
     queryMemoryRead("pc", regSize);
   }

@@ -71,6 +71,41 @@ function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers):
 
   return true;
 }
+function clrmempart1(
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
+  ____: Registers,
+) {
+  if (!stateInfo.ctx.instructionCtx.hasRead) {
+    return queryReadAddressing(1, addr, cpuInfo, stateInfo);
+  } else {
+    return queryWrite(1, 0, addr, cpuInfo, stateInfo);
+  }
+}
+function clrmem(
+  { registers, memoryPending }: CpuInfo,
+  { ctx: { instructionCtx } }: ExecuteStateInfo,
+  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
+): boolean {
+  if (memoryPending) return false;
+
+  // We need to perform a memory read, ignore the value, and then perform
+  // a memory write, and then, we're done.
+  if (!instructionCtx.hasRead) {
+    instructionCtx.hasRead = true;
+    return false;
+  }
+
+  updateConditionCodes(registers, {
+    N: 0,
+    Z: 1,
+    V: 0,
+  });
+
+  return true;
+}
 
 export default function (addInstructions: typeof addInstructionsType) {
   // clr(accumulator)
@@ -81,6 +116,18 @@ export default function (addInstructions: typeof addInstructionsType) {
       [0x5f, "B", "inherent", "1"],
     ],
     (_, reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
+  );
+  addInstructions(
+    "clr",
+    [
+      [0x0f, undefined, "direct", "6/5"],
+      [0x1f, undefined, "indexed", "6+"],
+      [0x2f, undefined, "extended", "7/6"],
+    ],
+    (_, __, ___, ____) => ({
+      start: clrmempart1,
+      end: (_, cpuInfo, stateInfo, addr, ___) => clrmem(cpuInfo, stateInfo, addr),
+    }),
   );
 
   // ld8 (lda, ldb) and ld16 (ldd, lds, ldu, ldx, ldy)

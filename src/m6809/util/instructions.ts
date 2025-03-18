@@ -213,13 +213,16 @@ export type ExtraInstructionData = {
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
   cycles: string;
-  register: Accumulator | Register | "pc";
+  register: Accumulator | Register | "pc" | (T extends "immediate" ? never : undefined);
   mode: T;
   start?: InstructionStartFn<T>;
   end?: InstructionEndFn<T>;
   extra: ExtraInstructionData;
 };
-export type FunGen<R extends Accumulator | Register | "pc", M extends AddressingMode> = (
+export type FunGen<
+  R extends Accumulator | Register | "pc" | (M extends "immediate" ? never : undefined),
+  M extends AddressingMode,
+> = (
   mnemonic: string,
   register: R,
   mode: M,
@@ -237,7 +240,10 @@ export const INSTRUCTIONS: Record<number, InstructionData> = {};
  * The function can return an object with `start` and `end` functions,
  * or just an `end` function.
  */
-export function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
+export function addInstructions<
+  R extends Accumulator | Register | "pc" | (M extends "immediate" ? never : undefined),
+  M extends AddressingMode,
+>(
   mnemonicPattern: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
   funGen: FunGen<R, M>,
@@ -247,7 +253,10 @@ export function addInstructions<R extends Accumulator | Register | "pc", M exten
   const extra = { isLongBranch: false, ...extraIn };
 
   for (const [opcode, register, mode, cycles] of modes) {
-    const mnemonic = mnemonicPattern.replace("{register}", register.toLowerCase());
+    const mnemonic =
+      register === undefined
+        ? mnemonicPattern
+        : mnemonicPattern.replace("{register}", register.toLowerCase());
 
     const fun = funGen(mnemonic, register, mode, cycles, extra);
     INSTRUCTIONS[opcode] = {
@@ -280,7 +289,7 @@ export function performInstructionLogic<M extends AddressingMode>(
   }
 }
 
-// Add the branching instructions.
+// Add the instructions.
 branching(addInstructions);
 loadStore(addInstructions);
 test(addInstructions);

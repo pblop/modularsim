@@ -219,12 +219,17 @@ export async function decompileInstruction(
     };
   const instruction = INSTRUCTIONS[opcode];
 
-  const registerSize = REGISTER_SIZE[instruction.register];
-
   // Perform addressing.
   let address: number | "pc";
+  // Some instructions don't use registers at all (CLR), so we use 0 as the register
+  // size for those.
+  const registerSize = instruction.register === undefined ? 0 : REGISTER_SIZE[instruction.register];
+
   switch (instruction.mode) {
     case "immediate": {
+      if (registerSize === 0)
+        throw new Error("[InstructionUI] Immediate mode with no register size");
+
       address = "pc";
       const value = await read(startAddress + size, registerSize);
       args.push(value);
