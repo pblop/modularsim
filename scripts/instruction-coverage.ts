@@ -45,6 +45,16 @@ let implemented_mnemonics = Object.values(IMPLEMENTED).map((x) => x.mnemonic.toL
 // There are duplicated entries (multiple addressing modes).
 implemented_mnemonics = [...new Set(implemented_mnemonics)];
 
+// Add aliases
+function add_alias(alias: string, mnemonic: string) {
+  if (implemented_mnemonics.includes(mnemonic)) implemented_mnemonics.push(alias);
+  if (implemented_mnemonics.includes(alias)) implemented_mnemonics.push(mnemonic);
+}
+add_alias("bcc", "bhs");
+add_alias("bcs", "blo");
+add_alias("lbcc", "lbhs");
+add_alias("lbcs", "lblo");
+
 // For all in `instructions`, check if they are implemented.
 let fully_implemented = 0;
 let partially_implemented = 0;
