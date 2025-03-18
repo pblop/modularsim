@@ -10,8 +10,9 @@ import {
   twosComplement,
 } from "../../general/numbers.js";
 import M6809Simulator from "../base.js";
+import branching from "./instructions/branching.js";
 
-type ExecuteStateInfo = StateInfo<"execute">;
+export type ExecuteStateInfo = StateInfo<"execute">;
 
 // A function that takes a CPU and an address, performs some operation, and
 // returns the number of cycles the processor should wait.
@@ -218,39 +219,6 @@ function ld<M extends GeneralAddressingMode>(
   return true;
 }
 
-function branching<M extends "relative">(
-  cpu: Cpu,
-  mnemonic: string,
-  { memoryPending }: CpuInfo,
-  { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-  condition: (cc: number) => boolean | number,
-  isLongBranch: boolean,
-): boolean {
-  // If this is a long branch, the first cycle we're in "branching" is a DC cycle.
-  // If we don't take the branch, we're finished. But if we do, we take another
-  // cycle (the first cycle of "branching" in a short branch).
-
-  if (instructionCtx.taken === undefined) instructionCtx.taken = condition(regs.cc);
-
-  // LONG BRANCH LOGIC
-  // If the branch is NOT taken, we only take one cycle, and we don't branch, so
-  // we're done.
-  if (isLongBranch && !instructionCtx.taken) return true;
-  // If the branch is taken, we take TWO cycles.
-  if (isLongBranch && ticksOnState === 0) return false;
-
-  if (instructionCtx.taken) {
-    if (mnemonic === "bsr" || mnemonic === "lbsr") {
-      console.error("BSR/LBSR not implemented");
-    }
-    regs.pc = addr.address;
-  }
-
-  return true;
-}
-
 function st<M extends "direct" | "indexed" | "extended">(
   reg: Accumulator | Register,
   mode: M,
@@ -410,7 +378,7 @@ function cmp<M extends GeneralAddressingMode>(
  * - readAddressing: whether the instruction reads from the memory region specified by the
  *    addressing mode (e.g., `ld`, `add instructions do, `clr` instructions don't).
  */
-type ExtraInstructionData = {
+export type ExtraInstructionData = {
   isLongBranch: boolean;
 };
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
@@ -433,7 +401,7 @@ export const INSTRUCTIONS: Record<number, InstructionData> = {};
  * The function can return an object with `start` and `end` functions,
  * or just an `end` function.
  */
-function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
+export function addInstructions<R extends Accumulator | Register | "pc", M extends AddressingMode>(
   mnemonic: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
   funGen: (
@@ -462,59 +430,6 @@ function addInstructions<R extends Accumulator | Register | "pc", M extends Addr
     };
   }
 }
-
-addInstructions(
-  "beq",
-  [[0x27, "pc", "relative", "3"]],
-  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    branching(
-      cpu,
-      "beq",
-      cpuInfo,
-      stateInfo,
-      addr,
-      regs,
-      (cc) => cc & ConditionCodes.ZERO,
-      extra.isLongBranch,
-    ),
-);
-addInstructions(
-  "lbeq",
-  [[0x1027, "pc", "relative", "5(6)"]],
-  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    branching(
-      cpu,
-      "lbeq",
-      cpuInfo,
-      stateInfo,
-      addr,
-      regs,
-      (cc) => cc & ConditionCodes.ZERO,
-      extra.isLongBranch,
-    ),
-  { isLongBranch: true },
-);
-addInstructions(
-  "bra",
-  [[0x20, "pc", "relative", "3"]],
-  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    branching(cpu, "bra", cpuInfo, stateInfo, addr, regs, () => true, extra.isLongBranch),
-);
-addInstructions(
-  "bne",
-  [[0x26, "pc", "relative", "3"]],
-  (_, __, ___, extra) => (cpu, cpuInfo, stateInfo, addr, regs) =>
-    branching(
-      cpu,
-      "bne",
-      cpuInfo,
-      stateInfo,
-      addr,
-      regs,
-      (cc) => !(cc & ConditionCodes.ZERO),
-      extra.isLongBranch,
-    ),
-);
 
 // clr(accumulator)
 addInstructions(
@@ -709,3 +624,6 @@ export function performInstructionLogic<M extends AddressingMode>(
     return true;
   }
 }
+
+// Add the branching instructions.
+branching(addInstructions);
