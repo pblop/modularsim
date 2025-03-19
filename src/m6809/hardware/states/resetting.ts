@@ -42,7 +42,7 @@ const end: CycleEndFn<"resetting"> = (
   registers.pc = memoryAction!.valueRead;
   commitRegisters();
 
-  et.emit("cpu:reset_finish");
+  et.emit("cpu:reset_finish", registers);
   return "fetch";
 };
 
