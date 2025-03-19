@@ -15,6 +15,21 @@ import {
 } from "../instructions.js";
 import type { CpuInfo, StateInfo } from "../state_machine";
 
+type AllRegisters = Register | Accumulator | "pc" | "cc" | "dp";
+
+// biome-ignore format: this is easier to read if not formatted
+const REGISTER_LIST_EXG: (AllRegisters | null)[] = ["D", "X", "Y", "U", "S", 
+  "pc", null, null, "A", "B", "cc", "dp"];
+function parseExgPostbyte(postbyte: number): [AllRegisters | null, AllRegisters | null] {
+  const reg1i = (postbyte & 0xf0) >> 4;
+  const reg2i = postbyte & 0x0f;
+
+  const reg1: AllRegisters | null = REGISTER_LIST_EXG[reg1i];
+  const reg2: AllRegisters | null = REGISTER_LIST_EXG[reg2i];
+
+  return [reg1, reg2];
+}
+
 function ld<M extends GeneralAddressingMode>(
   reg: Accumulator | Register,
   mode: M,
@@ -107,6 +122,103 @@ function clrmem(
   return true;
 }
 
+function exg(
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addressingData: CpuAddressingData<"immediate">,
+): boolean {
+  const { registers } = cpuInfo;
+  const {
+    ticksOnState,
+    ctx: { instructionCtx },
+  } = stateInfo;
+
+  // 1 tick on Instruction Fetch, 1 tick on Immediate, 6 ticks on Execute
+  if (ticksOnState !== 6) return false;
+
+  const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
+  if (postbyte === null) return false;
+
+  const [name1, name2] = parseExgPostbyte(postbyte);
+
+  // NOTE: I perform the swap on the last cycle because I send events for every
+  // PC change, and it seems most sensible (even if it's not the most accurate)
+  // to send the event at the end of the instruction.
+
+  // The Programmer's Reference I'm using says that:
+  // > Program flow can be altered by specifying PC as one of the registers.
+  // > When this occurs, the other register is set to the address of the
+  // > instruction that follows EXG.
+  // Given that, at this point, the PC is already pointing to the next
+  // instruction, I just need to swap the registers around!
+
+  // If the register is null (invalid register in the postbyte), a constant
+  // value of FF or FFFF is used, depending on the size of the other register.
+  if (name1 === null && name2 === null) {
+    console.error("Invalid EXG postbyte, both registers' encodings are invalid");
+    return true;
+  } else if (name1 === null || name2 === null) {
+    console.error("Invalid EXG postbyte, one register's encoding is invalid");
+
+    // TypeScript is a bit dumb here. Only one of the two can be null!
+    const validName = (name1 ?? name2)!;
+    registers[validName] = REGISTER_SIZE[validName] === 1 ? 0xff : 0xffff;
+
+    return true;
+  }
+
+  const size1 = REGISTER_SIZE[name1];
+  const size2 = REGISTER_SIZE[name2];
+
+  if (size1 === size2) {
+    const val1 = registers[name1];
+    registers[name1] = registers[name2];
+    registers[name2] = val1;
+  } else {
+    // When exchanging registers of different sizes, the 8-bit register is
+    // exchanged with the low byte of the 16-bit register, and the high byte of
+    // the 16-bit register is set to a value depending on some conditions (coded
+    // below).
+
+    // The case of A->D is special, because it's the same as A->B
+    if (name1 === "A" && name2 === "D") {
+      const A = registers.A;
+      registers.A = registers.B;
+      registers.B = A;
+      return true;
+    }
+
+    // Now, for the general case:
+    // The high byte is set to FF if:
+    // - 16 -> 8 exchange and any 8-bit register is involved
+    // - 8 -> 16 exchange and A or B is involved
+    //             but not if A -> D (which is the same as A -> B)
+    // Otherwise (when 8 -> 16 and CC or DP is involved), the high byte is set
+    // to the value of the 8-bit register (that is, the big register is set to
+    // the value of the small register on both bytes).
+    const nameSmall = size1 === 1 ? name1 : name2;
+    const nameBig = size1 === 2 ? name1 : name2;
+
+    const valSmall = registers[nameSmall];
+    const valBig = registers[nameBig];
+
+    let highByte = 0;
+
+    if ((size1 === 2 && size2 === 1) || name1 === "A" || name2 === "B") {
+      highByte = 0xff;
+    } else {
+      highByte = valSmall;
+    }
+
+    // NOTE: This is not _very_ efficient, because in the case that B -> D, I'm
+    // doing an extra operation that is not needed.
+    registers[nameSmall] = truncate(valBig, 8);
+    registers[nameBig] = (highByte << 8) | valSmall;
+  }
+
+  return true;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // clr(accumulator)
   addInstructions(
@@ -117,6 +229,7 @@ export default function (addInstructions: typeof addInstructionsType) {
     ],
     (_, reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
   );
+  // clr(mem)
   addInstructions(
     "clr",
     [
@@ -210,4 +323,11 @@ export default function (addInstructions: typeof addInstructionsType) {
         st(reg, mode, cpu, cpuInfo, stateInfo, addr, regs),
     }),
   );
+
+  // exg
+  addInstructions("exg", [[0x1e, undefined, "immediate", "8"]], (_, __, ___, ____) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      queryReadAddressing(1, addr, cpuInfo, stateInfo),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) => exg(cpuInfo, stateInfo, addr),
+  }));
 }

@@ -213,14 +213,14 @@ export type ExtraInstructionData = {
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
   cycles: string;
-  register: Accumulator | Register | "pc" | (T extends "immediate" ? never : undefined);
+  register: Accumulator | Register | "pc" | undefined;
   mode: T;
   start?: InstructionStartFn<T>;
   end?: InstructionEndFn<T>;
   extra: ExtraInstructionData;
 };
 export type FunGen<
-  R extends Accumulator | Register | "pc" | (M extends "immediate" ? never : undefined),
+  R extends Accumulator | Register | "pc" | undefined,
   M extends AddressingMode,
 > = (
   mnemonic: string,
@@ -241,7 +241,7 @@ export const INSTRUCTIONS: Record<number, InstructionData> = {};
  * or just an `end` function.
  */
 export function addInstructions<
-  R extends Accumulator | Register | "pc" | (M extends "immediate" ? never : undefined),
+  R extends Accumulator | Register | "pc" | undefined,
   M extends AddressingMode,
 >(
   mnemonicPattern: string,

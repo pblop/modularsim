@@ -227,8 +227,12 @@ export async function decompileInstruction(
 
   switch (instruction.mode) {
     case "immediate": {
-      if (registerSize === 0)
+      if (instruction.register === undefined) {
+        // TODO: Think about how to handle EXG and TFR instructions, which have immediate
+        // addressing but don't store the value in a register. They use postbyte values
+        // to determine the register to use.
         throw new Error("[InstructionUI] Immediate mode with no register size");
+      }
 
       address = "pc";
       const value = await read(startAddress + size, registerSize);
