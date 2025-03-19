@@ -23,6 +23,9 @@ all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard
 
 %.cdb: %.rel
 	$(LINK) $(LINKFLAGS) -y $<
+	
+%.json: %.s19
+	$(SELF_DIR)/../scripts/generate-test-json.py $< $@
 
 %.bin: %.s19
 	$(SELF_DIR)/../scripts/s19reader.py $< $@
