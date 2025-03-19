@@ -1,7 +1,13 @@
 import type Cpu from "../hardware/cpu.js";
 import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
 import type { CpuInfo, StateInfo } from "./state_machine.js";
-import { ConditionCodes, REGISTER_SIZE, type Registers } from "../util/cpu_parts.js";
+import {
+  ConditionCodes,
+  REGISTER_SIZE,
+  SHORT_CC_NAME_MAP,
+  ShortCCNames,
+  type Registers,
+} from "../util/cpu_parts.js";
 import {
   indexBit,
   isNegative,
@@ -180,17 +186,6 @@ export function queryWrite(
   }
 }
 
-type ShortCCNames = "E" | "F" | "H" | "I" | "N" | "Z" | "V" | "C";
-const SHORT_CC_NAME_MAP: Record<ShortCCNames, ConditionCodes> = {
-  E: ConditionCodes.ENTIRE_FLAG,
-  F: ConditionCodes.FIRQ_MASK,
-  H: ConditionCodes.HALF_CARRY,
-  I: ConditionCodes.IRQ_MASK,
-  N: ConditionCodes.NEGATIVE,
-  Z: ConditionCodes.ZERO,
-  V: ConditionCodes.OVERFLOW,
-  C: ConditionCodes.CARRY,
-};
 export function updateConditionCodes(
   regs: Registers,
   ccs: { [K in ShortCCNames]?: boolean | number },

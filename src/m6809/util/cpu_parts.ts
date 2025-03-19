@@ -82,3 +82,15 @@ export enum ConditionCodes {
   FIRQ_MASK = 1 << 6, // FIRQ Mask
   ENTIRE_FLAG = 1 << 7, // Entire Flag
 }
+
+export type ShortCCNames = "E" | "F" | "H" | "I" | "N" | "Z" | "V" | "C";
+export const SHORT_CC_NAME_MAP: Record<ShortCCNames, ConditionCodes> = {
+  E: ConditionCodes.ENTIRE_FLAG,
+  F: ConditionCodes.FIRQ_MASK,
+  H: ConditionCodes.HALF_CARRY,
+  I: ConditionCodes.IRQ_MASK,
+  N: ConditionCodes.NEGATIVE,
+  Z: ConditionCodes.ZERO,
+  V: ConditionCodes.OVERFLOW,
+  C: ConditionCodes.CARRY,
+};
