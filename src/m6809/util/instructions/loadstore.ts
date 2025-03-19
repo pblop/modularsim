@@ -133,8 +133,8 @@ function exg(
     ctx: { instructionCtx },
   } = stateInfo;
 
-  // 1 tick on Instruction Fetch, 1 tick on Immediate, 6 ticks on Execute
-  if (ticksOnState !== 6) return false;
+  // 1 tick on Instruction Fetch, 7 ticks on Execute
+  if (ticksOnState !== 7) return false;
 
   const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
   if (postbyte === null) return false;
@@ -155,6 +155,7 @@ function exg(
   // If the register is null (invalid register in the postbyte), a constant
   // value of FF or FFFF is used, depending on the size of the other register.
   if (name1 === null && name2 === null) {
+    // TODO: what does the 6809 do in this case?
     console.error("Invalid EXG postbyte, both registers' encodings are invalid");
     return true;
   } else if (name1 === null || name2 === null) {
@@ -214,6 +215,53 @@ function exg(
     // doing an extra operation that is not needed.
     registers[nameSmall] = truncate(valBig, 8);
     registers[nameBig] = (highByte << 8) | valSmall;
+  }
+
+  return true;
+}
+
+function tfr(
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addressingData: CpuAddressingData<"immediate">,
+): boolean {
+  const { registers } = cpuInfo;
+  const {
+    ticksOnState,
+    ctx: { instructionCtx },
+  } = stateInfo;
+
+  // 1 tick on Instruction Fetch, 5 ticks on Execute
+  if (ticksOnState !== 5) return false;
+
+  const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
+  if (postbyte === null) return false;
+
+  const [name1, name2] = parseExgPostbyte(postbyte);
+
+  if (name2 === null) return true;
+
+  const size2 = REGISTER_SIZE[name2];
+  const size1 = name1 == null ? size2 : REGISTER_SIZE[name1];
+  const val1 = name1 == null ? (size1 === 1 ? 0xff : 0xffff) : registers[name1];
+
+  if (size1 === size2) {
+    registers[name2] = val1;
+  } else {
+    // If the two registers are of different sizes:
+    if (size1 === 16 && size2 === 8) {
+      // 16 -> 8, destination is LSB of source
+      registers[name2] = truncate(val1, 8);
+    } else {
+      // 8 -> 16
+      if (name1 === "A" || name1 === "B") {
+        // if A or B, destination is MSB=ff, LSB=source
+        registers[name2] = 0xff00 | val1;
+      } else {
+        // if CC or DP, destination is MSB=source, LSB=source
+        registers[name2] = (val1 << 8) | val1;
+      }
+    }
   }
 
   return true;
@@ -329,5 +377,12 @@ export default function (addInstructions: typeof addInstructionsType) {
     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
       queryReadAddressing(1, addr, cpuInfo, stateInfo),
     end: (cpu, cpuInfo, stateInfo, addr, regs) => exg(cpuInfo, stateInfo, addr),
+  }));
+
+  // tfr
+  addInstructions("tfr", [[0x1f, undefined, "immediate", "8"]], (_, __, ___, ____) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+      queryReadAddressing(1, addr, cpuInfo, stateInfo),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) => tfr(cpuInfo, stateInfo, addr),
   }));
 }
