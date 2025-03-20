@@ -14,6 +14,7 @@ import {
   intNToNumber,
   decompose,
 } from "../../general/numbers.js";
+import { parseExgPostbyte, type AllRegisters } from "./instructions/loadstore.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.
 export type ReadFunction = (address: number, bytes?: number) => Promise<number>;
@@ -99,49 +100,6 @@ export async function disassIdxAdressing(
   };
 }
 
-// type DisassAddressingResult =
-//   | { mode: "immediate"; address: "pc"; value: number; size: number }
-//   | { mode: "direct"; address: number; size: number }
-//   | { mode: "indexed"; address: number; size: number }
-//   | { mode: "extended"; address: number; size: number }
-//   | { mode: "relative"; targetAddress: number; size: number };
-
-// async function disassAdressing<T extends AddressableAddressingMode>(
-//   read: ReadFunction,
-//   address: number,
-//   registers: Registers,
-//   mode: T,
-// ): Promise<T extends "immediate" ? "pc" : number> {
-//   type ReturnType = T extends "immediate" ? "pc" : number;
-
-//   switch (mode) {
-//     case "immediate":
-//       return "pc" as ReturnType;
-//     case "direct": {
-//       const low = await read(address, 1);
-
-//       return ((registers.dp << 8) | low) as ReturnType;
-//     }
-//     case "indexed": {
-//       const postbyte = await read(address, 1);
-//       const parsedPostbyte = parseIndexedPostbyte(postbyte);
-//       if (!parsedPostbyte) return null;
-
-//       return (await indexedAddressing(cpu, postbyte)) as ReturnType;
-//     }
-//     case "extended": {
-//       return (await read(address, 2)) as ReturnType;
-//     }
-//     case "relative": {
-//       // Only used for branches
-//       const offset = await read(registers.pc, 1);
-//       registers.pc += 1;
-//       return truncate(registers.pc + signExtend(offset, 8, 16), 16) as ReturnType;
-//     }
-//   }
-//   throw new Error("[instruction-ui] Unknown addressing mode passed to addressing function");
-// }
-
 // biome-ignore format: this is easier to read if not biome-formatted
 type DecompiledAddressingInfo<T extends AddressingMode> = 
   T extends "immediate" ? { mode: T, value: number } :
@@ -164,8 +122,7 @@ export type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   // The values above but in a more readable format.
   instruction: InstructionData<T>;
   addressing: DecompiledAddressingInfo<T>;
-  registerSize: number; // redundant
-  size: number; // redundant
+  exgRegisters?: [AllRegisters | null, AllRegisters | null];
 
   failed: false;
 };
@@ -221,18 +178,13 @@ export async function decompileInstruction(
 
   // Perform addressing.
   let address: number | "pc";
-  // Some instructions don't use registers at all (CLR), so we use 0 as the register
-  // size for those.
-  const registerSize = instruction.register === undefined ? 0 : REGISTER_SIZE[instruction.register];
 
   switch (instruction.mode) {
     case "immediate": {
-      if (instruction.register === undefined) {
-        // TODO: Think about how to handle EXG and TFR instructions, which have immediate
-        // addressing but don't store the value in a register. They use postbyte values
-        // to determine the register to use.
-        throw new Error("[InstructionUI] Immediate mode with no register size");
-      }
+      // The only instructions with immediate addressing and no register are
+      // EXG and TFR. For those instructions, we need to read 1 byte.
+      const registerSize =
+        instruction.register === undefined ? 1 : REGISTER_SIZE[instruction.register];
 
       address = "pc";
       const value = await read(startAddress + size, registerSize);
@@ -308,14 +260,18 @@ export async function decompileInstruction(
       throw new Error(`[InstructionUI] Unknown addressing mode ${instruction.mode}`);
   }
 
+  let exgRegisters: [AllRegisters | null, AllRegisters | null] | undefined;
+  if (instruction.mnemonic === "exg" || instruction.mnemonic === "tfr") {
+    exgRegisters = parseExgPostbyte((addressing as DecompiledAddressingInfo<"immediate">).value);
+  }
+
   return {
     startAddress,
     opcode,
     instruction,
     args,
-    registerSize,
-    size,
     addressing,
+    exgRegisters,
     bytes: bytes,
     failed: false,
   };
@@ -326,7 +282,6 @@ export type InstructionRowData = {
   raw: string;
   data: string;
   extra: string;
-  size: number;
   ok: true;
 };
 type FailedInstructionRowData = {
@@ -362,19 +317,26 @@ export function generateRowData(
       ok: false,
     };
   } else {
-    const { registerSize, args, addressing } = decompiled;
+    const { args, addressing } = decompiled;
     const { mnemonic } = decompiled.instruction;
     const { mode } = addressing;
-
-    const registerHexSize = registerSize * 2;
 
     let data = mnemonic;
     let extra = `${mode.slice(0, 3)}`;
 
     switch (mode) {
-      case "immediate":
-        data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
+      case "immediate": {
+        if (decompiled.instruction.register === undefined) {
+          // EXG or TFR
+          const [src, dst] = decompiled.exgRegisters!;
+          const intermediateStr = decompiled.instruction.mnemonic === "exg" ? "<->" : "->";
+          data += ` ${src}${intermediateStr}${dst}`;
+        } else {
+          const registerHexSize = REGISTER_SIZE[decompiled.instruction.register] * 2;
+          data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
+        }
         break;
+      }
       case "direct":
         data += ` 0x${addressing.low}`;
         extra += ` <${formatAddress(addressing.address)}>`;
@@ -439,7 +401,6 @@ export function generateRowData(
       raw,
       data,
       extra,
-      size: decompiled.size,
       ok: true,
     };
   }

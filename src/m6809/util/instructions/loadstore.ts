@@ -15,12 +15,12 @@ import {
 } from "../instructions.js";
 import type { CpuInfo, StateInfo } from "../state_machine";
 
-type AllRegisters = Register | Accumulator | "pc" | "cc" | "dp";
+export type AllRegisters = Register | Accumulator | "pc" | "cc" | "dp";
 
 // biome-ignore format: this is easier to read if not formatted
 const REGISTER_LIST_EXG: (AllRegisters | null)[] = ["D", "X", "Y", "U", "S", 
   "pc", null, null, "A", "B", "cc", "dp"];
-function parseExgPostbyte(postbyte: number): [AllRegisters | null, AllRegisters | null] {
+export function parseExgPostbyte(postbyte: number): [AllRegisters | null, AllRegisters | null] {
   const reg1i = (postbyte & 0xf0) >> 4;
   const reg2i = postbyte & 0x0f;
 
