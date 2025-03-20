@@ -3,6 +3,11 @@ import type M6809Simulator from "../src/m6809/base.ts";
 
 import { describe, expect, test, beforeAll, beforeEach } from "bun:test";
 import type { Registers } from "../src/m6809/util/cpu_parts.ts";
+import {
+  decompileInstruction,
+  generateRowData,
+  InstructionRowData,
+} from "../src/m6809/util/decompile.ts";
 
 function RegisterTester(): (memory: Uint8Array) => Promise<Registers[]> {
   return (memory: Uint8Array) => {
@@ -73,10 +78,17 @@ describe("Instructions", () => {
           pc: registers.pc,
         };
 
-        expect(
-          execSnapshot,
-          `Cycle ${index} of ${basefile}.s19 is not equal to truth source`,
-        ).toEqual(testSnapshot);
+        const decompiled = await decompileInstruction(
+          async (addr, bytes = 1) =>
+            contents.slice(addr, addr + bytes).reduce((acc, val) => (acc << 8) | val, 0),
+          registers,
+          registers.pc,
+        );
+        const decompiledRowData = generateRowData(decompiled, (addr) =>
+          addr.toString(16).padStart(4, "0"),
+        ) as InstructionRowData;
+        const errorMsg = `Cycle ${index} of ${basefile}.s19 failed to decompile.\nInstruction: ${decompiledRowData.data}`;
+        expect(execSnapshot, errorMsg).toEqual(testSnapshot);
       }
     };
   }
