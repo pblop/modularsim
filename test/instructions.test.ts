@@ -87,7 +87,7 @@ describe("Instructions", () => {
         const decompiledRowData = generateRowData(decompiled, (addr) =>
           addr.toString(16).padStart(4, "0"),
         ) as InstructionRowData;
-        const errorMsg = `Cycle ${index} of ${basefile}.s19 failed to decompile.\nInstruction: ${decompiledRowData.data}`;
+        const errorMsg = `Cycle ${index} of ${basefile}.s19 not equal to source of truth.\nInstruction: ${decompiledRowData.data}`;
         expect(execSnapshot, errorMsg).toEqual(testSnapshot);
       }
     };
