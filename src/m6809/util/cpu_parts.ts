@@ -1,3 +1,21 @@
+export function ccToStrings(cc: number): string[] {
+  const ccStrings = [];
+  for (const key in ConditionCodes) {
+    const bitMask = ConditionCodes[key as keyof typeof ConditionCodes];
+    if (cc & bitMask) ccStrings.push(key);
+  }
+  return ccStrings;
+}
+export function ccToShortStrings(cc: number, addNotSet = false): string[] {
+  const ccStrings = [];
+  for (const key in SHORT_CC_NAME_MAP) {
+    const bitMask = SHORT_CC_NAME_MAP[key as ShortCCNames];
+    if (cc & bitMask) ccStrings.push(key);
+    else if (addNotSet) ccStrings.push("");
+  }
+  return ccStrings;
+}
+
 export class Registers {
   dp: number;
   cc: number;
@@ -30,23 +48,6 @@ export class Registers {
   }
   set B(val: number) {
     this.D = (this.D & 0xff00) | val;
-  }
-
-  getCCStrings(): string[] {
-    const ccStrings = [];
-    for (const key in ConditionCodes) {
-      const bitMask = ConditionCodes[key as keyof typeof ConditionCodes];
-      if (this.cc & bitMask) ccStrings.push(key);
-    }
-    return ccStrings;
-  }
-  getShortCCStrings(): string[] {
-    const ccStrings = [];
-    for (const key in SHORT_CC_NAME_MAP) {
-      const bitMask = SHORT_CC_NAME_MAP[key as ShortCCNames];
-      if (this.cc & bitMask) ccStrings.push(key);
-    }
-    return ccStrings;
   }
 
   copy(): Registers {

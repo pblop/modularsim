@@ -1,12 +1,12 @@
 import { generateCpuOnlySimulator } from "./common";
 import type M6809Simulator from "../src/m6809/base.ts";
 
-import { describe, expect, test, beforeAll, beforeEach } from "bun:test";
-import type { Registers } from "../src/m6809/util/cpu_parts.ts";
+import { describe, expect, test, beforeAll, beforeEach, afterEach } from "bun:test";
+import { ccToShortStrings, type Registers } from "../src/m6809/util/cpu_parts.ts";
 import {
   decompileInstruction,
   generateRowData,
-  InstructionRowData,
+  type InstructionRowData,
 } from "../src/m6809/util/decompile.ts";
 
 function RegisterTester(): (memory: Uint8Array) => Promise<Registers[]> {
@@ -65,6 +65,41 @@ async function generateDecompilation(
   return decompiledRowData.data;
 }
 
+function snapshotToHumanReadable(regObject: Record<string, unknown>) {
+  // Sort the keys so that the output is consistent.
+  const keys = Object.keys(regObject).sort();
+  regObject = Object.fromEntries(keys.map((key) => [key, regObject[key]]));
+
+  const num = (address: number, bytes = 2) => address.toString(16).padStart(bytes, "0");
+  let output = "";
+  for (const [key, value] of Object.entries(regObject)) {
+    if (key === "cc") {
+      const ccString = ccToShortStrings(value as number, true)
+        .map((x) => (x.length === 0 ? "_" : x))
+        .join("");
+      output += `cc: ${num(value as number)} (${ccString}) `;
+    } else {
+      const bytes = ["dp", "a", "b"].includes(key) ? 2 : 4;
+      output += `${key}: ${num(value as number, bytes)} `;
+    }
+  }
+  return output;
+}
+function registersToSnapshot(registers: Registers) {
+  return {
+    dp: registers.dp,
+    cc: registers.cc,
+    a: registers.A,
+    b: registers.B,
+    x: registers.X,
+    y: registers.Y,
+    u: registers.U,
+    s: registers.S,
+    pc: registers.pc,
+  };
+}
+
+// TODO: Use test.each here.
 function generateDescribe(basefile: string) {
   return async () => {
     const file = Bun.file(`./programs/${basefile}.bin`);
@@ -75,6 +110,24 @@ function generateDescribe(basefile: string) {
     // Get all snapshots except the last one, which contains the PC following
     // the final instruction.
     const snapshots = (await registerTester(contents)).slice(0, -1);
+    let currentSnapshot: number;
+    let testStatus: boolean;
+
+    afterEach(() => {
+      if (!testStatus) {
+        console.error(`Test failed at snapshot ${currentSnapshot}`);
+        const prevValue = snapshotToHumanReadable(
+          registersToSnapshot(snapshots[currentSnapshot - 1]),
+        );
+        const currValue = snapshotToHumanReadable(registersToSnapshot(snapshots[currentSnapshot]));
+        const prevExpected = snapshotToHumanReadable(testSnapshots[currentSnapshot - 1]);
+        const currExpected = snapshotToHumanReadable(testSnapshots[currentSnapshot]);
+        console.error(`Previous value of registers         : ${prevValue}`);
+        console.error(`Previous expected value of registers: ${prevExpected}`);
+        console.error(`Current value of registers          : ${currValue}`);
+        console.error(`Current expected value of registers : ${currExpected}`);
+      }
+    });
 
     for (const [index, registers] of snapshots.entries()) {
       let decompiledInstruction: string;
@@ -90,22 +143,16 @@ function generateDescribe(basefile: string) {
       }
 
       test(`${index}: ${decompiledInstruction}`, () => {
+        currentSnapshot = index;
+        testStatus = false;
+
         const testSnapshot = testSnapshots[index];
 
         // Generate an object that matches the type of the objects in the testSnapshots array.
-        const execSnapshot = {
-          dp: registers.dp,
-          cc: registers.getShortCCStrings(),
-          a: registers.A,
-          b: registers.B,
-          x: registers.X,
-          y: registers.Y,
-          u: registers.U,
-          s: registers.S,
-          pc: registers.pc,
-        };
+        const execSnapshot = registersToSnapshot(registers);
 
         expect(execSnapshot).toEqual(testSnapshot);
+        testStatus = true;
       });
     }
   };
