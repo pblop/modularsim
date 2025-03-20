@@ -116,11 +116,15 @@ function generateDescribe(basefile: string) {
 
     afterEach(() => {
       if (!testStatus && !skipTests) {
-        const prevValue = snapshotToHumanReadable(
-          registersToSnapshot(snapshots[currentSnapshot - 1]),
-        );
+        const prevValue =
+          currentSnapshot > 0
+            ? snapshotToHumanReadable(registersToSnapshot(snapshots[currentSnapshot - 1]))
+            : "<no previous snapshot>";
         const currValue = snapshotToHumanReadable(registersToSnapshot(snapshots[currentSnapshot]));
-        const prevExpected = snapshotToHumanReadable(testSnapshots[currentSnapshot - 1]);
+        const prevExpected =
+          currentSnapshot > 0
+            ? snapshotToHumanReadable(testSnapshots[currentSnapshot - 1])
+            : "<no previous snapshot>";
         const currExpected = snapshotToHumanReadable(testSnapshots[currentSnapshot]);
         console.error(`Previous value of registers         : ${prevValue}`);
         console.error(`Previous expected value of registers: ${prevExpected}`);

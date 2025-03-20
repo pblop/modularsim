@@ -22,7 +22,7 @@ if __name__ == '__main__':
     print('error: output file already exists')
     sys.exit(1)
 
-  cmd = ["m6809-run", "-d", args.s19file]
+  cmd = ["pm6809-run", "-d", args.s19file]
   ip = b'next' + b'\n'*100
   result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, input=ip, check=False)
 
@@ -45,13 +45,7 @@ if __name__ == '__main__':
       # make sure all names are lowercase
       name = name.lower() if name != "PCR" else "pc"
 
-      if name == "cc":
-        # convert ccs to binary
-        ccs = list(value.replace("_", ""))
-        idxs = [CC_ORDER.index(cc) for cc in ccs]
-        jsonsnap[name] = sum([1 << idx for idx in idxs])
-      else:
-        jsonsnap[name] = int(value, 16)
+      jsonsnap[name] = int(value, 16)
     
     jsonsnaps.append(jsonsnap)
 
