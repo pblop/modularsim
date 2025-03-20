@@ -1,7 +1,7 @@
 import { generateCpuOnlySimulator } from "./common";
 import type M6809Simulator from "../src/m6809/base.ts";
 
-import { describe, expect, test, beforeAll, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, test, beforeEach, afterAll, afterEach } from "bun:test";
 import { ccToShortStrings, type Registers } from "../src/m6809/util/cpu_parts.ts";
 import {
   decompileInstruction,
@@ -111,11 +111,11 @@ function generateDescribe(basefile: string) {
     // the final instruction.
     const snapshots = (await registerTester(contents)).slice(0, -1);
     let currentSnapshot: number;
-    let testStatus: boolean;
+    let testStatus: boolean | undefined;
+    let skipTests = false;
 
     afterEach(() => {
-      if (!testStatus) {
-        console.error(`Test failed at snapshot ${currentSnapshot}`);
+      if (!testStatus && !skipTests) {
         const prevValue = snapshotToHumanReadable(
           registersToSnapshot(snapshots[currentSnapshot - 1]),
         );
@@ -126,6 +126,8 @@ function generateDescribe(basefile: string) {
         console.error(`Previous expected value of registers: ${prevExpected}`);
         console.error(`Current value of registers          : ${currValue}`);
         console.error(`Current expected value of registers : ${currExpected}`);
+
+        skipTests = true;
       }
     });
 
@@ -142,7 +144,11 @@ function generateDescribe(basefile: string) {
         );
       }
 
-      test(`${index}: ${decompiledInstruction}`, () => {
+      it(`${index}: ${decompiledInstruction}`, () => {
+        if (skipTests) {
+          expect(true, "Skip").toBeFalsy();
+          return;
+        }
         currentSnapshot = index;
         testStatus = false;
 
