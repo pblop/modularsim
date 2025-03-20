@@ -6,6 +6,8 @@ from pathlib import Path
 import argparse
 import subprocess
 
+CC_ORDER = "CVZNIHFE"
+
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Generate test json file')
   parser.add_argument('s19file', type=str, help='s19 file')
@@ -44,7 +46,10 @@ if __name__ == '__main__':
       name = name.lower() if name != "PCR" else "pc"
 
       if name == "cc":
-        jsonsnap[name] = list(value.replace("_", ""))
+        # convert ccs to binary
+        ccs = list(value.replace("_", ""))
+        idxs = [CC_ORDER.index(cc) for cc in ccs]
+        jsonsnap[name] = sum([1 << idx for idx in idxs])
       else:
         jsonsnap[name] = int(value, 16)
     
