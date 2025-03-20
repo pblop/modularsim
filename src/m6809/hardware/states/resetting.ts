@@ -1,3 +1,4 @@
+import { ConditionCodes } from "../../util/cpu_parts.js";
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"resetting"> = (
@@ -33,7 +34,7 @@ const end: CycleEndFn<"resetting"> = (
   // Clear all registers.
   // Set pc to the value stored at the reset vector.
   registers.dp = 0;
-  registers.cc = 0;
+  registers.cc = ConditionCodes.FIRQ_MASK | ConditionCodes.IRQ_MASK;
   registers.D = 0;
   registers.X = 0;
   registers.Y = 0;
