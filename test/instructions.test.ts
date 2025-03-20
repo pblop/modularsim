@@ -47,22 +47,49 @@ function RegisterTester(): (memory: Uint8Array) => Promise<Registers[]> {
   };
 }
 
-describe("Instructions", () => {
-  let registerTester: (memory: Uint8Array) => Promise<Registers[]>;
+async function generateDecompilation(
+  memory: Uint8Array,
+  address: number,
+  registers: Registers,
+): Promise<string> {
+  const decompiled = await decompileInstruction(
+    async (addr, bytes = 1) =>
+      memory.slice(addr, addr + bytes).reduce((acc, val) => (acc << 8) | val, 0),
+    registers,
+    registers.pc,
+  );
+  const decompiledRowData = generateRowData(decompiled, (addr) =>
+    addr.toString(16).padStart(4, "0"),
+  ) as InstructionRowData;
 
-  beforeAll(() => {
-    registerTester = RegisterTester();
-  });
+  return decompiledRowData.data;
+}
 
-  function genRegisterTest(basefile: string) {
-    return async () => {
-      const file = Bun.file(`./programs/${basefile}.bin`);
-      const testSnapshots = await Bun.file(`./programs/${basefile}.json`).json();
+function generateDescribe(basefile: string) {
+  return async () => {
+    const file = Bun.file(`./programs/${basefile}.bin`);
+    const testSnapshots = await Bun.file(`./programs/${basefile}.json`).json();
 
-      const contents = await file.bytes();
-      const snapshots = await registerTester(contents);
+    const registerTester = RegisterTester();
+    const contents = await file.bytes();
+    // Get all snapshots except the last one, which contains the PC following
+    // the final instruction.
+    const snapshots = (await registerTester(contents)).slice(0, -1);
 
-      for (const [index, registers] of snapshots.entries()) {
+    for (const [index, registers] of snapshots.entries()) {
+      let decompiledInstruction: string;
+      if (index === 0) {
+        decompiledInstruction = "<reset>";
+      } else {
+        const previousRegisters = snapshots[index - 1];
+        decompiledInstruction = await generateDecompilation(
+          contents,
+          previousRegisters.pc,
+          previousRegisters,
+        );
+      }
+
+      test(`${index}: ${decompiledInstruction}`, () => {
         const testSnapshot = testSnapshots[index];
 
         // Generate an object that matches the type of the objects in the testSnapshots array.
@@ -78,20 +105,10 @@ describe("Instructions", () => {
           pc: registers.pc,
         };
 
-        const decompiled = await decompileInstruction(
-          async (addr, bytes = 1) =>
-            contents.slice(addr, addr + bytes).reduce((acc, val) => (acc << 8) | val, 0),
-          registers,
-          registers.pc,
-        );
-        const decompiledRowData = generateRowData(decompiled, (addr) =>
-          addr.toString(16).padStart(4, "0"),
-        ) as InstructionRowData;
-        const errorMsg = `Cycle ${index} of ${basefile}.s19 not equal to source of truth.\nInstruction: ${decompiledRowData.data}`;
-        expect(execSnapshot, errorMsg).toEqual(testSnapshot);
-      }
-    };
-  }
+        expect(execSnapshot).toEqual(testSnapshot);
+      });
+    }
+  };
+}
 
-  test("9.asm", genRegisterTest("9"));
-});
+describe("9.asm", generateDescribe("9"));
