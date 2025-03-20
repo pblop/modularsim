@@ -45,7 +45,12 @@ if __name__ == '__main__':
       # make sure all names are lowercase
       name = name.lower() if name != "PCR" else "pc"
 
+      if name == "dp":
+        if value.endswith("00") and len(value) > 2:
+          value = value.removesuffix("00")
+
       jsonsnap[name] = int(value, 16)
+
     
     jsonsnaps.append(jsonsnap)
 
