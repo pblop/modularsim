@@ -373,16 +373,26 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
 
   // exg
-  addInstructions("exg", [[0x1e, undefined, "immediate", "8"]], (_, __, ___, ____) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryReadAddressing(1, addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) => exg(cpuInfo, stateInfo, addr),
-  }));
+  addInstructions(
+    "exg",
+    [[0x1e, undefined, "immediate", "8"]],
+    (_, __, ___, ____) => ({
+      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        queryReadAddressing(1, addr, cpuInfo, stateInfo),
+      end: (cpu, cpuInfo, stateInfo, addr, regs) => exg(cpuInfo, stateInfo, addr),
+    }),
+    { postbyte: true },
+  );
 
   // tfr
-  addInstructions("tfr", [[0x1f, undefined, "immediate", "8"]], (_, __, ___, ____) => ({
-    start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-      queryReadAddressing(1, addr, cpuInfo, stateInfo),
-    end: (cpu, cpuInfo, stateInfo, addr, regs) => tfr(cpuInfo, stateInfo, addr),
-  }));
+  addInstructions(
+    "tfr",
+    [[0x1f, undefined, "immediate", "8"]],
+    (_, __, ___, ____) => ({
+      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        queryReadAddressing(1, addr, cpuInfo, stateInfo),
+      end: (cpu, cpuInfo, stateInfo, addr, regs) => tfr(cpuInfo, stateInfo, addr),
+    }),
+    { postbyte: true },
+  );
 }

@@ -205,6 +205,7 @@ export function updateConditionCodes(
  */
 export type ExtraInstructionData = {
   isLongBranch: boolean;
+  postbyte: boolean;
 };
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
@@ -243,10 +244,10 @@ export function addInstructions<
   mnemonicPattern: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
   funGen: FunGen<R, M>,
-  extraIn?: ExtraInstructionData,
+  extraIn?: Partial<ExtraInstructionData>,
 ) {
   // Default extra information.
-  const extra = { isLongBranch: false, ...extraIn };
+  const extra = { isLongBranch: false, postbyte: false, ...extraIn };
 
   for (const [opcode, register, mode, cycles] of modes) {
     const mnemonic =

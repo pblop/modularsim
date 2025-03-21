@@ -122,6 +122,9 @@ export default function (addInstructions: typeof addInstructionsType) {
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
         pushEnd(register, cpu, cpuInfo, stateInfo, addr),
     }),
+    {
+      postbyte: true,
+    },
   );
 
   // // PULS, PULU
