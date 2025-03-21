@@ -3,8 +3,8 @@
 .org 0x100
 .globl main
 main:
-  lds #0x6666
-  ldu #0x7777
+  lds #0x01d9
+  ldu #0x01f9
   lda #0x01
   ldx #0x02
   pshs a,x,u

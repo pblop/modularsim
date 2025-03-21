@@ -169,3 +169,4 @@ function generateDescribe(basefile: string) {
 }
 
 describe("9.asm", generateDescribe("9"));
+describe("stack.asm", generateDescribe("stack"));
