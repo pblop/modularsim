@@ -148,7 +148,13 @@ class MemoryUI implements IModule {
 
     // If the bulk write is completely outside the memory table, we can ignore
     // it.
-    if (dataStart >= this.config.start + this.config.size) return;
+    if (
+      // If it ends before the memory table
+      dataStart + data.length <= this.config.start ||
+      // If it starts after the memory
+      dataStart >= this.config.start + this.config.size
+    )
+      return;
 
     this.updateQueue.queueUpdate({ type: "bulk_write", address: dataStart, data });
   };
@@ -267,13 +273,26 @@ class MemoryUI implements IModule {
   }
 
   refreshUI = async (queue: UpdateQueueElement[]) => {
-    // We only need the last update of each type.
-    const updates = new Map<string, UpdateQueueElement>();
-    for (const update of queue) {
-      updates.set(update.type, update);
+    // We only need the last update of the read/write/pc types.
+    let hasRead = false;
+    let hasWrite = false;
+    let hasPC = false;
+
+    for (let i = queue.length - 1; i >= 0; i--) {
+      const type = queue[i].type;
+      if (type === "read") {
+        if (hasRead) queue.splice(i);
+        else hasRead = true;
+      } else if (type === "write") {
+        if (hasWrite) queue.splice(i);
+        else hasWrite = true;
+      } else if (type === "pc") {
+        if (hasPC) queue.splice(i);
+        else hasPC = true;
+      }
     }
 
-    for (const [_, update] of updates) {
+    for (const update of queue) {
       switch (update.type) {
         case "read":
           this.updateHighlight(update.address, "read-highlight");
