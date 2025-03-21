@@ -16,11 +16,25 @@ import {
 import type { CpuInfo, StateInfo } from "../state_machine";
 import type { AllRegisters } from "./loadstore.js";
 
+// These are in the order of the bits in the postbyte (which is the same as the
+// order the registers are pulled).
 const STACK_BITMASK = ["cc", "A", "B", "dp", "X", "Y", "_", "pc"] as const;
-export function parseStackPostbyte(postbyte: number, usedStackRegister: "U" | "S"): AllRegisters[] {
+/**
+ * Calculates the registers that are pushed or pulled from the stack and in
+ * what order.
+ * @param postbyte The PSH/PUL postbyte.
+ * @param usedStackRegister The register that is used as the stack pointer (S or U).
+ * @param order Whether the registers are being pushed or pulled.
+ * @returns The registers that are pushed or pulled, in the order they are pushed or pulled.
+ */
+export function parseStackPostbyte(
+  postbyte: number,
+  usedStackRegister: "U" | "S",
+  order: "push" | "pull",
+): AllRegisters[] {
   const registers: AllRegisters[] = [];
   const otherStackRegister = usedStackRegister === "U" ? "S" : "U";
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < STACK_BITMASK.length; i++) {
     if (indexBit(postbyte, i)) {
       const register: AllRegisters = (
         STACK_BITMASK[i] === "_" ? otherStackRegister : STACK_BITMASK[i]
@@ -28,6 +42,9 @@ export function parseStackPostbyte(postbyte: number, usedStackRegister: "U" | "S
       registers.push(register);
     }
   }
+
+  // If we're pulling, the order in which the registers are accessed is reversed.
+  if (order === "push") registers.reverse();
   return registers;
 }
 
@@ -93,7 +110,7 @@ function pushEnd(
   if (instructionCtx.registers === undefined) {
     const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
     if (postbyte === null) return false;
-    instructionCtx.registers = parseStackPostbyte(postbyte, register);
+    instructionCtx.registers = parseStackPostbyte(postbyte, register, "push");
   }
 
   if (instructionCtx.i >= instructionCtx.registers.length) return true;
@@ -156,7 +173,7 @@ function pullEnd(
   if (instructionCtx.registers === undefined) {
     const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
     if (postbyte === null) return false;
-    instructionCtx.registers = parseStackPostbyte(postbyte, register);
+    instructionCtx.registers = parseStackPostbyte(postbyte, register, "pull");
   }
 
   if (stateInfo.ticksOnState < 3) return false;

@@ -125,7 +125,7 @@ export type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   addressing: DecompiledAddressingInfo<T>;
 
   exgRegisters?: [AllRegisters | null, AllRegisters | null];
-  registersToPush?: AllRegisters[];
+  registersAffectedStack?: AllRegisters[];
 
   failed: false;
 };
@@ -269,11 +269,12 @@ export async function decompileInstruction(
   if (instruction.mnemonic === "exg" || instruction.mnemonic === "tfr") {
     exgRegisters = parseExgPostbyte((addressing as DecompiledAddressingInfo<"immediate">).value);
   }
-  let registersToPush: AllRegisters[] | undefined;
+  let registersAffectedStack: AllRegisters[] | undefined;
   if (instruction.mnemonic.startsWith("psh") || instruction.mnemonic.startsWith("pul")) {
-    registersToPush = parseStackPostbyte(
+    registersAffectedStack = parseStackPostbyte(
       (addressing as DecompiledAddressingInfo<"immediate">).value,
       instruction.register as "S" | "U",
+      instruction.mnemonic.startsWith("pul") ? "pull" : "push",
     );
   }
 
@@ -284,7 +285,7 @@ export async function decompileInstruction(
     args,
     addressing,
     exgRegisters,
-    registersToPush,
+    registersAffectedStack,
     bytes: bytes,
     failed: false,
   };
@@ -345,7 +346,7 @@ export function generateRowData(
             decompiled.instruction.mnemonic.startsWith("psh") ||
             decompiled.instruction.mnemonic.startsWith("pul")
           ) {
-            data += ` ${decompiled.registersToPush!.join(",")}`;
+            data += ` ${decompiled.registersAffectedStack!.join(",")}`;
           } else {
             // EXG or TFR (the only instructions with immediate addressing and no register)
             const [src, dst] = decompiled.exgRegisters!;
