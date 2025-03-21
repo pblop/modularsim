@@ -45,15 +45,13 @@ function pushStart(
   if (stateInfo.ticksOnState === 0) {
     instructionCtx.registers = undefined;
     instructionCtx.i = 0;
-  }
 
-  // If the postbyte is not yet retrieved, retrieve it.
-  if (instructionCtx.registers === undefined) {
+    // Retrieve the postbyte.
     return queryReadAddressing(1, addr, cpuInfo, stateInfo);
   }
 
   // After the postbyte is retrieved, there are 3 Don't Care cycles (in the last
-  // of which we perform the first push).
+  // of which we think about performing the first push).
   if (stateInfo.ticksOnState < 3) return;
 
   const registers = instructionCtx.registers;
@@ -102,6 +100,80 @@ function pushEnd(
   else return false;
 }
 
+function pullStart(
+  register: "U" | "S",
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addr: CpuAddressingData<"immediate">,
+) {
+  const { memoryPending, queryMemoryRead } = cpuInfo;
+  if (memoryPending) return;
+
+  const instructionCtx = stateInfo.ctx.instructionCtx;
+  if (stateInfo.ticksOnState === 0) {
+    instructionCtx.registers = undefined;
+    instructionCtx.i = 0;
+
+    // Retrieve the postbyte.
+    return queryReadAddressing(1, addr, cpuInfo, stateInfo);
+  }
+
+  // After the postbyte is retrieved, there are 2 Don't Care cycles.
+  if (stateInfo.ticksOnState < 3) return;
+
+  const registers = instructionCtx.registers;
+  // We're done if we've pulled all registers.
+  if (instructionCtx.i >= registers.length) return;
+
+  // Otherwise, push the next register.
+  const regToPull: AllRegisters = registers[instructionCtx.i];
+  const size = REGISTER_SIZE[regToPull];
+  const stackLocation = cpu.registers[register];
+  if (regToPull) {
+    // TODO: It would be good to update the stack pointer after the push (maybe
+    // in the same fashion as the PC is updated after a read).
+    queryMemoryRead(stackLocation, size);
+
+    cpu.registers[register] += size;
+    cpu.registers[register] = truncate(cpu.registers[register], 16);
+  }
+}
+
+function pullEnd(
+  register: "U" | "S",
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addressingData: CpuAddressingData<"immediate">,
+): boolean {
+  const { memoryPending, memoryAction, commitRegisters, registers } = cpuInfo;
+  if (memoryPending) return false;
+
+  const instructionCtx = stateInfo.ctx.instructionCtx;
+
+  // If the postbyte is not yet retrieved, retrieve it.
+  if (instructionCtx.registers === undefined) {
+    const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
+    if (postbyte === null) return false;
+    instructionCtx.registers = parseStackPostbyte(postbyte, register);
+  }
+
+  if (stateInfo.ticksOnState < 3) return false;
+
+  if (instructionCtx.i >= instructionCtx.registers.length) return true;
+
+  // We have to update the registers after the each pull.
+  const pulledReg: AllRegisters = instructionCtx.registers[instructionCtx.i];
+  if (pulledReg) {
+    cpu.registers[pulledReg] = memoryAction!.valueRead;
+
+    instructionCtx.i++;
+  }
+
+  return false;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // PSHS, PSHU
   addInstructions(
@@ -121,17 +193,19 @@ export default function (addInstructions: typeof addInstructionsType) {
     },
   );
 
-  // // PULS, PULU
-  // addInstructions(
-  //   "pul{register}",
-  //   [
-  //     [0x35, "S", "immediate", "1"],
-  //     [0x37, "U", "immediate", "1"],
-  //   ],
-  //   (_, __, ___, ____) => ({
-  //     start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-  //       queryReadAddressing(1, addr, cpuInfo, stateInfo),
-  //     end: (cpu, cpuInfo, stateInfo, addr, regs) => exg(cpuInfo, stateInfo, addr),
-  //   }),
-  // );
+  // PULS, PULU
+  addInstructions(
+    "pul{register}",
+    [
+      [0x35, "S", "immediate", "1"],
+      [0x37, "U", "immediate", "1"],
+    ],
+    (_, register, ___, ____) => ({
+      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        pullStart(register, cpu, cpuInfo, stateInfo, addr),
+      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        pullEnd(register, cpu, cpuInfo, stateInfo, addr),
+    }),
+    { postbyte: true },
+  );
 }
