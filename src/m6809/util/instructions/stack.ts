@@ -50,9 +50,8 @@ function pushStart(
     return queryReadAddressing(1, addr, cpuInfo, stateInfo);
   }
 
-  // After the postbyte is retrieved, there are 3 Don't Care cycles (in the last
-  // of which we think about performing the first push).
-  if (stateInfo.ticksOnState < 3) return;
+  // After the postbyte is retrieved, there are 3 Don't Care cycles.
+  if (stateInfo.ticksOnState < 4) return;
 
   const registers = instructionCtx.registers;
   // We're done if we've pushed all registers.
