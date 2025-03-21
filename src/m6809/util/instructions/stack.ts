@@ -16,7 +16,7 @@ import {
 import type { CpuInfo, StateInfo } from "../state_machine";
 import type { AllRegisters } from "./loadstore.js";
 
-const STACK_BITMASK = ["cc", "A", "B", "D", "X", "Y", "_", "pc"] as const;
+const STACK_BITMASK = ["cc", "A", "B", "dp", "X", "Y", "_", "pc"] as const;
 export function parseStackPostbyte(postbyte: number, usedStackRegister: "U" | "S"): AllRegisters[] {
   const registers: AllRegisters[] = [];
   const otherStackRegister = usedStackRegister === "U" ? "S" : "U";
@@ -97,8 +97,6 @@ function pushEnd(
     if (postbyte === null) return false;
     instructionCtx.registers = parseStackPostbyte(postbyte, register);
   }
-
-  if (stateInfo.ticksOnState < 3) return false;
 
   if (instructionCtx.i >= instructionCtx.registers.length) return true;
   else return false;
