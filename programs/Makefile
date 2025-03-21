@@ -15,20 +15,24 @@ all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard
 %.lst: %.asm
 	$(AS) $(ASFLAGS) -l $<
 
+# Binary output file
 %.s19: %.rel
 	$(LINK) $(LINKFLAGS) -s $<
-
-%.noi: %.rel
-	$(LINK) $(LINKFLAGS) -j $<
-
-%.cdb: %.rel
-	$(LINK) $(LINKFLAGS) -y $<
-	
-%.json: %.s19
-	$(SELF_DIR)/../scripts/generate-test-json.py $< $@
-
+%.ihx: %.rel
+	$(LINK) $(LINKFLAGS) -i $<
+# Full memory binary output 
 %.bin: %.s19
 	$(SELF_DIR)/../scripts/s19reader.py $< $@
+
+# Debug symbols
+%.noi: %.rel
+	$(LINK) $(LINKFLAGS) -j $<
+%.cdb: %.rel # this one isn't implemented
+	$(LINK) $(LINKFLAGS) -y $<
+
+# Test .json
+%.json: %.s19
+	$(SELF_DIR)/../scripts/generate-test-json.py $< $@
 
 # Clean build artifacts
 clean:
