@@ -281,13 +281,13 @@ class MemoryUI implements IModule {
     for (let i = queue.length - 1; i >= 0; i--) {
       const type = queue[i].type;
       if (type === "read") {
-        if (hasRead) queue.splice(i);
+        if (hasRead) queue.splice(i, 1);
         else hasRead = true;
       } else if (type === "write") {
-        if (hasWrite) queue.splice(i);
+        if (hasWrite) queue.splice(i, 1);
         else hasWrite = true;
       } else if (type === "pc") {
-        if (hasPC) queue.splice(i);
+        if (hasPC) queue.splice(i, 1);
         else hasPC = true;
       }
     }
