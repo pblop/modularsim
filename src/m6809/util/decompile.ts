@@ -15,6 +15,7 @@ import {
   decompose,
 } from "../../general/numbers.js";
 import { parseExgPostbyte, type AllRegisters } from "./instructions/loadstore.js";
+import { parseStackPostbyte } from "./instructions/stack.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.
 export type ReadFunction = (address: number, bytes?: number) => Promise<number>;
@@ -122,7 +123,9 @@ export type DecompiledInstruction<T extends AddressingMode = AddressingMode> = {
   // The values above but in a more readable format.
   instruction: InstructionData<T>;
   addressing: DecompiledAddressingInfo<T>;
+
   exgRegisters?: [AllRegisters | null, AllRegisters | null];
+  registersToPush?: AllRegisters[];
 
   failed: false;
 };
@@ -182,9 +185,11 @@ export async function decompileInstruction(
   switch (instruction.mode) {
     case "immediate": {
       // The only instructions with immediate addressing and no register are
-      // EXG and TFR. For those instructions, we need to read 1 byte.
-      const registerSize =
-        instruction.register === undefined ? 1 : REGISTER_SIZE[instruction.register];
+      // EXG and TFR. Those instructions have a postbyte that specifies the
+      // registers (so the .extra.postbyte is set).
+      // Other instructions that have immediate addressing and a postbyte are
+      // PSH and PUL.
+      const registerSize = instruction.extra.postbyte ? 1 : REGISTER_SIZE[instruction.register!];
 
       address = "pc";
       const value = await read(startAddress + size, registerSize);
@@ -264,6 +269,13 @@ export async function decompileInstruction(
   if (instruction.mnemonic === "exg" || instruction.mnemonic === "tfr") {
     exgRegisters = parseExgPostbyte((addressing as DecompiledAddressingInfo<"immediate">).value);
   }
+  let registersToPush: AllRegisters[] | undefined;
+  if (instruction.mnemonic.startsWith("psh") || instruction.mnemonic.startsWith("pul")) {
+    registersToPush = parseStackPostbyte(
+      (addressing as DecompiledAddressingInfo<"immediate">).value,
+      instruction.register as "S" | "U",
+    );
+  }
 
   return {
     startAddress,
@@ -272,6 +284,7 @@ export async function decompileInstruction(
     args,
     addressing,
     exgRegisters,
+    registersToPush,
     bytes: bytes,
     failed: false,
   };
@@ -326,13 +339,21 @@ export function generateRowData(
 
     switch (mode) {
       case "immediate": {
-        if (decompiled.instruction.register === undefined) {
-          // EXG or TFR
-          const [src, dst] = decompiled.exgRegisters!;
-          const intermediateStr = decompiled.instruction.mnemonic === "exg" ? "<->" : "->";
-          data += ` ${src}${intermediateStr}${dst}`;
+        if (decompiled.instruction.extra.postbyte) {
+          // PSH or PUL
+          if (
+            decompiled.instruction.mnemonic.startsWith("psh") ||
+            decompiled.instruction.mnemonic.startsWith("pul")
+          ) {
+            data += ` ${decompiled.registersToPush!.join(",")}`;
+          } else {
+            // EXG or TFR (the only instructions with immediate addressing and no register)
+            const [src, dst] = decompiled.exgRegisters!;
+            const intermediateStr = decompiled.instruction.mnemonic === "exg" ? "<->" : "->";
+            data += ` ${src}${intermediateStr}${dst}`;
+          }
         } else {
-          const registerHexSize = REGISTER_SIZE[decompiled.instruction.register] * 2;
+          const registerHexSize = REGISTER_SIZE[decompiled.instruction.register!] * 2;
           data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
         }
         break;
