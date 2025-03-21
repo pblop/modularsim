@@ -1,6 +1,6 @@
 import type Cpu from "../../hardware/cpu";
 import type { CpuAddressingData } from "../../hardware/cpu";
-import { ConditionCodes, type Registers } from "../cpu_parts";
+import { ConditionCodes, type Registers } from "../cpu_parts.js";
 import type {
   addInstructions as addInstructionsType,
   ExecuteStateInfo,
