@@ -20,6 +20,7 @@ import branching from "./instructions/branching.js";
 import test from "./instructions/test.js";
 import loadStore from "./instructions/loadstore.js";
 import arithmetic from "./instructions/arithmetic.js";
+import stack from "./instructions/stack.js";
 
 export type ExecuteStateInfo = StateInfo<"execute">;
 
@@ -167,7 +168,7 @@ export function retrieveReadAddressing(
 export function queryWrite(
   size: number,
   value: number,
-  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
+  addr: CpuAddressingData<"direct" | "indexed" | "extended"> | { address: number },
   { queryMemoryWrite, memoryAction, memoryPending }: CpuInfo,
   { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
 ): boolean {
@@ -289,3 +290,4 @@ branching(addInstructions);
 loadStore(addInstructions);
 test(addInstructions);
 arithmetic(addInstructions);
+stack(addInstructions);
