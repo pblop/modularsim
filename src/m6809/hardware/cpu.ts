@@ -273,6 +273,8 @@ class Cpu implements IModule {
   performPendingMemory = () => {
     if (!this.memoryAction || this.memoryAction.isDone()) return;
     this.memoryAction.perform();
+
+    if (this.memoryAction.type === "read" && this.performingPCRead) this.registers.pc++;
   };
   onMemoryReadResult = (address: number, data: number) => {
     if (!this.memoryAction) return;
@@ -280,8 +282,6 @@ class Cpu implements IModule {
     // If the result wasn't put in the memoryAction, it's not the result we
     // want.
     if (!this.memoryAction.putReadResult(address, data)) return;
-
-    if (this.performingPCRead) this.registers.pc++;
   };
   queryMemoryWrite = (address: number, bytes: number, value: number) => {
     this.memoryAction = new RWHelper(this.et, address, bytes, "write", value);
