@@ -50,7 +50,8 @@ function pushStart(
     return queryReadAddressing(1, addr, cpuInfo, stateInfo);
   }
 
-  // After the postbyte is retrieved, there are 3 Don't Care cycles.
+  // After the postbyte is retrieved (1 cycle), there are 3 Don't Care cycles,
+  // so the real work starts on the 4th cycle.
   if (stateInfo.ticksOnState < 4) return;
 
   const registers = instructionCtx.registers;
