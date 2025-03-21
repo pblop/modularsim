@@ -80,6 +80,8 @@ function pushStart(
 
     cpu.registers[register] += twosComplement(size, 16);
     cpu.registers[register] = truncate(cpu.registers[register], 16);
+
+    instructionCtx.i++;
   }
 }
 
