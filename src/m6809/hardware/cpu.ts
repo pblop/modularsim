@@ -182,7 +182,7 @@ class Cpu implements IModule {
       nmiVector: { type: "number", required: false, default: 0xfffc },
       swiVector: { type: "number", required: false, default: 0xfffa },
       irqVector: { type: "number", required: false, default: 0xfff8 },
-      firqVector: { type: "number", required: false, default: 0xfff },
+      firqVector: { type: "number", required: false, default: 0xfff6 },
       swi2Vector: { type: "number", required: false, default: 0xfff4 },
       swi3Vector: { type: "number", required: false, default: 0xfff2 },
     });
