@@ -5,8 +5,8 @@ import type {
   InstructionData,
   ParsedIndexedPostbyte,
 } from "../util/instructions.js";
-import { Registers } from "../util/cpu_parts.js";
-import { CpuInfo, type CpuState, StateMachine } from "../util/state_machine.js";
+import { ConditionCodes, Registers } from "../util/cpu_parts.js";
+import { type CpuInfo, type CpuState, StateMachine } from "../util/state_machine.js";
 import { compose, decompose } from "../../general/numbers.js";
 import { verify } from "../../general/config.js";
 import ResettingState from "./states/resetting.js";
@@ -18,9 +18,16 @@ import ExtendedState from "./states/extended.js";
 import DirectState from "./states/direct.js";
 import ExecuteState from "./states/execute.js";
 import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
+import IrqNmiState from "./states/irqnmi.js";
 
 export type CpuConfig = {
   resetVector: number;
+  nmiVector: number;
+  irqVector: number;
+  firqVector: number;
+  swiVector: number;
+  swi2Vector: number;
+  swi3Vector: number;
 };
 
 export type CpuImmediateAddressingData = {
@@ -129,6 +136,10 @@ class Cpu implements IModule {
   instruction?: InstructionData;
   addressing?: CpuAddressingData<AddressingMode>;
 
+  pendingIRQ: boolean;
+  pendingNMI: boolean;
+  pendingFIRQ: boolean;
+
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
@@ -145,7 +156,11 @@ class Cpu implements IModule {
           "signal:reset": this.reset,
           "memory:read:result": this.onMemoryReadResult,
         },
-        optional: {},
+        optional: {
+          "signal:irq": this.irq,
+          "signal:nmi": this.nmi,
+          "signal:firq": this.firq,
+        },
       },
       cycles: {
         permanent: [
@@ -164,11 +179,21 @@ class Cpu implements IModule {
     this.id = id;
     this.config = verify<CpuConfig>(config, {
       resetVector: { type: "number", required: false, default: 0xfffe },
+      nmiVector: { type: "number", required: false, default: 0xfffc },
+      swiVector: { type: "number", required: false, default: 0xfffa },
+      irqVector: { type: "number", required: false, default: 0xfff8 },
+      firqVector: { type: "number", required: false, default: 0xfff },
+      swi2Vector: { type: "number", required: false, default: 0xfff4 },
+      swi3Vector: { type: "number", required: false, default: 0xfff2 },
     });
     this.et = eventTransceiver;
 
     this._registers = new Registers();
     this.registers = this.getRegistersProxy();
+
+    this.pendingIRQ = false;
+    this.pendingNMI = false;
+    this.pendingFIRQ = false;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -193,6 +218,30 @@ class Cpu implements IModule {
       this.et.emit("cpu:register_update", key, value);
     }
     this.et.emit("cpu:registers_update", this._registers.copy());
+  };
+
+  // TODO: The IRQs are not immediate (see Figure 9 of the datasheet, or the very
+  // good explanation at https://github.com/cavnex/mc6809/blob/master/documentation/CoreDesign.md#interrupts).
+  // But for now, we're going to receive them whenever they're emitted, because
+  // it's easier to implement.
+  irq = () => {
+    // If the IRQs are masked, don't do anything.
+    if (this.registers.cc & ConditionCodes.IRQ_MASK) return;
+
+    this.pendingIRQ = true;
+  };
+  nmi = () => {
+    this.pendingNMI = true;
+  };
+  firq = () => {
+    // If the FIRQs are masked, don't do anything.
+    if (this.registers.cc & ConditionCodes.FIRQ_MASK) return;
+
+    this.pendingFIRQ = true;
+  };
+
+  swi = (num: number) => {
+    return this.fail(`SWI${num} not implemented`);
   };
 
   reset = () => {
@@ -272,6 +321,8 @@ class Cpu implements IModule {
       extended: ExtendedState,
       direct: DirectState,
       execute: ExecuteState,
+      irqnmi: IrqNmiState,
+      firq: FailState,
       fail: FailState,
     },
     "fail",

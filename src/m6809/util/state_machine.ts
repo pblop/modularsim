@@ -20,6 +20,8 @@ type StateContexts = {
   relative: EmptyObject;
   extended: { remainingTicks: number };
   direct: { remainingTicks: number };
+  irqnmi: { irq: boolean; nmi: boolean };
+  firq: EmptyObject;
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>

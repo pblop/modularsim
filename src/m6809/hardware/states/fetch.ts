@@ -21,6 +21,12 @@ const end: CycleEndFn<"fetch"> = (
 ) => {
   if (memoryPending) return null;
 
+  if (cpu.pendingNMI || cpu.pendingIRQ) {
+    return "irqnmi";
+  } else if (cpu.pendingFIRQ) {
+    return "firq";
+  }
+
   // Convert the opcode bytes (one or two) to a single u16 containing the
   // whole opcode.
   // The low byte is the last byte read.

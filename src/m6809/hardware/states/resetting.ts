@@ -14,7 +14,7 @@ const start: CycleStartFn<"resetting"> = (
 };
 
 const end: CycleEndFn<"resetting"> = (
-  { memoryPending, memoryAction, registers, commitRegisters, et },
+  { cpu, memoryPending, memoryAction, registers, commitRegisters, et },
   { ticksOnState, ctx },
 ) => {
   // This state is a bit special because of it being the "first" one. It
@@ -30,6 +30,11 @@ const end: CycleEndFn<"resetting"> = (
   }
   ctx.remainingTicks--;
   if (memoryPending || ctx.remainingTicks > 0) return null;
+
+  // Clear "interrupt pending" flags.
+  cpu.pendingFIRQ = false;
+  cpu.pendingNMI = false;
+  cpu.pendingIRQ = false;
 
   // Clear all registers.
   // Set pc to the value stored at the reset vector.

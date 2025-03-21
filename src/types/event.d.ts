@@ -23,6 +23,9 @@ export interface EventMap {
 
   // The hardware reset signal.
   "signal:reset": [];
+  "signal:nmi": [];
+  "signal:irq": [];
+  "signal:firq": [];
 
   // CPU events
   "cpu:instruction_finish": [];
