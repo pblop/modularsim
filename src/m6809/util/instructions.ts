@@ -168,7 +168,7 @@ export function retrieveReadAddressing(
 export function queryWrite(
   size: number,
   value: number,
-  addr: CpuAddressingData<"direct" | "indexed" | "extended"> | { address: number },
+  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
   { queryMemoryWrite, memoryAction, memoryPending }: CpuInfo,
   { ticksOnState, ctx: { instructionCtx } }: ExecuteStateInfo,
 ): boolean {

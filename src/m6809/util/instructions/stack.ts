@@ -70,13 +70,7 @@ function pushStart(
     // to the CPU class?
     // Also, it would be good to update the stack pointer after the push (maybe
     // in the same fashion as the PC is updated after a read).
-    queryWrite(
-      size,
-      cpu.registers[regToPush],
-      { address: stackLocation - size },
-      cpuInfo,
-      stateInfo,
-    );
+    queryMemoryWrite(stackLocation - size, size, cpu.registers[regToPush]);
 
     cpu.registers[register] += twosComplement(size, 16);
     cpu.registers[register] = truncate(cpu.registers[register], 16);
@@ -98,7 +92,7 @@ function pushEnd(
   const instructionCtx = stateInfo.ctx.instructionCtx;
 
   // If the postbyte is not yet retrieved, retrieve it.
-  if (instructionCtx.postbyte === undefined) {
+  if (instructionCtx.registers === undefined) {
     const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
     if (postbyte === null) return false;
     instructionCtx.registers = parseStackPostbyte(postbyte, register);
