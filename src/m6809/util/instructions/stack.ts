@@ -51,9 +51,17 @@ export function parseStackPostbyte(
   return registers;
 }
 
+/**
+ * Utility function to push registers onto the stack.
+ * @param cpuInfo A CpuInfo object.
+ * @param stackRegister The register that is used as the stack pointer (S or U).
+ * @param regsToPush The registers to push onto the stack (in the order they are pushed).
+ * @param ctx An object to hold the state of the function.
+ * @param key The key in the ctx object that holds the state of the function.
+ * @returns Whether all the registers have been pushed (or queried to be pushed).
+ */
 export function pushRegisters<K extends string>(
   cpuInfo: CpuInfo,
-  stateInfo: AnyStateInfo,
   stackRegister: "U" | "S",
   regsToPush: AllRegisters[],
   ctx: { [P in K]: number },
@@ -106,7 +114,7 @@ function pushStart(
 
   const registers = instructionCtx.registers;
 
-  instructionCtx.done = pushRegisters(cpuInfo, stateInfo, register, registers, instructionCtx, "i");
+  instructionCtx.done = pushRegisters(cpuInfo, register, registers, instructionCtx, "i");
 }
 
 function pushEnd(
