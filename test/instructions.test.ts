@@ -107,9 +107,13 @@ function generateDescribe(basefile: string) {
 
     const registerTester = RegisterTester();
     const contents = await file.bytes();
+
     // Get all snapshots except the last one, which contains the PC following
     // the final instruction.
-    const snapshots = (await registerTester(contents)).slice(0, -1);
+    const regSnapshots = (await registerTester(contents)).slice(0, -1);
+    const snapshots = regSnapshots.map(registersToSnapshot);
+
+    // Global variables to know the test status in the afterEach function.
     let currentSnapshot: number;
     let testStatus: boolean | undefined;
     let skipTests = false;
@@ -118,9 +122,11 @@ function generateDescribe(basefile: string) {
       if (!testStatus && !skipTests) {
         const prevValue =
           currentSnapshot > 0
-            ? snapshotToHumanReadable(registersToSnapshot(snapshots[currentSnapshot - 1]))
+            ? snapshotToHumanReadable(registersToSnapshot(regSnapshots[currentSnapshot - 1]))
             : "<no previous snapshot>";
-        const currValue = snapshotToHumanReadable(registersToSnapshot(snapshots[currentSnapshot]));
+        const currValue = snapshotToHumanReadable(
+          registersToSnapshot(regSnapshots[currentSnapshot]),
+        );
         const prevExpected =
           currentSnapshot > 0
             ? snapshotToHumanReadable(testSnapshots[currentSnapshot - 1])
@@ -135,12 +141,21 @@ function generateDescribe(basefile: string) {
       }
     });
 
-    for (const [index, registers] of snapshots.entries()) {
+    for (const [index, testSnapshot] of testSnapshots.entries()) {
+      if (index >= snapshots.length) {
+        it(`${index}: <no snapshot>`, () => {
+          expect(true, "<no snapshot>").toBeFalsy();
+        });
+        continue;
+      }
+
+      const execSnapshot = snapshots[index];
+
       let decompiledInstruction: string;
       if (index === 0) {
         decompiledInstruction = "<reset>";
       } else {
-        const previousRegisters = snapshots[index - 1];
+        const previousRegisters = regSnapshots[index - 1];
         decompiledInstruction = await generateDecompilation(
           contents,
           previousRegisters.pc,
@@ -155,11 +170,6 @@ function generateDescribe(basefile: string) {
         }
         currentSnapshot = index;
         testStatus = false;
-
-        const testSnapshot = testSnapshots[index];
-
-        // Generate an object that matches the type of the objects in the testSnapshots array.
-        const execSnapshot = registersToSnapshot(registers);
 
         expect(execSnapshot).toEqual(testSnapshot);
         testStatus = true;
