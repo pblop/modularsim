@@ -20,7 +20,7 @@ type StateContexts = {
   relative: EmptyObject;
   extended: { remainingTicks: number };
   direct: { remainingTicks: number };
-  irqnmi: { irq: boolean; nmi: boolean };
+  irqnmi: { irq: boolean; nmi: boolean; pushedRegisters: number };
   firq: EmptyObject;
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
@@ -46,9 +46,11 @@ export type CpuInfo = {
   et: TypedEventTransceiver;
   cpu: Cpu;
 };
-export type StateInfo<S extends CpuState> = {
-  ctx: StateContexts[S];
+export type AnyStateInfo = {
   ticksOnState: number;
+};
+export type StateInfo<S extends CpuState> = AnyStateInfo & {
+  ctx: StateContexts[S];
 };
 
 /**

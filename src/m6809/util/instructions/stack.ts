@@ -13,12 +13,15 @@ import {
   queryReadAddressing,
   queryWrite,
 } from "../instructions.js";
-import type { CpuInfo, CpuState, StateInfo } from "../state_machine";
+import type { AnyStateInfo, CpuInfo, CpuState, StateInfo } from "../state_machine";
 import type { AllRegisters } from "./loadstore.js";
 
 // These are in the order of the bits in the postbyte (which is the same as the
 // order the registers are pulled).
 const STACK_BITMASK = ["cc", "A", "B", "dp", "X", "Y", "_", "pc"] as const;
+export const IRQNMI_STACK_REGISTERS: AllRegisters[] = STACK_BITMASK.map((x) =>
+  x.replace("_", "U"),
+).reverse() as AllRegisters[];
 /**
  * Calculates the registers that are pushed or pulled from the stack and in
  * what order.
@@ -48,19 +51,20 @@ export function parseStackPostbyte(
   return registers;
 }
 
-export function pushRegisters<S extends CpuState = "execute">(
+export function pushRegisters<K extends string>(
   cpuInfo: CpuInfo,
-  stateInfo: StateInfo<S>,
+  stateInfo: AnyStateInfo,
   stackRegister: "U" | "S",
   regsToPush: AllRegisters[],
-  ctx: { i: number },
+  ctx: { [P in K]: number },
+  key: K,
 ): boolean {
   const { memoryPending, queryMemoryWrite, registers } = cpuInfo;
 
-  if (ctx.i >= regsToPush.length) return true;
+  if (ctx[key] >= regsToPush.length) return true;
 
   // Otherwise, push the next register.
-  const regToPush: AllRegisters = regsToPush[ctx.i];
+  const regToPush: AllRegisters = regsToPush[ctx[key]];
   const size = REGISTER_SIZE[regToPush];
   const stackLocation = registers[stackRegister];
   if (regToPush) {
@@ -102,7 +106,7 @@ function pushStart(
 
   const registers = instructionCtx.registers;
 
-  instructionCtx.done = pushRegisters(cpuInfo, stateInfo, register, registers, instructionCtx);
+  instructionCtx.done = pushRegisters(cpuInfo, stateInfo, register, registers, instructionCtx, "i");
 }
 
 function pushEnd(
