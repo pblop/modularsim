@@ -75,10 +75,10 @@ export function pushRegisters<K extends string>(
     // points to the last location stored in the stack.
     queryMemoryWrite(stackLocation - 1, size, registers[regToPush], stackRegister);
 
-    ctx.i++;
+    ctx[key]++;
   }
 
-  return false;
+  return ctx[key] >= regsToPush.length;
 }
 
 function pushStart(
