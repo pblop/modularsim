@@ -19,6 +19,7 @@ import DirectState from "./states/direct.js";
 import ExecuteState from "./states/execute.js";
 import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
 import IrqNmiState from "./states/irqnmi.js";
+import FastIrqState from "./states/fastirq.js";
 
 export type CpuConfig = {
   resetVector: number;
@@ -352,7 +353,7 @@ class Cpu implements IModule {
       direct: DirectState,
       execute: ExecuteState,
       irqnmi: IrqNmiState,
-      firq: FailState,
+      firq: FastIrqState,
       fail: FailState,
     },
     "fail",
