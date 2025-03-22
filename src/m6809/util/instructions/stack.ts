@@ -52,7 +52,9 @@ export function parseStackPostbyte(
 }
 
 /**
- * Utility function to push registers onto the stack.
+ * Utility function to push registers onto the stack. This function is meant to
+ * be called in the start function of an instruction, every cycle, until all
+ * registers have been pushed.
  * @param cpuInfo A CpuInfo object.
  * @param stackRegister The register that is used as the stack pointer (S or U).
  * @param regsToPush The registers to push onto the stack (in the order they are pushed).
