@@ -3,10 +3,14 @@ import { IRQNMI_STACK_REGISTERS, pushRegisters } from "../../util/instructions/s
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"firq"> = (cpuInfo, stateInfo) => {
-  const { memoryPending, queryMemoryRead, config, cpu } = cpuInfo;
+  const { memoryPending, registers, queryMemoryRead, config, cpu } = cpuInfo;
   const { ctx, ticksOnState } = stateInfo;
 
   if (memoryPending) return;
+
+  if (ticksOnState === 0) {
+    registers.cc &= ~ConditionCodes.ENTIRE_FLAG;
+  }
   // (using figure 10 as a reference)
   // m-1 is the last cycle of the previous instruction.
   // m is the first cycle of the current instruction ("fetch" for us).
@@ -34,6 +38,7 @@ const start: CycleStartFn<"firq"> = (cpuInfo, stateInfo) => {
   else if (ticksOnState === 6) {
     // On cycle 6 (m+7), we fetch the first byte of the interrupt vector.
     // On cycle 7 (m+8) we fetch the second byte (automatically done by queryMemoryRead).
+    registers.cc |= ConditionCodes.FIRQ_MASK | ConditionCodes.IRQ_MASK;
     queryMemoryRead(config.firqVector, 2);
   }
 };

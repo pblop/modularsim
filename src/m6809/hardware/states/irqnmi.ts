@@ -3,18 +3,21 @@ import { IRQNMI_STACK_REGISTERS, pushRegisters } from "../../util/instructions/s
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"irqnmi"> = (cpuInfo, stateInfo) => {
-  const { memoryPending, queryMemoryRead, config, cpu } = cpuInfo;
+  const { memoryPending, queryMemoryRead, config, cpu, registers } = cpuInfo;
   const { ctx, ticksOnState } = stateInfo;
 
   if (memoryPending) return;
 
   if (ticksOnState === 0) {
-    // We need to know which type of interrupt to handle.
+    // Store which interrupt we're handling, and clear the interrupt pending flag.
     if (cpu.pendingNMI) {
       ctx.nmi = true;
+      cpu.pendingNMI = false;
     } else if (cpu.pendingIRQ) {
       ctx.irq = true;
+      cpu.pendingIRQ = false;
     }
+    registers.cc |= ConditionCodes.ENTIRE_FLAG;
   }
   // (using figure 9 as a reference)
   // m-1 is the last cycle of the previous instruction.
@@ -43,6 +46,11 @@ const start: CycleStartFn<"irqnmi"> = (cpuInfo, stateInfo) => {
   else if (ticksOnState === 15) {
     // On cycle 15 (m+16), we fetch the first byte of the interrupt vector.
     // On cycle 16 (m+17) we fetch the second byte (automatically done by queryMemoryRead).
+    if (ctx.nmi) {
+      registers.cc |= ConditionCodes.FIRQ_MASK | ConditionCodes.IRQ_MASK;
+    } else if (ctx.irq) {
+      registers.cc |= ConditionCodes.IRQ_MASK;
+    }
     const vector = ctx.nmi ? config.nmiVector : config.irqVector;
     queryMemoryRead(vector, 2);
   }
@@ -52,14 +60,7 @@ const end: CycleEndFn<"irqnmi"> = (
   { cpu, memoryPending, memoryAction, registers, commitRegisters, et },
   { ticksOnState, ctx },
 ) => {
-  if (ticksOnState === 0) {
-    // Clear the interrupt pending flag for the interrupt we're handling.
-    if (ctx.irq) {
-      cpu.pendingIRQ = false;
-    } else if (ctx.nmi) {
-      cpu.pendingNMI = false;
-    }
-  } else if (ticksOnState === 16) {
+  if (ticksOnState === 16) {
     // On cycle 16 (m+17), we should have the interrupt vector.
     registers.pc = memoryAction!.valueRead;
   } else if (ticksOnState === 17) {
