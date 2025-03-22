@@ -80,15 +80,7 @@ function pushStart(
   const size = REGISTER_SIZE[regToPush];
   const stackLocation = cpu.registers[register];
   if (regToPush) {
-    // TODO: Multi-byte registers are pushed in little-endian order, so it would
-    // be better to perform pushes in the correct order. Maybe add a "pushStack" method
-    // to the CPU class?
-    // Also, it would be good to update the stack pointer after the push (maybe
-    // in the same fashion as the PC is updated after a read).
-    queryMemoryWrite(stackLocation - size, size, cpu.registers[regToPush]);
-
-    cpu.registers[register] += twosComplement(size, 16);
-    cpu.registers[register] = truncate(cpu.registers[register], 16);
+    queryMemoryWrite(stackLocation - 1, size, cpu.registers[regToPush], register);
 
     instructionCtx.i++;
   }
