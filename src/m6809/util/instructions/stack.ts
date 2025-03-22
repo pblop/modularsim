@@ -80,6 +80,11 @@ function pushStart(
   const size = REGISTER_SIZE[regToPush];
   const stackLocation = cpu.registers[register];
   if (regToPush) {
+    // We write the register to the stack, but we don't update the stack pointer
+    // (because it's automatically updated by the CPU memoryWrite utility).
+    // To write the register to the stack, we write it to the stack pointer - 1,
+    // that is, the location before the stack pointer, because the stack pointer
+    // points to the last location stored in the stack.
     queryMemoryWrite(stackLocation - 1, size, cpu.registers[regToPush], register);
 
     instructionCtx.i++;
