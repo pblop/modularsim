@@ -13,7 +13,7 @@ import {
   queryReadAddressing,
   queryWrite,
 } from "../instructions.js";
-import type { CpuInfo, StateInfo } from "../state_machine";
+import type { CpuInfo, CpuState, StateInfo } from "../state_machine";
 import type { AllRegisters } from "./loadstore.js";
 
 // These are in the order of the bits in the postbyte (which is the same as the
@@ -48,6 +48,35 @@ export function parseStackPostbyte(
   return registers;
 }
 
+export function pushRegisters<S extends CpuState = "execute">(
+  cpuInfo: CpuInfo,
+  stateInfo: StateInfo<S>,
+  stackRegister: "U" | "S",
+  regsToPush: AllRegisters[],
+  ctx: { i: number },
+): boolean {
+  const { memoryPending, queryMemoryWrite, registers } = cpuInfo;
+
+  if (ctx.i >= regsToPush.length) return true;
+
+  // Otherwise, push the next register.
+  const regToPush: AllRegisters = regsToPush[ctx.i];
+  const size = REGISTER_SIZE[regToPush];
+  const stackLocation = registers[stackRegister];
+  if (regToPush) {
+    // We write the register to the stack, but we don't update the stack pointer
+    // (because it's automatically updated by the CPU memoryWrite utility).
+    // To write the register to the stack, we write it to the stack pointer - 1,
+    // that is, the location before the stack pointer, because the stack pointer
+    // points to the last location stored in the stack.
+    queryMemoryWrite(stackLocation - 1, size, registers[regToPush], stackRegister);
+
+    ctx.i++;
+  }
+
+  return false;
+}
+
 function pushStart(
   register: "U" | "S",
   cpu: Cpu,
@@ -72,23 +101,8 @@ function pushStart(
   if (stateInfo.ticksOnState < 4) return;
 
   const registers = instructionCtx.registers;
-  // We're done if we've pushed all registers.
-  if (instructionCtx.i >= registers.length) return;
 
-  // Otherwise, push the next register.
-  const regToPush: AllRegisters = registers[instructionCtx.i];
-  const size = REGISTER_SIZE[regToPush];
-  const stackLocation = cpu.registers[register];
-  if (regToPush) {
-    // We write the register to the stack, but we don't update the stack pointer
-    // (because it's automatically updated by the CPU memoryWrite utility).
-    // To write the register to the stack, we write it to the stack pointer - 1,
-    // that is, the location before the stack pointer, because the stack pointer
-    // points to the last location stored in the stack.
-    queryMemoryWrite(stackLocation - 1, size, cpu.registers[regToPush], register);
-
-    instructionCtx.i++;
-  }
+  instructionCtx.done = pushRegisters(cpuInfo, stateInfo, register, registers, instructionCtx);
 }
 
 function pushEnd(
@@ -110,8 +124,8 @@ function pushEnd(
     instructionCtx.registers = parseStackPostbyte(postbyte, register, "push");
   }
 
-  if (instructionCtx.i >= instructionCtx.registers.length) return true;
-  else return false;
+  // All the push logic is done in the start function.
+  return instructionCtx.done;
 }
 
 function pullStart(
