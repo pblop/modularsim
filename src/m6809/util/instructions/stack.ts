@@ -22,6 +22,7 @@ const STACK_BITMASK = ["cc", "A", "B", "dp", "X", "Y", "_", "pc"] as const;
 export const IRQNMI_STACK_REGISTERS: AllRegisters[] = STACK_BITMASK.map((x) =>
   x.replace("_", "U"),
 ).reverse() as AllRegisters[];
+export const FIRQ_NMI_STACK_REGISTERS: AllRegisters[] = ["cc", "pc"] as const;
 /**
  * Calculates the registers that are pushed or pulled from the stack and in
  * what order.
@@ -77,16 +78,14 @@ export function pushRegisters<K extends string>(
   const regToPush: AllRegisters = regsToPush[ctx[key]];
   const size = REGISTER_SIZE[regToPush];
   const stackLocation = registers[stackRegister];
-  if (regToPush) {
-    // We write the register to the stack, but we don't update the stack pointer
-    // (because it's automatically updated by the CPU memoryWrite utility).
-    // To write the register to the stack, we write it to the stack pointer - 1,
-    // that is, the location before the stack pointer, because the stack pointer
-    // points to the last location stored in the stack.
-    queryMemoryWrite(stackLocation - 1, size, registers[regToPush], stackRegister);
+  // We write the register to the stack, but we don't update the stack pointer
+  // (because it's automatically updated by the CPU memoryWrite utility).
+  // To write the register to the stack, we write it to the stack pointer - 1,
+  // that is, the location before the stack pointer, because the stack pointer
+  // points to the last location stored in the stack.
+  queryMemoryWrite(stackLocation - 1, size, registers[regToPush], stackRegister);
 
-    ctx[key]++;
-  }
+  ctx[key]++;
 
   return ctx[key] >= regsToPush.length;
 }
@@ -123,26 +122,25 @@ export function pullRegisters<K extends string>(
     const regToPull: AllRegisters = regsToPull[ctx[key]];
     const size = REGISTER_SIZE[regToPull];
     const stackLocation = registers[stackRegister];
-    // TODO: Are these if statements necessary?
-    if (regToPull) {
-      // TODO: It would be good to update the stack pointer after the push (maybe
-      // in the same fashion as the PC is updated after a read).
-      queryMemoryRead(stackLocation, size);
 
-      registers[stackRegister] += size;
-      registers[stackRegister] = truncate(registers[stackRegister], 16);
-    }
+    // NOTE: I removed an if statement here that checked if the regToPull existed,
+    // I don't think it was necessary, but I'm leaving this note here just in case.
+
+    // TODO: It would be good to update the stack pointer after the push (maybe
+    // in the same fashion as the PC is updated after a read).
+    queryMemoryRead(stackLocation, size);
+
+    registers[stackRegister] += size;
+    registers[stackRegister] = truncate(registers[stackRegister], 16);
 
     // We're not done yet, we need to wait for the read result.
     return false;
   } else {
     // During the end part, we update the registers with the pulled values.
     const pulledReg: AllRegisters = regsToPull[ctx[key]];
-    if (pulledReg) {
-      registers[pulledReg] = memoryAction!.valueRead;
+    registers[pulledReg] = memoryAction!.valueRead;
 
-      ctx[key]++;
-    }
+    ctx[key]++;
 
     return ctx[key] >= regsToPull.length;
   }
