@@ -21,6 +21,7 @@ import test from "./instructions/test.js";
 import loadStore from "./instructions/loadstore.js";
 import arithmetic from "./instructions/arithmetic.js";
 import stack from "./instructions/stack.js";
+import interrupts from "./instructions/interrupts.js";
 
 export type ExecuteStateInfo = StateInfo<"execute">;
 
@@ -206,6 +207,7 @@ export function updateConditionCodes(
 export type ExtraInstructionData = {
   isLongBranch: boolean;
   postbyte: boolean;
+  swi: 0 | 1 | 2 | 3; // The SWI number, if the instruction is an SWI, or 0 if it isn't.
 };
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
@@ -247,7 +249,7 @@ export function addInstructions<
   extraIn?: Partial<ExtraInstructionData>,
 ) {
   // Default extra information.
-  const extra = { isLongBranch: false, postbyte: false, ...extraIn };
+  const extra = { isLongBranch: false, postbyte: false, swi: 0, ...extraIn };
 
   for (const [opcode, register, mode, cycles] of modes) {
     const mnemonic =
@@ -292,3 +294,4 @@ loadStore(addInstructions);
 test(addInstructions);
 arithmetic(addInstructions);
 stack(addInstructions);
+interrupts(addInstructions);

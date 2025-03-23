@@ -67,6 +67,8 @@ const end: CycleEndFn<"fetch"> = (
     switch (instruction.mode) {
       case "immediate":
         cpu.addressing = { mode: "immediate" };
+        // If the instruction is a software interrupt, go to the interrupt state.
+        if (instruction.extra.swi) return "irqnmi";
         return "execute";
       case "indexed":
         return "indexed_postbyte";

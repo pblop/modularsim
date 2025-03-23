@@ -11,11 +11,14 @@ const start: CycleStartFn<"irqnmi"> = (cpuInfo, stateInfo) => {
   if (ticksOnState === 0) {
     // Store which interrupt we're handling, and clear the interrupt pending flag.
     if (cpu.pendingNMI) {
-      ctx.nmi = true;
+      ctx.interrupt = "nmi";
       cpu.pendingNMI = false;
     } else if (cpu.pendingIRQ) {
-      ctx.irq = true;
+      ctx.interrupt = "irq";
       cpu.pendingIRQ = false;
+    } else if (cpu.instruction!.extra.swi !== 0) {
+      const swinum = cpu.instruction!.extra.swi === 1 ? "" : cpu.instruction!.extra.swi;
+      ctx.interrupt = `swi${swinum}`;
     }
     registers.cc |= ConditionCodes.ENTIRE_FLAG;
   }
@@ -44,14 +47,15 @@ const start: CycleStartFn<"irqnmi"> = (cpuInfo, stateInfo) => {
   // cycle 14 (m+15) is a VMA cycle, which is not relevant for us.
   //}
   else if (ticksOnState === 15) {
-    // On cycle 15 (m+16), we fetch the first byte of the interrupt vector.
-    // On cycle 16 (m+17) we fetch the second byte (automatically done by queryMemoryRead).
-    if (ctx.nmi) {
+    if (ctx.interrupt === "nmi" || ctx.interrupt === "swi") {
       registers.cc |= ConditionCodes.FIRQ_MASK | ConditionCodes.IRQ_MASK;
-    } else if (ctx.irq) {
+    } else if (ctx.interrupt === "irq") {
       registers.cc |= ConditionCodes.IRQ_MASK;
     }
-    const vector = ctx.nmi ? config.nmiVector : config.irqVector;
+
+    // On cycle 15 (m+16), we fetch the first byte of the interrupt vector.
+    // On cycle 16 (m+17) we fetch the second byte (automatically done by queryMemoryRead).
+    const vector = cpu.config[`${ctx.interrupt}Vector`];
     queryMemoryRead(vector, 2);
   }
 };

@@ -20,7 +20,7 @@ type StateContexts = {
   relative: EmptyObject;
   extended: { remainingTicks: number };
   direct: { remainingTicks: number };
-  irqnmi: { irq: boolean; nmi: boolean; pushedRegisters: number };
+  irqnmi: { interrupt: "irq" | "nmi" | "swi" | "swi2" | "swi3"; pushedRegisters: number };
   firq: { pushedRegisters: number };
   // I could type this correctly, but it's not worth the effort. Every
   // instruction can have a different context, so it's better to just use any.
