@@ -15,6 +15,37 @@ import {
 } from "../instructions.js";
 import type { AnyStateInfo, CpuInfo, CpuState, StateInfo } from "../state_machine";
 import type { AllRegisters } from "./loadstore.js";
+import { FIRQ_NMI_STACK_REGISTERS, IRQNMI_STACK_REGISTERS, pullRegisters } from "./stack.js";
+
+function rtiStart(cpu: Cpu, cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
+  const { registers } = cpu;
+  const { memoryAction } = cpuInfo;
+  const {
+    ctx: { instructionCtx },
+    ticksOnState,
+  } = stateInfo;
+
+  if (ticksOnState === 0) {
+    // If the E flag is set, we pull the entire register set, otherwise, just
+    // PC and CC.
+    instructionCtx.regsToPull =
+      registers.cc & ConditionCodes.ENTIRE_FLAG ? IRQNMI_STACK_REGISTERS : FIRQ_NMI_STACK_REGISTERS;
+  }
+
+  if (!instructionCtx.done)
+    pullRegisters(cpuInfo, stateInfo, "S", instructionCtx.regsToPull, instructionCtx, "i");
+}
+
+function rtiEnd(cpu: Cpu, cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
+  const {
+    ctx: { instructionCtx },
+  } = stateInfo;
+
+  if (!instructionCtx.done)
+    pullRegisters(cpuInfo, stateInfo, "S", instructionCtx.regsToPull, instructionCtx, "i");
+
+  return instructionCtx.done;
+}
 
 export default function (addInstructions: typeof addInstructionsType) {
   addInstructions(
@@ -37,4 +68,8 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
 
   // TODO: RTI
+  addInstructions("rti", [[0x3b, undefined, "inherent", "6/15"]], (_, __, ___, ____) => ({
+    start: (cpu, cpuInfo, stateInfo, addr, regs) => rtiStart(cpu, cpuInfo, stateInfo),
+    end: (cpu, cpuInfo, stateInfo, addr, regs) => rtiEnd(cpu, cpuInfo, stateInfo),
+  }));
 }
