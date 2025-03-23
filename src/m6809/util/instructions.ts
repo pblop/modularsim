@@ -249,7 +249,12 @@ export function addInstructions<
   extraIn?: Partial<ExtraInstructionData>,
 ) {
   // Default extra information.
-  const extra = { isLongBranch: false, postbyte: false, swi: 0, ...extraIn };
+  const extra: ExtraInstructionData = {
+    isLongBranch: false,
+    postbyte: false,
+    swi: 0,
+    ...extraIn,
+  };
 
   for (const [opcode, register, mode, cycles] of modes) {
     const mnemonic =
