@@ -22,7 +22,7 @@ const STACK_BITMASK = ["cc", "A", "B", "dp", "X", "Y", "_", "pc"] as const;
 export const IRQNMI_STACK_REGISTERS: AllRegisters[] = STACK_BITMASK.map((x) =>
   x.replace("_", "U"),
 ).reverse() as AllRegisters[];
-export const FIRQ_NMI_STACK_REGISTERS: AllRegisters[] = ["cc", "pc"] as const;
+export const FIRQ_NMI_STACK_REGISTERS = ["cc", "pc"] as const;
 /**
  * Calculates the registers that are pushed or pulled from the stack and in
  * what order.
