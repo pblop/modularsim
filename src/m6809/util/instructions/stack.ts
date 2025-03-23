@@ -90,6 +90,63 @@ export function pushRegisters<K extends string>(
 
   return ctx[key] >= regsToPush.length;
 }
+/**
+ * Utility function to pull registers from the stack. This function is meant to
+ * be called in the start _and end_ functions of an instruction, every cycle,
+ * until all registers have been pulled.
+ * @param cpuInfo A CpuInfo object.
+ * @param stateInfo A StateInfo object for the current CPU state.
+ * @param stackRegister The register that is used as the stack pointer (S or U).
+ * @param regsToPull The registers to pull from the stack (in the order they are pulled).
+ * @param ctx An object to hold the state of the function.
+ * @param key The key in the ctx object that holds the state of the function.
+ * @returns Whether all the registers have been pulled.
+ */
+export function pullRegisters<K extends string>(
+  { memoryPending, queryMemoryRead, registers, memoryAction }: CpuInfo,
+  { currentPart }: AnyStateInfo,
+  stackRegister: "U" | "S",
+  regsToPull: AllRegisters[],
+  ctx: { [P in K]: number },
+  key: K,
+): boolean {
+  // If we've pulled all the registers, we're done.
+  if (ctx[key] >= regsToPull.length) return true;
+
+  // If there's a memory pending, we wait.
+  if (memoryPending) return false;
+
+  if (currentPart === "start") {
+    // During the start part, we query the memory to read the register.
+
+    // Pull the next register.
+    const regToPull: AllRegisters = regsToPull[ctx[key]];
+    const size = REGISTER_SIZE[regToPull];
+    const stackLocation = registers[stackRegister];
+    // TODO: Are these if statements necessary?
+    if (regToPull) {
+      // TODO: It would be good to update the stack pointer after the push (maybe
+      // in the same fashion as the PC is updated after a read).
+      queryMemoryRead(stackLocation, size);
+
+      registers[stackRegister] += size;
+      registers[stackRegister] = truncate(registers[stackRegister], 16);
+    }
+
+    // We're not done yet, we need to wait for the read result.
+    return false;
+  } else {
+    // During the end part, we update the registers with the pulled values.
+    const pulledReg: AllRegisters = regsToPull[ctx[key]];
+    if (pulledReg) {
+      registers[pulledReg] = memoryAction!.valueRead;
+
+      ctx[key]++;
+    }
+
+    return ctx[key] >= regsToPull.length;
+  }
+}
 
 function pushStart(
   register: "U" | "S",
@@ -164,22 +221,8 @@ function pullStart(
   // After the postbyte is retrieved, there are 2 Don't Care cycles.
   if (stateInfo.ticksOnState < 3) return;
 
-  const registers = instructionCtx.registers;
-  // We're done if we've pulled all registers.
-  if (instructionCtx.i >= registers.length) return;
-
-  // Otherwise, push the next register.
-  const regToPull: AllRegisters = registers[instructionCtx.i];
-  const size = REGISTER_SIZE[regToPull];
-  const stackLocation = cpu.registers[register];
-  if (regToPull) {
-    // TODO: It would be good to update the stack pointer after the push (maybe
-    // in the same fashion as the PC is updated after a read).
-    queryMemoryRead(stackLocation, size);
-
-    cpu.registers[register] += size;
-    cpu.registers[register] = truncate(cpu.registers[register], 16);
-  }
+  if (!instructionCtx.done)
+    pullRegisters(cpuInfo, stateInfo, register, instructionCtx.registers!, instructionCtx, "i");
 }
 
 function pullEnd(
@@ -203,17 +246,14 @@ function pullEnd(
 
   if (stateInfo.ticksOnState < 3) return false;
 
-  if (instructionCtx.i >= instructionCtx.registers.length) return true;
-
-  // We have to update the registers after the each pull.
-  const pulledReg: AllRegisters = instructionCtx.registers[instructionCtx.i];
-  if (pulledReg) {
-    cpu.registers[pulledReg] = memoryAction!.valueRead;
-
-    instructionCtx.i++;
-  }
-
-  return false;
+  return pullRegisters(
+    cpuInfo,
+    stateInfo,
+    register,
+    instructionCtx.registers!,
+    instructionCtx,
+    "i",
+  );
 }
 
 export default function (addInstructions: typeof addInstructionsType) {

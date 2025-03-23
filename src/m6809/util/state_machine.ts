@@ -48,6 +48,7 @@ export type CpuInfo = {
 };
 export type AnyStateInfo = {
   ticksOnState: number;
+  currentPart: "start" | "end";
 };
 export type StateInfo<S extends CpuState> = AnyStateInfo & {
   ctx: StateContexts[S];
@@ -87,14 +88,18 @@ export class StateMachine {
     this.ticksOnState = 0;
   }
 
-  getStateInfo<S extends CpuState>(): StateInfo<S> {
-    return { ctx: this.ctx as StateContexts[S], ticksOnState: this.ticksOnState };
+  getStateInfo<S extends CpuState>(moment: "start" | "end"): StateInfo<S> {
+    return {
+      ctx: this.ctx as StateContexts[S],
+      ticksOnState: this.ticksOnState,
+      currentPart: moment,
+    };
   }
   tick<S extends CpuState>(moment: "start" | "end", cpuInfo: CpuInfo): void {
     const currentFns = this.stateFns[this.current] as StateFns[S];
     if (currentFns == null) throw new Error(`[StateMachine] Unknown state: ${this.current}`);
 
-    const stateInfo = this.getStateInfo<S>();
+    const stateInfo = this.getStateInfo<S>(moment);
     if (moment === "start") {
       currentFns.start(cpuInfo, stateInfo);
     } else {
