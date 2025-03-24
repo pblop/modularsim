@@ -52,10 +52,7 @@ export type ObjectSchema = {
   type: "object";
   required?: boolean;
   default?: Record<string, unknown>;
-} & (
-  | { properties: VerificationProperties }
-  | { properties: undefined; keyPattern: RegExp; schema: VerificationSchema }
-);
+} & ({ properties: VerificationProperties } | { keyPattern: RegExp; schema: VerificationSchema });
 type VerificationSchema = PrimitiveSchema | ArraySchema | ObjectSchema;
 
 export type VerificationProperties = {
@@ -147,7 +144,7 @@ function verifyObject(
   if (typeof obj !== "object" || Array.isArray(obj))
     throw new Error(`${fieldString} must be an object`);
 
-  if (objectSchema.properties === undefined) {
+  if (!("properties" in objectSchema)) {
     const schema = objectSchema.schema;
     for (const key of Object.keys(obj)) {
       if (!objectSchema.keyPattern.test(key))
