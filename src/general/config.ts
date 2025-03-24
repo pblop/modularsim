@@ -52,8 +52,10 @@ export type ObjectSchema = {
   type: "object";
   required?: boolean;
   default?: Record<string, unknown>;
-  properties: VerificationProperties;
-};
+} & (
+  | { properties: VerificationProperties }
+  | { properties: undefined; keyPattern: RegExp; schema: VerificationSchema }
+);
 type VerificationSchema = PrimitiveSchema | ArraySchema | ObjectSchema;
 
 export type VerificationProperties = {
@@ -122,10 +124,10 @@ function verifyArray(value: unknown[], fieldString: string, schema: ArraySchema)
     if (schema.schema.type === "number" || schema.schema.type === "string") {
       value[i] = verifyProperty(value[i] as string | number, `${fieldString}[${i}]`, schema.schema);
     } else if (schema.schema.type === "object") {
-      value[i] = verify(
+      value[i] = verifyObject(
         value[i] as Record<string, unknown>,
-        schema.schema.properties,
         `${fieldString}[${i}]`,
+        schema.schema,
       );
     }
   }
@@ -145,26 +147,58 @@ function verifyObject(
   if (typeof obj !== "object" || Array.isArray(obj))
     throw new Error(`${fieldString} must be an object`);
 
-  for (const [key, schema] of Object.entries(objectSchema.properties)) {
-    // Existence checks
-    if (schema.required && obj[key] === undefined)
-      throw new Error(`${fieldString} field "${key}" is required`);
-    if (schema.default !== undefined && obj[key] === undefined) {
-      obj[key] = schema.default;
-      return obj;
-    }
-    if (obj[key] === undefined) continue;
+  if (objectSchema.properties === undefined) {
+    const schema = objectSchema.schema;
+    for (const key of Object.keys(obj)) {
+      if (!objectSchema.keyPattern.test(key))
+        throw new Error(
+          `${fieldString} field "${key}" does not match the pattern ${objectSchema.keyPattern}`,
+        );
 
-    if (schema.type === "number" || schema.type === "string") {
-      obj[key] = verifyProperty(obj[key] as string | number, `${fieldString} field ${key}`, schema);
-    } else if (schema.type === "array") {
-      obj[key] = verifyArray(obj[key] as unknown[], `${fieldString} field ${key}`, schema);
-    } else if (schema.type === "object") {
-      obj[key] = verifyObject(
-        obj[key] as Record<string, unknown>,
-        `${fieldString} field ${key}`,
-        schema,
-      );
+      if (obj[key] === undefined) continue;
+
+      if (schema.type === "number" || schema.type === "string") {
+        obj[key] = verifyProperty(
+          obj[key] as string | number,
+          `${fieldString} field ${key}`,
+          schema,
+        );
+      } else if (schema.type === "array") {
+        obj[key] = verifyArray(obj[key] as unknown[], `${fieldString} field ${key}`, schema);
+      } else if (schema.type === "object") {
+        obj[key] = verifyObject(
+          obj[key] as Record<string, unknown>,
+          `${fieldString} field ${key}`,
+          schema,
+        );
+      }
+    }
+  } else {
+    for (const [key, schema] of Object.entries(objectSchema.properties)) {
+      // Existence checks
+      if (schema.required && obj[key] === undefined)
+        throw new Error(`${fieldString} field "${key}" is required`);
+      if (schema.default !== undefined && obj[key] === undefined) {
+        obj[key] = schema.default;
+        return obj;
+      }
+      if (obj[key] === undefined) continue;
+
+      if (schema.type === "number" || schema.type === "string") {
+        obj[key] = verifyProperty(
+          obj[key] as string | number,
+          `${fieldString} field ${key}`,
+          schema,
+        );
+      } else if (schema.type === "array") {
+        obj[key] = verifyArray(obj[key] as unknown[], `${fieldString} field ${key}`, schema);
+      } else if (schema.type === "object") {
+        obj[key] = verifyObject(
+          obj[key] as Record<string, unknown>,
+          `${fieldString} field ${key}`,
+          schema,
+        );
+      }
     }
   }
 
