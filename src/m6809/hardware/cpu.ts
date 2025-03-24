@@ -1,5 +1,5 @@
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { TypedEventTransceiver } from "../../types/event.js";
+import type { EventName, TypedEventTransceiver } from "../../types/event.js";
 import type {
   AddressingMode,
   InstructionData,
@@ -29,6 +29,9 @@ export type CpuConfig = {
   swiVector: number;
   swi2Vector: number;
   swi3Vector: number;
+  swiModule: string;
+  swi2Module: string;
+  swi3Module: string;
 };
 
 export type CpuImmediateAddressingData = {
@@ -155,6 +158,21 @@ class Cpu implements IModule {
   pendingFIRQ: boolean;
 
   getModuleDeclaration(): ModuleDeclaration {
+    // Get the SWI modules that are defined in the config and add the SWI events
+    // (directed) to the module declaration.
+    const swiModules = [
+      this.config.swiModule,
+      this.config.swi2Module,
+      this.config.swi3Module,
+    ].filter((module) => module !== undefined);
+    const emittedSWIEvts = swiModules.map((module) => `cpu:js_swi/${module}` satisfies EventName);
+    const requiredSWIObj = Object.fromEntries(
+      swiModules.map((module) => [
+        `cpu:js_swi:result/${module}` satisfies EventName,
+        this.onSwiResult,
+      ]),
+    );
+
     return {
       events: {
         provided: [
@@ -165,10 +183,12 @@ class Cpu implements IModule {
           "cpu:registers_update",
           "cpu:fail",
           "cpu:reset_finish",
+          ...emittedSWIEvts,
         ],
         required: {
           "signal:reset": this.reset,
           "memory:read:result": this.onMemoryReadResult,
+          ...requiredSWIObj,
         },
         optional: {
           "signal:irq": this.irq,
@@ -199,6 +219,9 @@ class Cpu implements IModule {
       firqVector: { type: "number", required: false, default: 0xfff6 },
       swi2Vector: { type: "number", required: false, default: 0xfff4 },
       swi3Vector: { type: "number", required: false, default: 0xfff2 },
+      swiModule: { type: "string", required: false, default: undefined },
+      swi2Module: { type: "string", required: false, default: undefined },
+      swi3Module: { type: "string", required: false, default: undefined },
     });
     this.et = eventTransceiver;
 
@@ -256,6 +279,10 @@ class Cpu implements IModule {
 
   swi = (num: number) => {
     return this.fail(`SWI${num} not implemented`);
+  };
+
+  onSwiResult = (num: number, newRegisters: Registers) => {
+    return this.fail(`JS SWI${num} not implemented`);
   };
 
   reset = () => {
