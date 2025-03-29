@@ -204,23 +204,28 @@ class Cpu implements IModule {
     eventTransceiver: TypedEventTransceiver,
   ) {
     this.id = id;
-    this.config = verify<CpuConfig>(config, {
-      resetVector: { type: "number", required: false, default: 0xfffe },
-      nmiVector: { type: "number", required: false, default: 0xfffc },
-      swiVector: { type: "number", required: false, default: 0xfffa },
-      irqVector: { type: "number", required: false, default: 0xfff8 },
-      firqVector: { type: "number", required: false, default: 0xfff6 },
-      swi2Vector: { type: "number", required: false, default: 0xfff4 },
-      swi3Vector: { type: "number", required: false, default: 0xfff2 },
-      functions: {
-        type: "array",
-        required: false,
-        default: [],
-        schema: {
-          type: "number",
+
+    this.config = verify<CpuConfig>(
+      config,
+      {
+        resetVector: { type: "number", required: false, default: 0xfffe },
+        nmiVector: { type: "number", required: false, default: 0xfffc },
+        swiVector: { type: "number", required: false, default: 0xfffa },
+        irqVector: { type: "number", required: false, default: 0xfff8 },
+        firqVector: { type: "number", required: false, default: 0xfff6 },
+        swi2Vector: { type: "number", required: false, default: 0xfff4 },
+        swi3Vector: { type: "number", required: false, default: 0xfff2 },
+        functions: {
+          type: "array",
+          required: false,
+          default: [],
+          schema: {
+            type: "number",
+          },
         },
       },
-    });
+      `[${this.id}] configuration error: `,
+    );
     this.et = eventTransceiver;
 
     this._registers = new Registers();
