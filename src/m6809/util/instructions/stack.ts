@@ -80,6 +80,12 @@ export function pushRegisters<K extends string>(
   const regToPush: AllRegisters = regsToPush[ctx[key]];
   const size = REGISTER_SIZE[regToPush];
   const stackLocation = registers[stackRegister];
+
+  if (stackLocation < size) {
+    throw new Error(
+      `[cpu] Stack pointer underflow. Stack pointer: ${stackLocation}, size: ${size}`,
+    );
+  }
   // We write the register to the stack, but we don't update the stack pointer
   // (because it's automatically updated by the CPU memoryWrite utility).
   // To write the register to the stack, we write it to the stack pointer - 1,
@@ -126,6 +132,12 @@ export function pullRegisters<K extends string>(
     const regToPull: AllRegisters = regsToPull[ctx[key]];
     const size = REGISTER_SIZE[regToPull];
     const stackLocation = registers[stackRegister];
+
+    if (stackLocation > 0xffff - size) {
+      throw new Error(
+        `[cpu] Stack pointer overflow. Stack pointer: ${stackLocation}, size: ${size}`,
+      );
+    }
 
     // NOTE: I removed an if statement here that checked if the regToPull existed,
     // I don't think it was necessary, but I'm leaving this note here just in case.
