@@ -275,6 +275,8 @@ class Cpu implements IModule {
 
   // TODO: The IRQs are not immediate (see Figure 9 of the datasheet, or the very
   // good explanation at https://github.com/cavnex/mc6809/blob/master/documentation/CoreDesign.md#interrupts).
+  // That means that, we should only receive them when the CPU is in the second
+  // to last state of the instruction.
   // But for now, we're going to receive them whenever they're emitted, because
   // it's easier to implement.
   irq = () => {
