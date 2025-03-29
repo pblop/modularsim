@@ -19,10 +19,11 @@ import type { AllRegisters } from "./loadstore.js";
 // These are in the order of the bits in the postbyte (which is the same as the
 // order the registers are pulled).
 const STACK_BITMASK = ["cc", "A", "B", "dp", "X", "Y", "_", "pc"] as const;
-export const IRQNMI_STACK_REGISTERS: AllRegisters[] = STACK_BITMASK.map((x) =>
-  x.replace("_", "U"),
-).reverse() as AllRegisters[];
-export const FIRQ_NMI_STACK_REGISTERS = ["cc", "pc"] as const;
+export const IRQNMI_STACK_REGISTERS: readonly AllRegisters[] = Object.freeze(
+  STACK_BITMASK.map((x) => x.replace("_", "U")).reverse() as AllRegisters[],
+);
+export const FIRQ_NMI_STACK_REGISTERS: readonly AllRegisters[] = Object.freeze(["cc", "pc"]);
+
 /**
  * Calculates the registers that are pushed or pulled from the stack and in
  * what order.
@@ -66,7 +67,7 @@ export function parseStackPostbyte(
 export function pushRegisters<K extends string>(
   cpuInfo: CpuInfo,
   stackRegister: "U" | "S",
-  regsToPush: AllRegisters[],
+  regsToPush: readonly AllRegisters[],
   ctx: { [P in K]: number },
   key: K,
 ): boolean {
@@ -113,7 +114,7 @@ export function pullRegisters<K extends string>(
   { memoryPending, queryMemoryRead, registers, memoryAction }: CpuInfo,
   { currentPart }: AnyStateInfo,
   stackRegister: "U" | "S",
-  regsToPull: AllRegisters[],
+  regsToPull: readonly AllRegisters[],
   ctx: { [P in K]: number },
   key: K,
 ): boolean {
