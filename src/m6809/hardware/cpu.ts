@@ -256,7 +256,10 @@ class Cpu implements IModule {
   getRegistersProxy() {
     return new Proxy<Registers>(this._registers, {
       set: (target, prop, value) => {
-        if (prop in this.config.immediateUpdateRegisters)
+        // If it's not of the same type, naturally, it won't be included in the
+        // array!
+        // biome-ignore lint/suspicious/noExplicitAny: <above>
+        if (typeof prop === "string" && this.config.immediateUpdateRegisters.includes(prop as any))
           // prop must be string if it is in immediateUpdateRegisters.
           this.et.emit("cpu:register_update", prop as string, value);
         target[prop as keyof Registers] = value;
