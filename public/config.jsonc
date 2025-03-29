@@ -63,11 +63,11 @@
               "column": "1 / span 3",
               "row": "9 / span 2"
             },
-            {
-              "id": "history_ui",
-              "column": "4 / span 3",
-              "row": "9 / span 2"
-            },
+            // {
+            //   "id": "history_ui",
+            //   "column": "4 / span 3",
+            //   "row": "9 / span 2"
+            // },
             {
               "id": "breakpoint_ui",
               "column": "4 / span 1",
@@ -118,9 +118,9 @@
         "type": "cpu",
         "url": "./m6809/hardware/cpu.js",
         "config": {
-          "memory": "main_memory",
-          "clock": "clock",
-          "pc": 270
+          // "functions": {
+          //   "0x8000": "myfunctionmodule"
+          // }
         }
       },
       {
@@ -129,9 +129,18 @@
         "url": "./m6809/extra/loader.js",
         "css": ["./m6809/extra/loader.css"],
         "config": {
-          "file": "./m6809/programs/hola.s19",
-          "symbolsFile": "./m6809/programs/hola.noi"
+          "file": "./m6809/programs/interrupt.s19",
+          "symbolsFile": "./m6809/programs/2d.noi"
           // "file": "http://localhost:6809/m6809/programs/loop.bin"
+        }
+      },
+      {
+        "id": "interrupter",
+        "type": "hw",
+        "url": "./m6809/hardware/interrupter.js",
+        "config": {
+          "each": 1000,
+          "type": "nmi"
         }
       },
       {
