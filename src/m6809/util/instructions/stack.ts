@@ -144,9 +144,6 @@ export function pullRegisters<K extends string>(
     // I don't think it was necessary, but I'm leaving this note here just in case.
     queryMemoryReadStack(stackLocation, size);
 
-    registers[stackRegister] += size;
-    registers[stackRegister] = truncate(registers[stackRegister], 16);
-
     // We're not done yet, we need to wait for the read result.
     return false;
   } else {
