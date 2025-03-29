@@ -25,6 +25,7 @@ import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./
 import IrqNmiState from "./states/irqnmi.js";
 import FastIrqState from "./states/fastirq.js";
 import CustomFnState from "./states/customfn.js";
+import type { AllRegisters } from "../util/instructions/loadstore.js";
 
 export type CpuConfig = {
   resetVector: number;
@@ -35,6 +36,7 @@ export type CpuConfig = {
   swi2Vector: number;
   swi3Vector: number;
   functions: number[];
+  immediateUpdateRegisters: Exclude<AllRegisters, "A" | "B">[];
 };
 
 export type CpuImmediateAddressingData = {
@@ -223,6 +225,17 @@ class Cpu implements IModule {
             type: "number",
           },
         },
+        immediateUpdateRegisters: {
+          type: "array",
+          required: false,
+          // By default, we send updates for stack and pc registers (to allow
+          // for better visualization).
+          default: ["pc", "S", "U"],
+          schema: {
+            type: "string",
+            enum: ["D", "X", "Y", "U", "S", "pc", "cc", "dp"],
+          },
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -241,9 +254,9 @@ class Cpu implements IModule {
   getRegistersProxy() {
     return new Proxy<Registers>(this._registers, {
       set: (target, prop, value) => {
-        if (prop === "pc" || prop === "S" || prop === "U") {
-          this.et.emit("cpu:register_update", prop, value);
-        }
+        if (prop in this.config.immediateUpdateRegisters)
+          // prop must be string if it is in immediateUpdateRegisters.
+          this.et.emit("cpu:register_update", prop as string, value);
         target[prop as keyof Registers] = value;
         return true;
       },
