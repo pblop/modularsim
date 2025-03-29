@@ -29,7 +29,9 @@ function rtiStart(cpu: Cpu, cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
     // If the E flag is set, we pull the entire register set, otherwise, just
     // PC and CC.
     instructionCtx.regsToPull =
-      registers.cc & ConditionCodes.ENTIRE_FLAG ? IRQNMI_STACK_REGISTERS : FIRQ_NMI_STACK_REGISTERS;
+      registers.cc & ConditionCodes.ENTIRE_FLAG
+        ? IRQNMI_STACK_REGISTERS.slice().reverse()
+        : FIRQ_NMI_STACK_REGISTERS.slice().reverse();
   }
 
   if (!instructionCtx.done)
