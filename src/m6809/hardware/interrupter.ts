@@ -36,7 +36,7 @@ class Interrupter implements IModule {
         optional: {},
       },
       cycles: {
-        permanent: [this.timerCallback],
+        permanent: [[this.timerCallback, { subcycle: -1 }]],
       },
     };
   }
