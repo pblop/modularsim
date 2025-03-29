@@ -72,6 +72,8 @@ export function pushRegisters<K extends string>(
 ): boolean {
   const { memoryPending, queryMemoryWrite, registers } = cpuInfo;
 
+  if (ctx[key] == null) ctx[key] = 0; // Initialize the context if it doesn't exist.
+
   if (ctx[key] >= regsToPush.length) return true;
 
   // Otherwise, push the next register.
@@ -111,6 +113,8 @@ export function pullRegisters<K extends string>(
 ): boolean {
   // If we've pulled all the registers, we're done.
   if (ctx[key] >= regsToPull.length) return true;
+
+  if (ctx[key] == null) ctx[key] = 0; // Initialize the context if it doesn't exist.
 
   // If there's a memory pending, we wait.
   if (memoryPending) return false;
