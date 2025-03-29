@@ -177,7 +177,7 @@ function verifyObject(
         throw new Error(`${fieldString} field "${key}" is required`);
       if (schema.default !== undefined && obj[key] === undefined) {
         obj[key] = schema.default;
-        return obj;
+        continue;
       }
       if (obj[key] === undefined) continue;
 
