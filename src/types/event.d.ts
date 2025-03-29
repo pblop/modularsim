@@ -33,6 +33,8 @@ export interface EventMap {
   "cpu:register_update": [register: string, value: number];
   "cpu:fail": [];
   "cpu:reset_finish": [];
+  "cpu:function": [pc: number, registers: Registers];
+  "cpu:function:result": [pc: number, newRegisters: Registers];
 
   // UI events.
   "ui:clock:pause": [];

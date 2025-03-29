@@ -158,21 +158,6 @@ class Cpu implements IModule {
   pendingFIRQ: boolean;
 
   getModuleDeclaration(): ModuleDeclaration {
-    // Get the SWI modules that are defined in the config and add the SWI events
-    // (directed) to the module declaration.
-    const swiModules = [
-      this.config.swiModule,
-      this.config.swi2Module,
-      this.config.swi3Module,
-    ].filter((module) => module !== undefined);
-    const emittedSWIEvts = swiModules.map((module) => `cpu:js_swi/${module}` satisfies EventName);
-    const requiredSWIObj = Object.fromEntries(
-      swiModules.map((module) => [
-        `cpu:js_swi:result/${module}` satisfies EventName,
-        this.onSwiResult,
-      ]),
-    );
-
     return {
       events: {
         provided: [
@@ -183,12 +168,12 @@ class Cpu implements IModule {
           "cpu:registers_update",
           "cpu:fail",
           "cpu:reset_finish",
-          ...emittedSWIEvts,
+          "cpu:function",
         ],
         required: {
           "signal:reset": this.reset,
           "memory:read:result": this.onMemoryReadResult,
-          ...requiredSWIObj,
+          "cpu:function:result": this.onModuleFunctionResult,
         },
         optional: {
           "signal:irq": this.irq,
@@ -219,9 +204,14 @@ class Cpu implements IModule {
       firqVector: { type: "number", required: false, default: 0xfff6 },
       swi2Vector: { type: "number", required: false, default: 0xfff4 },
       swi3Vector: { type: "number", required: false, default: 0xfff2 },
-      swiModule: { type: "string", required: false, default: undefined },
-      swi2Module: { type: "string", required: false, default: undefined },
-      swi3Module: { type: "string", required: false, default: undefined },
+      functions: {
+        type: "object",
+        required: false,
+        keyPattern: /^\d\d\d\d$/,
+        schema: {
+          type: "string",
+        },
+      },
     });
     this.et = eventTransceiver;
 
@@ -281,8 +271,8 @@ class Cpu implements IModule {
     return this.fail(`SWI${num} not implemented`);
   };
 
-  onSwiResult = (num: number, newRegisters: Registers) => {
-    return this.fail(`JS SWI${num} not implemented`);
+  onModuleFunctionResult = (pc: number, newRegisters: Registers) => {
+    return this.fail("JS Modules functions not implemented");
   };
 
   reset = () => {
@@ -421,6 +411,20 @@ class Cpu implements IModule {
     // result to be ready at the beginning of the next cycle.
     this.performPendingMemory();
     // console.log(`[${this.id}] start state: ${this.stateMachine.current}`);
+
+    if (this.stateMachine.current === "fetch" && this.stateMachine.ticksOnState === 0) {
+      // Before entering the fetch state for the first time, we need to check if
+      // the PC is part of a module function.
+      // If it is, we need to emit the event, and wait for the result.
+      if (this.registers.pc in this.config.functions) {
+        const module = this.config.functions[this.registers.pc];
+        this.et.emit("cpu:function", this.registers.pc, this.registers);
+        this.stateMachine.tick("execute", cpuInfo);
+        return;
+        return;
+      }
+    }
+
     this.stateMachine.tick("start", cpuInfo);
   };
 
