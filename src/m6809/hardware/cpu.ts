@@ -175,6 +175,8 @@ class Cpu implements IModule {
     return {
       events: {
         provided: [
+          "cpu:instruction_fetched",
+          "cpu:instruction_decoded",
           "cpu:instruction_finish",
           "memory:read",
           "memory:write",
