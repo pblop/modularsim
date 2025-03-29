@@ -26,6 +26,7 @@ type StateContexts = {
   // instruction can have a different context, so it's better to just use any.
   // biome-ignore lint/suspicious/noExplicitAny: <above>
   execute: { isDone: boolean; instructionCtx: any };
+  customfn: EmptyObject;
 };
 export type CpuState = keyof StateContexts;
 

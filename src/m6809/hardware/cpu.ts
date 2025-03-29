@@ -1,5 +1,9 @@
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { EventName, TypedEventTransceiver } from "../../types/event.js";
+import type {
+  EventDeclarationListeners,
+  EventName,
+  TypedEventTransceiver,
+} from "../../types/event.js";
 import type {
   AddressingMode,
   InstructionData,
@@ -20,6 +24,7 @@ import ExecuteState from "./states/execute.js";
 import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
 import IrqNmiState from "./states/irqnmi.js";
 import FastIrqState from "./states/fastirq.js";
+import CustomFnState from "./states/customfn.js";
 
 export type CpuConfig = {
   resetVector: number;
@@ -29,9 +34,7 @@ export type CpuConfig = {
   swiVector: number;
   swi2Vector: number;
   swi3Vector: number;
-  swiModule: string;
-  swi2Module: string;
-  swi3Module: string;
+  functions: number[];
 };
 
 export type CpuImmediateAddressingData = {
@@ -157,7 +160,16 @@ class Cpu implements IModule {
   pendingNMI: boolean;
   pendingFIRQ: boolean;
 
+  receivedFnRegisters?: Registers;
+
   getModuleDeclaration(): ModuleDeclaration {
+    const required: EventDeclarationListeners = {
+      "signal:reset": this.reset,
+      "memory:read:result": this.onMemoryReadResult,
+    };
+    if (this.config.functions.length > 0) {
+      required["cpu:function:result"] = this.onModuleFunctionResult;
+    }
     return {
       events: {
         provided: [
@@ -170,11 +182,7 @@ class Cpu implements IModule {
           "cpu:reset_finish",
           "cpu:function",
         ],
-        required: {
-          "signal:reset": this.reset,
-          "memory:read:result": this.onMemoryReadResult,
-          "cpu:function:result": this.onModuleFunctionResult,
-        },
+        required,
         optional: {
           "signal:irq": this.irq,
           "signal:nmi": this.nmi,
@@ -205,11 +213,11 @@ class Cpu implements IModule {
       swi2Vector: { type: "number", required: false, default: 0xfff4 },
       swi3Vector: { type: "number", required: false, default: 0xfff2 },
       functions: {
-        type: "object",
+        type: "array",
         required: false,
-        keyPattern: /^\d\d\d\d$/,
+        default: [],
         schema: {
-          type: "string",
+          type: "number",
         },
       },
     });
@@ -272,7 +280,13 @@ class Cpu implements IModule {
   };
 
   onModuleFunctionResult = (pc: number, newRegisters: Registers) => {
-    return this.fail("JS Modules functions not implemented");
+    if (pc !== this.registers.pc) return;
+
+    // If the CPU is not in the custom function state, the result will be
+    // ignored.
+    if (this.stateMachine.current !== "customfn") return;
+
+    this.receivedFnRegisters = newRegisters;
   };
 
   reset = () => {
@@ -371,6 +385,7 @@ class Cpu implements IModule {
       execute: ExecuteState,
       irqnmi: IrqNmiState,
       firq: FastIrqState,
+      customfn: CustomFnState,
       fail: FailState,
     },
     "fail",
@@ -415,12 +430,9 @@ class Cpu implements IModule {
     if (this.stateMachine.current === "fetch" && this.stateMachine.ticksOnState === 0) {
       // Before entering the fetch state for the first time, we need to check if
       // the PC is part of a module function.
-      // If it is, we need to emit the event, and wait for the result.
+      // If it is, we switch to the custom function state.
       if (this.registers.pc in this.config.functions) {
-        const module = this.config.functions[this.registers.pc];
-        this.et.emit("cpu:function", this.registers.pc, this.registers);
-        this.stateMachine.tick("execute", cpuInfo);
-        return;
+        this.stateMachine.setState("customfn");
         return;
       }
     }
