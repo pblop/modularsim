@@ -149,8 +149,8 @@ class Cpu implements IModule {
   // Store the last read memory address, and the value read between states.
   memoryAction: RWHelper | null = null;
   performingPCRead = false;
-  // When performing a stack write, we need to know which register to decrement.
-  stackRegisterWrite: "S" | "U" | null = null; // null means we're not writing to the stack.
+  // When performing a stack read, we need to know which register to decrement.
+  stackRW: "S" | "U" | null = null; // null means we're not reading/writing to/from the stack.
 
   // The current opcode being executed (if any)
   opcode?: number;
@@ -338,6 +338,13 @@ class Cpu implements IModule {
       "read",
     );
     this.performingPCRead = where === "pc";
+    this.stackRW = null;
+    this.performPendingMemory();
+  };
+  queryMemoryReadStack = (where: number, bytes: number) => {
+    this.memoryAction = new RWHelper(this.et, where, bytes, "read");
+    this.stackRW = where === this.registers.S ? "S" : "U";
+    this.performingPCRead = false;
     this.performPendingMemory();
   };
   performPendingMemory = () => {
@@ -346,12 +353,11 @@ class Cpu implements IModule {
 
     if (this.memoryAction.type === "read" && this.performingPCRead) this.registers.pc++;
 
-    if (this.memoryAction.type === "write" && this.stackRegisterWrite != null) {
-      this.registers[this.stackRegisterWrite] += twosComplement(1, 16);
-      this.registers[this.stackRegisterWrite] = truncate(
-        this.registers[this.stackRegisterWrite],
-        16,
-      );
+    // Update the stack pointer if we're using the stack, to better show
+    // the stack pointer being used in the UI.
+    if (this.stackRW != null) {
+      this.registers[this.stackRW] += this.memoryAction.type === "read" ? 1 : twosComplement(1, 16);
+      this.registers[this.stackRW] = truncate(this.registers[this.stackRW], 16);
     }
   };
   onMemoryReadResult = (address: number, data: number) => {
@@ -361,17 +367,19 @@ class Cpu implements IModule {
     // want.
     if (!this.memoryAction.putReadResult(address, data)) return;
   };
-  queryMemoryWrite = (address: number, bytes: number, value: number, stackRegister?: "S" | "U") => {
-    this.stackRegisterWrite = stackRegister ?? null;
-
-    this.memoryAction = new RWHelper(
-      this.et,
-      address,
-      bytes,
-      "write",
-      value,
-      stackRegister !== undefined,
-    );
+  queryMemoryWrite = (address: number, bytes: number, value: number) => {
+    this.memoryAction = new RWHelper(this.et, address, bytes, "write", value);
+    this.stackRW = null;
+    this.performPendingMemory();
+  };
+  queryMemoryWriteStack = (
+    address: number,
+    bytes: number,
+    value: number,
+    stackRegister: "S" | "U",
+  ) => {
+    this.memoryAction = new RWHelper(this.et, address, bytes, "write", value, true);
+    this.stackRW = stackRegister;
     this.performPendingMemory();
   };
 
@@ -438,6 +446,8 @@ class Cpu implements IModule {
       memoryPending,
       queryMemoryRead: this.queryMemoryRead,
       queryMemoryWrite: this.queryMemoryWrite,
+      queryMemoryReadStack: this.queryMemoryReadStack,
+      queryMemoryWriteStack: this.queryMemoryWriteStack,
       config: this.config,
       registers: this.registers,
       memoryAction: this.memoryAction,

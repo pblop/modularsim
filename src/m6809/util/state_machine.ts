@@ -33,13 +33,10 @@ export type CpuState = keyof StateContexts;
 // This is the cpu information that is passed to the state functions.
 export type CpuInfo = {
   memoryPending: boolean;
-  queryMemoryRead: (where: number | "pc", size: number) => void;
-  queryMemoryWrite: (
-    address: number,
-    bytes: number,
-    value: number,
-    stackRegister?: "S" | "U",
-  ) => void;
+  queryMemoryRead: typeof Cpu.prototype.queryMemoryRead;
+  queryMemoryReadStack: typeof Cpu.prototype.queryMemoryReadStack;
+  queryMemoryWriteStack: typeof Cpu.prototype.queryMemoryWriteStack;
+  queryMemoryWrite: typeof Cpu.prototype.queryMemoryWrite;
   config: CpuConfig;
   registers: Registers;
   memoryAction: RWHelper | null;

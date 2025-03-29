@@ -71,7 +71,7 @@ export function pushRegisters<K extends string>(
   ctx: { [P in K]: number },
   key: K,
 ): boolean {
-  const { memoryPending, queryMemoryWrite, registers } = cpuInfo;
+  const { queryMemoryWriteStack, registers } = cpuInfo;
 
   if (ctx[key] == null) ctx[key] = 0; // Initialize the context if it doesn't exist.
 
@@ -92,7 +92,7 @@ export function pushRegisters<K extends string>(
   // To write the register to the stack, we write it to the stack pointer - 1,
   // that is, the location before the stack pointer, because the stack pointer
   // points to the last location stored in the stack.
-  queryMemoryWrite(stackLocation - 1, size, registers[regToPush], stackRegister);
+  queryMemoryWriteStack(stackLocation - 1, size, registers[regToPush], stackRegister);
 
   ctx[key]++;
 
@@ -111,7 +111,7 @@ export function pushRegisters<K extends string>(
  * @returns Whether all the registers have been pulled.
  */
 export function pullRegisters<K extends string>(
-  { memoryPending, queryMemoryRead, registers, memoryAction }: CpuInfo,
+  { memoryPending, queryMemoryReadStack, registers, memoryAction }: CpuInfo,
   { currentPart }: AnyStateInfo,
   stackRegister: "U" | "S",
   regsToPull: readonly AllRegisters[],
@@ -142,10 +142,7 @@ export function pullRegisters<K extends string>(
 
     // NOTE: I removed an if statement here that checked if the regToPull existed,
     // I don't think it was necessary, but I'm leaving this note here just in case.
-
-    // TODO: It would be good to update the stack pointer after the push (maybe
-    // in the same fashion as the PC is updated after a read).
-    queryMemoryRead(stackLocation, size);
+    queryMemoryReadStack(stackLocation, size);
 
     registers[stackRegister] += size;
     registers[stackRegister] = truncate(registers[stackRegister], 16);
