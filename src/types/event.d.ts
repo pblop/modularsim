@@ -1,4 +1,5 @@
 import type { Registers } from "../m6809/util/cpu_parts.js";
+import { InstructionData } from "../m6809/util/instructions.js";
 
 export interface EventMap {
   "memory:read": [address: number];
@@ -29,6 +30,8 @@ export interface EventMap {
 
   // CPU events
   "cpu:instruction_finish": [];
+  "cpu:instruction_fetched": [instruction: InstructionData];
+
   "cpu:registers_update": [registers: Registers];
   "cpu:register_update": [register: string, value: number];
   "cpu:fail": [];

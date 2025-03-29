@@ -16,7 +16,7 @@ const start: CycleStartFn<"fetch"> = (
 };
 
 const end: CycleEndFn<"fetch"> = (
-  { memoryPending, memoryAction, queryMemoryRead, cpu },
+  { memoryPending, memoryAction, queryMemoryRead, cpu, et },
   { ctx },
 ) => {
   // NOTE: Doing the change of state to interrupt within the fetch state means
@@ -63,6 +63,8 @@ const end: CycleEndFn<"fetch"> = (
 
     if (!instruction) return cpu.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
     cpu.instruction = instruction;
+
+    et.emit("cpu:instruction_fetched", instruction);
 
     switch (instruction.mode) {
       case "immediate":
