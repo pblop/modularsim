@@ -34,8 +34,7 @@ function rtiStart(cpu: Cpu, cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
         : FIRQ_NMI_STACK_REGISTERS.slice().reverse();
   }
 
-  if (!instructionCtx.done)
-    pullRegisters(cpuInfo, stateInfo, "S", instructionCtx.regsToPull, instructionCtx, "i");
+  pullRegisters(cpuInfo, stateInfo, "S", instructionCtx.regsToPull, instructionCtx, "i");
 }
 
 function rtiEnd(cpu: Cpu, cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
@@ -43,10 +42,7 @@ function rtiEnd(cpu: Cpu, cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
     ctx: { instructionCtx },
   } = stateInfo;
 
-  if (!instructionCtx.done)
-    pullRegisters(cpuInfo, stateInfo, "S", instructionCtx.regsToPull, instructionCtx, "i");
-
-  return instructionCtx.done;
+  return pullRegisters(cpuInfo, stateInfo, "S", instructionCtx.regsToPull, instructionCtx, "i");
 }
 
 export default function (addInstructions: typeof addInstructionsType) {
