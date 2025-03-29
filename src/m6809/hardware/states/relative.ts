@@ -25,6 +25,7 @@ const end: CycleEndFn<"relative"> = ({ memoryPending, memoryAction, cpu, registe
     address: truncate(registers.pc + offset, 16),
   };
 
+  cpu.onInstructionDecoded();
   return "execute";
 };
 

@@ -391,6 +391,22 @@ class Cpu implements IModule {
     this.addressing = undefined;
   };
 
+  /**
+   * Notify other modules that the instruction has been fetched.
+   */
+  onInstructionFetched = () => {
+    if (!this.instruction) return;
+    this.et.emit("cpu:instruction_fetched", this.instruction);
+  };
+
+  /**
+   * Notify other modules that the instruction has been decoded.
+   */
+  onInstructionDecoded = () => {
+    if (!this.instruction || !this.addressing) return;
+    this.et.emit("cpu:instruction_decoded", this.instruction, this.addressing);
+  };
+
   stateMachine: StateMachine = new StateMachine(
     {
       resetting: ResettingState,

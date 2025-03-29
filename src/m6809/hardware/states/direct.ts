@@ -22,6 +22,7 @@ const end: CycleEndFn<"direct"> = ({ memoryPending, memoryAction, registers, cpu
     return null;
   }
 
+  cpu.onInstructionDecoded();
   return "execute";
 };
 

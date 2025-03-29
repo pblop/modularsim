@@ -22,6 +22,7 @@ const end: CycleEndFn<"extended"> = ({ memoryPending, cpu }, { ctx }) => {
     return null;
   }
 
+  cpu.onInstructionDecoded();
   return "execute";
 };
 

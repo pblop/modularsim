@@ -272,11 +272,13 @@ const endIndexedIndirect: CycleEndFn<"indexed_indirect"> = (
     if (ctx.remainingTicks === 1) {
       cpu.addressing!.address = memoryAction!.valueRead;
     } else if (ctx.remainingTicks === 0) {
+      cpu.onInstructionDecoded();
       return "execute";
     }
     ctx.remainingTicks--;
   } else {
     // If the addressing is not indirect, we don't need to do any reading, so we can move on.
+    cpu.onInstructionDecoded();
     return "execute";
   }
 

@@ -15,10 +15,7 @@ const start: CycleStartFn<"fetch"> = (
   }
 };
 
-const end: CycleEndFn<"fetch"> = (
-  { memoryPending, memoryAction, queryMemoryRead, cpu, et },
-  { ctx },
-) => {
+const end: CycleEndFn<"fetch"> = ({ memoryPending, memoryAction, cpu }, { ctx }) => {
   // NOTE: Doing the change of state to interrupt within the fetch state means
   // that, just like the real CPU, we will have fetched a memory byte, and will,
   // therefore, discard it.
@@ -64,11 +61,12 @@ const end: CycleEndFn<"fetch"> = (
     if (!instruction) return cpu.fail(`Unknown opcode ${ctx.opcode.toString(16)}`);
     cpu.instruction = instruction;
 
-    et.emit("cpu:instruction_fetched", instruction);
+    cpu.onInstructionFetched();
 
     switch (instruction.mode) {
       case "immediate":
         cpu.addressing = { mode: "immediate" };
+        cpu.onInstructionDecoded();
         // If the instruction is a software interrupt, go to the interrupt state.
         if (instruction.extra.swi) return "irqnmi";
         return "execute";
