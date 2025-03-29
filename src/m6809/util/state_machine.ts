@@ -105,9 +105,13 @@ export class StateMachine {
       currentFns.start(cpuInfo, stateInfo);
     } else {
       const nextState = currentFns.end(cpuInfo, stateInfo);
-      if (nextState === null) {
+      if (nextState === null || nextState === this.current) {
+        // self-transition
+        // this is a special case, where we want to keep the state, but
+        // increment the ticksOnState counter.
         this.ticksOnState++;
       } else {
+        // transition to the a different state
         this.setState(nextState);
       }
     }
