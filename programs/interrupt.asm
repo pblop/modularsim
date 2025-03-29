@@ -8,7 +8,9 @@ cadena: .ascii "Interrupcion!"
 
 .globl main
 main:
-  bra main
+  lds #0xA000
+main_loop:
+  bra main_loop
 
 .org 0x5000
 .globl nmi_handler
