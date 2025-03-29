@@ -1,5 +1,9 @@
 import { ConditionCodes } from "../../util/cpu_parts.js";
-import { IRQNMI_STACK_REGISTERS, pushRegisters } from "../../util/instructions/stack.js";
+import {
+  FIRQ_NMI_STACK_REGISTERS,
+  IRQNMI_STACK_REGISTERS,
+  pushRegisters,
+} from "../../util/instructions/stack.js";
 import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"firq"> = (cpuInfo, stateInfo) => {
@@ -25,7 +29,7 @@ const start: CycleStartFn<"firq"> = (cpuInfo, stateInfo) => {
     const pushedAllRegisters = pushRegisters(
       cpuInfo,
       "S",
-      IRQNMI_STACK_REGISTERS,
+      FIRQ_NMI_STACK_REGISTERS,
       ctx,
       "pushedRegisters",
     );
