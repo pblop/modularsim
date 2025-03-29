@@ -19,8 +19,6 @@ const end: CycleEndFn<"fetch"> = (
   { memoryPending, memoryAction, queryMemoryRead, cpu },
   { ctx },
 ) => {
-  if (memoryPending) return null;
-
   // NOTE: Doing the change of state to interrupt within the fetch state means
   // that, just like the real CPU, we will have fetched a memory byte, and will,
   // therefore, discard it.
@@ -37,6 +35,8 @@ const end: CycleEndFn<"fetch"> = (
   } else if (cpu.pendingIRQ) {
     return "irqnmi";
   }
+
+  if (memoryPending) return null;
 
   // Convert the opcode bytes (one or two) to a single u16 containing the
   // whole opcode.
