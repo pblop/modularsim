@@ -79,6 +79,18 @@ function add<M extends GeneralAddressingMode>(
   return true;
 }
 
+function abx(cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
+  const { ticksOnState } = stateInfo;
+  const { registers } = cpuInfo;
+
+  if (ticksOnState === 2) {
+    registers.X = truncate(registers.X + registers.B, 16);
+    return true;
+  }
+
+  return false;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // add8 (adda, addb) and add16 (addd)
   addInstructions(
@@ -123,5 +135,12 @@ export default function (addInstructions: typeof addInstructionsType) {
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
         add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
     }),
+  );
+
+  // abx
+  addInstructions(
+    "abx",
+    [[0x3a, "X", "inherent", "3"]],
+    (_, __, ___, ____) => (_, cpuInfo, stateInfo, __, ___) => abx(cpuInfo, stateInfo),
   );
 }
