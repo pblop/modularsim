@@ -275,14 +275,14 @@ export default function (addInstructions: typeof addInstructionsType) {
   addInstructions(
     "sbc{register}",
     [
-      [0x81, "A", "immediate", "2"],
-      [0x91, "A", "direct", "4"],
-      [0xa1, "A", "indexed", "4+"],
-      [0xb1, "A", "extended", "5"],
-      [0xc1, "B", "immediate", "2"],
-      [0xd1, "B", "direct", "4"],
-      [0xe1, "B", "indexed", "4+"],
-      [0xf1, "B", "extended", "5"],
+      [0x82, "A", "immediate", "2"],
+      [0x92, "A", "direct", "4"],
+      [0xa2, "A", "indexed", "4+"],
+      [0xb2, "A", "extended", "5"],
+      [0xc2, "B", "immediate", "2"],
+      [0xd2, "B", "direct", "4"],
+      [0xe2, "B", "indexed", "4+"],
+      [0xf2, "B", "extended", "5"],
     ],
     (_, reg, mode, cycles) => ({
       start: (cpu, cpuInfo, stateInfo, addr, regs) =>
