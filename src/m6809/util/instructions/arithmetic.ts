@@ -160,8 +160,7 @@ function sub<M extends GeneralAddressingMode>(
       N: isNegative(result, size * 8),
       Z: result === 0,
       C: a < b + carry,
-      // For carry, we add the bits up to 7 and check if the result overflowed.
-      V: truncate(a, 7) + truncate(twosB, 7) > 0x7f,
+      V: indexBit(a, 7) !== indexBit(b, 7) && indexBit(a, 7) !== indexBit(result, 7),
     });
   } else {
     // 16-bit
@@ -171,8 +170,7 @@ function sub<M extends GeneralAddressingMode>(
       N: isNegative(result, size * 8),
       Z: result === 0,
       C: a < b + carry,
-      // For overflow, we add the bits up to 15 and check if the result overflowed.
-      V: truncate(a, 15) + truncate(twosB, 15) > 0x7fff,
+      V: indexBit(a, 15) !== indexBit(b, 15) && indexBit(a, 15) !== indexBit(result, 15),
     });
   }
 
