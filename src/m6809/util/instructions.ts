@@ -5,7 +5,7 @@ import {
   ConditionCodes,
   REGISTER_SIZE,
   SHORT_CC_NAME_MAP,
-  ShortCCNames,
+  type ShortCCNames,
   type Registers,
 } from "../util/cpu_parts.js";
 import {
@@ -22,6 +22,7 @@ import loadStore from "./instructions/loadstore.js";
 import arithmetic from "./instructions/arithmetic.js";
 import stack from "./instructions/stack.js";
 import interrupts from "./instructions/interrupts.js";
+import dual from "./instructions/dual.js";
 
 export type ExecuteStateInfo = StateInfo<"execute">;
 
@@ -300,3 +301,4 @@ test(addInstructions);
 arithmetic(addInstructions);
 stack(addInstructions);
 interrupts(addInstructions);
+dual(addInstructions);
