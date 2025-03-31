@@ -1,4 +1,10 @@
-import { isNegative, truncate, twosComplement } from "../../../general/numbers.js";
+import {
+  indexBit,
+  isNegative,
+  signExtend,
+  truncate,
+  twosComplement,
+} from "../../../general/numbers.js";
 import type Cpu from "../../hardware/cpu";
 import type { CpuAddressingData } from "../../hardware/cpu";
 import { ConditionCodes, REGISTER_SIZE, type Registers } from "../cpu_parts.js";
@@ -91,6 +97,23 @@ function abx(cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
   return false;
 }
 
+function mul({ registers }: CpuInfo, { ticksOnState }: ExecuteStateInfo) {
+  if (ticksOnState === 10) {
+    registers.D = truncate(registers.A * registers.B, 16);
+    updateConditionCodes(registers, {
+      Z: registers.D === 0,
+      C: indexBit(registers.B, 7),
+    });
+    return true;
+  }
+  return false;
+}
+
+function sex({ registers }: CpuInfo, _: ExecuteStateInfo) {
+  registers.D = signExtend(registers.D, 8, 16);
+  return true;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // add8 (adda, addb) and add16 (addd)
   addInstructions(
@@ -142,5 +165,19 @@ export default function (addInstructions: typeof addInstructionsType) {
     "abx",
     [[0x3a, "X", "inherent", "3"]],
     (_, __, ___, ____) => (_, cpuInfo, stateInfo, __, ___) => abx(cpuInfo, stateInfo),
+  );
+
+  // mul
+  addInstructions(
+    "mul",
+    [[0x3d, "D", "inherent", "4"]],
+    (_, __, ___, ____) => (_, cpuInfo, stateInfo, __, ___) => mul(cpuInfo, stateInfo),
+  );
+
+  // sex
+  addInstructions(
+    "sex",
+    [[0x1d, "D", "inherent", "2"]],
+    (_, __, ___, ____) => (_, cpuInfo, stateInfo, __, ___) => sex(cpuInfo, stateInfo),
   );
 }
