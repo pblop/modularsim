@@ -77,51 +77,6 @@ function st<M extends "direct" | "indexed" | "extended">(
   return true;
 }
 
-function clracc(stateInfo: ExecuteStateInfo, reg: Accumulator, regs: Registers): boolean {
-  regs[reg] = 0;
-
-  // Clear N,V,C, set Z
-  regs.cc &= ~(ConditionCodes.OVERFLOW | ConditionCodes.CARRY | ConditionCodes.NEGATIVE);
-  regs.cc |= ConditionCodes.ZERO;
-
-  return true;
-}
-function clrmempart1(
-  cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
-  ____: Registers,
-) {
-  if (!stateInfo.ctx.instructionCtx.hasRead) {
-    return queryReadAddressing(1, addr, cpuInfo, stateInfo);
-  } else {
-    return queryWrite(1, 0, addr, cpuInfo, stateInfo);
-  }
-}
-function clrmem(
-  { registers, memoryPending }: CpuInfo,
-  { ctx: { instructionCtx } }: ExecuteStateInfo,
-  addr: CpuAddressingData<"direct" | "indexed" | "extended">,
-): boolean {
-  if (memoryPending) return false;
-
-  // We need to perform a memory read, ignore the value, and then perform
-  // a memory write, and then, we're done.
-  if (!instructionCtx.hasRead) {
-    instructionCtx.hasRead = true;
-    return false;
-  }
-
-  updateConditionCodes(registers, {
-    N: 0,
-    Z: 1,
-    V: 0,
-  });
-
-  return true;
-}
-
 function exg(
   cpuInfo: CpuInfo,
   stateInfo: ExecuteStateInfo,
@@ -268,29 +223,6 @@ function tfr(
 }
 
 export default function (addInstructions: typeof addInstructionsType) {
-  // clr(accumulator)
-  addInstructions(
-    "clr{register}",
-    [
-      [0x4f, "A", "inherent", "1"],
-      [0x5f, "B", "inherent", "1"],
-    ],
-    (_, reg, mode, cycles) => (_, __, stateInfo, ____, regs) => clracc(stateInfo, reg, regs),
-  );
-  // clr(mem)
-  addInstructions(
-    "clr",
-    [
-      [0x0f, undefined, "direct", "6"],
-      [0x1f, undefined, "indexed", "6+"],
-      [0x2f, undefined, "extended", "7"],
-    ],
-    (_, __, ___, ____) => ({
-      start: clrmempart1,
-      end: (_, cpuInfo, stateInfo, addr, ___) => clrmem(cpuInfo, stateInfo, addr),
-    }),
-  );
-
   // ld8 (lda, ldb) and ld16 (ldd, lds, ldu, ldx, ldy)
   addInstructions(
     "ld{register}",
