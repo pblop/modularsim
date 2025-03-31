@@ -114,6 +114,71 @@ function sex({ registers }: CpuInfo, _: ExecuteStateInfo) {
   return true;
 }
 
+function sub<M extends GeneralAddressingMode>(
+  reg: Register | Accumulator,
+  mode: M,
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  regs: Registers,
+  withCarry = false,
+) {
+  // The size of the register (in bytes).
+  const size = REGISTER_SIZE[reg];
+  const { ticksOnState, ctx } = stateInfo;
+
+  if (ticksOnState === 0) {
+    // add16 takes 1 cycle to do internal calculations, after the read.
+    ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
+  }
+
+  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo);
+  if (b === null) return false;
+
+  // the remaining cycles are for the add16 operation.
+  if (ctx.instructionCtx.remainingCycles !== 0) {
+    ctx.instructionCtx.remainingCycles--;
+    return false;
+  }
+
+  const a = regs[reg];
+  const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
+  const untruncated = a + twosComplement(b, size * 8) + twosComplement(carry, size * 8);
+  const result = truncate(untruncated, size * 8);
+
+  regs[reg] = result;
+
+  if (size === 1) {
+    // 8-bit
+    // CC: N, Z, V, C
+    updateConditionCodes(regs, {
+      // The value of Half-Carry is _undefined_ after executing sub8 and sbc8
+      // instructions.
+      N: isNegative(result, size * 8),
+      Z: result === 0,
+      // For carry, we check if the result "overflowed".
+      C: untruncated > 0xff,
+      // For carry, we add the bits up to 7 and check if the result overflowed.
+      V: truncate(a, 7) + truncate(b, 7) > 0x7f,
+    });
+  } else {
+    // 16-bit
+    // CC: N, Z, V, C
+    updateConditionCodes(regs, {
+      // Half-Carry is _not affected_ by sub16.
+      N: isNegative(result, size * 8),
+      Z: result === 0,
+      // For carry, we check if the result "overflowed".
+      C: untruncated > 0xffff,
+      // For overflow, we add the bits up to 15 and check if the result overflowed.
+      V: truncate(a, 15) + truncate(b, 15) > 0x7fff,
+    });
+  }
+
+  return true;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // add8 (adda, addb) and add16 (addd)
   addInstructions(
@@ -179,5 +244,51 @@ export default function (addInstructions: typeof addInstructionsType) {
     "sex",
     [[0x1d, "D", "inherent", "2"]],
     (_, __, ___, ____) => (_, cpuInfo, stateInfo, __, ___) => sex(cpuInfo, stateInfo),
+  );
+
+  // sub8 (suba, subb) and sub16 (subd)
+  addInstructions(
+    "sub{register}",
+    [
+      [0x80, "A", "immediate", "2"],
+      [0x90, "A", "direct", "4"],
+      [0xa0, "A", "indexed", "4+"],
+      [0xb0, "A", "extended", "5"],
+      [0xc0, "B", "immediate", "2"],
+      [0xd0, "B", "direct", "4"],
+      [0xe0, "B", "indexed", "4+"],
+      [0xf0, "B", "extended", "5"],
+      [0x83, "D", "immediate", "4"],
+      [0x93, "D", "direct", "6"],
+      [0xa3, "D", "indexed", "6+"],
+      [0xb3, "D", "extended", "7"],
+    ],
+    (_, reg, mode, cycles) => ({
+      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        sub(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
+    }),
+  );
+
+  // sbc8 (sbca, sbcb)
+  addInstructions(
+    "sbc{register}",
+    [
+      [0x81, "A", "immediate", "2"],
+      [0x91, "A", "direct", "4"],
+      [0xa1, "A", "indexed", "4+"],
+      [0xb1, "A", "extended", "5"],
+      [0xc1, "B", "immediate", "2"],
+      [0xd1, "B", "direct", "4"],
+      [0xe1, "B", "indexed", "4+"],
+      [0xf1, "B", "extended", "5"],
+    ],
+    (_, reg, mode, cycles) => ({
+      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
+      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        sub(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
+    }),
   );
 }

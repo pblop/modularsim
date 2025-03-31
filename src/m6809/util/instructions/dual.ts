@@ -138,6 +138,10 @@ function dualEnd(
 
 export default function (addInstructions: typeof addInstructionsType) {
   const dualInstructions = [
+    // Each of these arrays contains, in order:
+    // 1. mnemonic
+    // 2. function to call to get the new value and condition codes
+    // 3. opcodes (A, B, direct, indexed, extended)
     ["clr{register}", clr, [0x4f, 0x5f, 0x0f, 0x6f, 0x7f]],
     ["com{register}", com, [0x43, 0x53, 0x03, 0x63, 0x73]],
     ["dec{register}", dec, [0x4a, 0x5a, 0x0a, 0x6a, 0x7a]],
