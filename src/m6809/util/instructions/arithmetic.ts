@@ -143,8 +143,10 @@ function sub<M extends GeneralAddressingMode>(
   }
 
   const a = regs[reg];
+  const twosB = twosComplement(b, size * 8);
   const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
-  const untruncated = a + twosComplement(b, size * 8) + twosComplement(carry, size * 8);
+  const twosCarry = twosComplement(carry, size * 8);
+  const untruncated = a + twosB + twosCarry;
   const result = truncate(untruncated, size * 8);
 
   regs[reg] = result;
@@ -157,10 +159,9 @@ function sub<M extends GeneralAddressingMode>(
       // instructions.
       N: isNegative(result, size * 8),
       Z: result === 0,
-      // For carry, we check if the result "overflowed".
-      C: untruncated > 0xff,
+      C: a < b + carry,
       // For carry, we add the bits up to 7 and check if the result overflowed.
-      V: truncate(a, 7) + truncate(b, 7) > 0x7f,
+      V: truncate(a, 7) + truncate(twosB, 7) > 0x7f,
     });
   } else {
     // 16-bit
@@ -169,10 +170,9 @@ function sub<M extends GeneralAddressingMode>(
       // Half-Carry is _not affected_ by sub16.
       N: isNegative(result, size * 8),
       Z: result === 0,
-      // For carry, we check if the result "overflowed".
-      C: untruncated > 0xffff,
+      C: a < b + carry,
       // For overflow, we add the bits up to 15 and check if the result overflowed.
-      V: truncate(a, 15) + truncate(b, 15) > 0x7fff,
+      V: truncate(a, 15) + truncate(twosB, 15) > 0x7fff,
     });
   }
 
