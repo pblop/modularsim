@@ -32,6 +32,7 @@ function add<M extends GeneralAddressingMode>(
 ) {
   // The size of the register (in bytes).
   const size = REGISTER_SIZE[reg];
+  const bits = size * 8;
   const { ticksOnState, ctx } = stateInfo;
 
   if (ticksOnState === 0) {
@@ -39,7 +40,7 @@ function add<M extends GeneralAddressingMode>(
     ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
   }
 
-  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo);
+  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo); // second operand
   if (b === null) return false;
 
   // the remaining cycles are for the add16 operation.
@@ -48,39 +49,25 @@ function add<M extends GeneralAddressingMode>(
     return false;
   }
 
-  const a = regs[reg];
-  const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
-  const untruncated = a + b + carry;
-  const result = truncate(untruncated, size * 8);
+  const a = regs[reg]; // first operand
+  const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
+
+  const untruncated = a + b + carryIn;
+  const result = truncate(untruncated, bits);
 
   regs[reg] = result;
 
-  if (size === 1) {
-    // 8-bit
-    // CC: H, N, Z, V, C
-    updateConditionCodes(regs, {
-      // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
-      H: truncate(a, 4) + truncate(b, 4) > 0xf,
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      // For carry, we check if the result "overflowed".
-      C: untruncated > 0xff,
-      // For carry, we add the bits up to 7 and check if the result overflowed.
-      V: truncate(a, 7) + truncate(b, 7) > 0x7f,
-    });
-  } else {
-    // 16-bit
-    // CC: N, Z, V, C
-    updateConditionCodes(regs, {
-      // For half-carry, we add the lower nibbles and check if the result is greater than 0xf.
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      // For carry, we check if the result "overflowed".
-      C: untruncated > 0xffff,
-      // For overflow, we add the bits up to 15 and check if the result overflowed.
-      V: truncate(a, 15) + truncate(b, 15) > 0x7fff,
-    });
-  }
+  // Check if the bit after the last bit is set.
+  const carryOut = !!(untruncated & (1 << bits));
+
+  // CC: H, N, Z, V, C
+  updateConditionCodes(regs, {
+    H: a ^ b ^ (result & (1 << (bits / 2))),
+    N: isNegative(result, bits),
+    Z: result === 0,
+    C: carryOut,
+    V: a ^ b ^ result ^ carryIn,
+  });
 
   return true;
 }
@@ -126,6 +113,7 @@ function sub<M extends GeneralAddressingMode>(
 ) {
   // The size of the register (in bytes).
   const size = REGISTER_SIZE[reg];
+  const bits = size * 8;
   const { ticksOnState, ctx } = stateInfo;
 
   if (ticksOnState === 0) {
@@ -143,36 +131,26 @@ function sub<M extends GeneralAddressingMode>(
   }
 
   const a = regs[reg];
-  const twosB = twosComplement(b, size * 8);
-  const carry = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
-  const twosCarry = twosComplement(carry, size * 8);
-  const untruncated = a + twosB + twosCarry;
-  const result = truncate(untruncated, size * 8);
+  const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
+
+  const negB = twosComplement(b, bits);
+  const negCarryIn = twosComplement(carryIn, bits);
+  const untruncated = a + negB + negCarryIn;
+  const result = truncate(untruncated, bits);
 
   regs[reg] = result;
 
-  if (size === 1) {
-    // 8-bit
-    // CC: N, Z, V, C
-    updateConditionCodes(regs, {
-      // The value of Half-Carry is _undefined_ after executing sub8 and sbc8
-      // instructions.
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      C: a < b + carry,
-      V: indexBit(a, 7) !== indexBit(b, 7) && indexBit(a, 7) !== indexBit(result, 7),
-    });
-  } else {
-    // 16-bit
-    // CC: N, Z, V, C
-    updateConditionCodes(regs, {
-      // Half-Carry is _not affected_ by sub16.
-      N: isNegative(result, size * 8),
-      Z: result === 0,
-      C: a < b + carry,
-      V: indexBit(a, 15) !== indexBit(b, 15) && indexBit(a, 15) !== indexBit(result, 15),
-    });
-  }
+  // Check if the bit after the last bit is set.
+  const carryOut = !!(untruncated & (1 << bits));
+
+  // CC: H, N, Z, V, C
+  updateConditionCodes(regs, {
+    H: a ^ b ^ (result & (1 << (bits / 2))),
+    N: isNegative(result, bits),
+    Z: result === 0,
+    C: carryOut,
+    V: a ^ b ^ result ^ carryIn,
+  });
 
   return true;
 }
