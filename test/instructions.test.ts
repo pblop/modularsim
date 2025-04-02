@@ -181,3 +181,4 @@ function generateDescribe(basefile: string) {
 describe("9.asm", generateDescribe("9"));
 describe("stack.asm", generateDescribe("stack"));
 describe("restar.asm", generateDescribe("restar"));
+describe("sumar.asm", generateDescribe("sumar"));

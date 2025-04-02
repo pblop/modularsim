@@ -85,9 +85,12 @@ const genDescribe = (signalName: "nmi" | "irq" | "firq", expectedSequenceCycles:
     it(`should activate the ${signalName} routine`, () => {
       expect(interruptType).toBe(routineTypeNum[signalName]);
     });
-    it.skip(`should take ${expectedSequenceCycles} cycles in the interrupt stacking & vector fetch sequence`, () => {
-      expect(sequenceCycles).toBe(expectedSequenceCycles);
-    });
+    it.todo(
+      `should take ${expectedSequenceCycles} cycles in the interrupt stacking & vector fetch sequence`,
+      () => {
+        expect(sequenceCycles).toBe(expectedSequenceCycles);
+      },
+    );
   });
 };
 
