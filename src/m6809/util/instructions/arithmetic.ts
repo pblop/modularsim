@@ -58,15 +58,23 @@ function add<M extends GeneralAddressingMode>(
   regs[reg] = result;
 
   // Check if the bit after the last bit is set.
-  const carryOut = !!(untruncated & (1 << bits));
+  const carryOut = (untruncated >> 1) & (1 << (bits - 1));
+
+  // carries contains the bits that have been carried into.
+  // that means that the 4th bit is set if the half carry has been set, the
+  // 7th bit is set if overflow happened, and the 8th bit is set if
+  // the carry has been set.
+
+  const carries = a ^ b ^ result ^ carryOut;
+  const H = bits === 16 ? undefined : carries & (1 << (bits / 2));
 
   // CC: H, N, Z, V, C
   updateConditionCodes(regs, {
-    H: a ^ b ^ (result & (1 << (bits / 2))),
+    H,
     N: isNegative(result, bits),
     Z: result === 0,
     C: carryOut,
-    V: a ^ b ^ result ^ carryIn,
+    V: carries & (1 << (bits - 1)),
   });
 
   return true;
@@ -140,16 +148,17 @@ function sub<M extends GeneralAddressingMode>(
 
   regs[reg] = result;
 
-  // Check if the bit after the last bit is set.
-  const carryOut = !!(untruncated & (1 << bits));
-
-  // CC: H, N, Z, V, C
+  // CC: ??H, N, Z, V, C
   updateConditionCodes(regs, {
-    H: a ^ b ^ (result & (1 << (bits / 2))),
+    // H is undefined for sub8, not set for sub16. So I just... don't set it.
     N: isNegative(result, bits),
     Z: result === 0,
-    C: carryOut,
-    V: a ^ b ^ result ^ carryIn,
+    // I tried to calculate the carry flag by using the same logic as in the
+    // add function (but using the negB val), but couldn't get it to work :(
+    C: b + carryIn >= a,
+    // I calculate the overflow flag following the logic explained here:
+    // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+    V: (a ^ result) & (negB ^ result) & (1 << (bits - 1)),
   });
 
   return true;
