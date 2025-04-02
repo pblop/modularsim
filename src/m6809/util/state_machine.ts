@@ -9,7 +9,6 @@ type StateContexts = {
   fail: EmptyObject;
   resetting: { remainingTicks: number };
   fetch: { opcode?: number; lastByteRead?: number };
-  immediate: EmptyObject;
   indexed_postbyte: EmptyObject;
   indexed_main: {
     baseAddress: number;

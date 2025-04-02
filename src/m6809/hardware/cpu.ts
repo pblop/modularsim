@@ -16,7 +16,6 @@ import { verify } from "../../general/config.js";
 import ResettingState from "./states/resetting.js";
 import FetchState from "./states/fetch.js";
 import FailState from "./states/fail.js";
-import ImmediateState from "./states/immediate.js";
 import RelativeState from "./states/relative.js";
 import ExtendedState from "./states/extended.js";
 import DirectState from "./states/direct.js";
@@ -424,7 +423,6 @@ class Cpu implements IModule {
     {
       resetting: ResettingState,
       fetch: FetchState,
-      immediate: ImmediateState,
       indexed_postbyte: IndexedPostbyteState,
       indexed_main: IndexedMainState,
       indexed_indirect: IndexedIndirectState,
