@@ -259,10 +259,7 @@ export function addInstructions<
   };
 
   for (const [opcode, register, mode, cycles] of modes) {
-    const mnemonic =
-      register === undefined
-        ? mnemonicPattern
-        : mnemonicPattern.replace("{register}", register.toLowerCase());
+    const mnemonic = mnemonicPattern.replace("{register}", register ? register.toLowerCase() : "");
 
     const fun = funGen(mnemonic, register, mode, cycles, extra);
     INSTRUCTIONS[opcode] = {
