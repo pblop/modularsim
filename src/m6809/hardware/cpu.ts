@@ -328,6 +328,14 @@ class Cpu implements IModule {
     }
 
     this.registers[register as AllRegisters] = value;
+    // If the register IS in the immediateUpdateRegisters list, the event will
+    // be emitted by the proxy. If it isn't, we need to emit it ourselves.
+    // If it's not of the same type, naturally, it won't be included in the
+    // array!
+    // biome-ignore lint/suspicious/noExplicitAny: <above>
+    if (!this.config.immediateUpdateRegisters.includes(register as any)) {
+      this.et.emit("cpu:register_update", register as AllRegisters, value);
+    }
   };
 
   reset = () => {
