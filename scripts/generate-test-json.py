@@ -16,9 +16,9 @@ if __name__ == "__main__":
     print("error: s19 file not found")
     sys.exit(1)
 
-  if Path(args.outfile).exists():
-    print("error: output file already exists")
-    sys.exit(1)
+  # if Path(args.outfile).exists():
+  #   print("error: output file already exists")
+  #   sys.exit(1)
 
   regdump_file = Path("regdump.json")
   if regdump_file.exists():
