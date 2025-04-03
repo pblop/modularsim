@@ -109,12 +109,13 @@ class RegisterUI implements IModule {
   localeStrings!: typeof RegisterUIStrings.en;
 
   updateQueue: UpdateQueue;
-  updatedRegisters: Set<string> = new Set();
+  updatedRegisters: Set<string>;
+  duringInstruction: boolean;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["ui:memory:read"],
+        provided: ["ui:memory:read", "dbg:register_update"],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
           "cpu:register_update": this.onRegisterUpdate,
@@ -123,7 +124,10 @@ class RegisterUI implements IModule {
           // provide the hover effect only if it is.
           "ui:memory:read:result": null,
         },
-        optional: {},
+        optional: {
+          "cpu:instruction_begin": this.onInstructionBegin,
+          "cpu:instruction_finish": this.onInstructionFinish,
+        },
       },
     };
   }
@@ -143,6 +147,8 @@ class RegisterUI implements IModule {
     this.setLanguage("en");
 
     this.updateQueue = new UpdateQueue(this.refreshUI);
+    this.updatedRegisters = new Set();
+    this.duringInstruction = false;
 
     console.log(`[${this.id}] Initializing module.`);
   }
@@ -164,6 +170,20 @@ class RegisterUI implements IModule {
     this.updatedRegisters.add(register);
     this.updateQueue.queueUpdate();
   };
+  onInstructionBegin = (pc: number): void => {
+    if (!this.panel) return;
+    if (!this.registerTable) return;
+
+    this.updateQueue.queueUpdate();
+    this.duringInstruction = true;
+  };
+  onInstructionFinish = (): void => {
+    if (!this.panel) return;
+    if (!this.registerTable) return;
+
+    this.updateQueue.queueUpdate();
+    this.duringInstruction = false;
+  };
 
   refreshUI = () => {
     if (!this.panel) return;
@@ -171,7 +191,24 @@ class RegisterUI implements IModule {
     for (const register of this.updatedRegisters) {
       this.updateRegisterCell(register);
     }
+
+    this.markRegistersAs(this.duringInstruction);
   };
+
+  markRegistersAs(uneditable: boolean): void {
+    if (!this.panel) return;
+    if (!this.registerTable) return;
+    for (const register of Object.keys(this.config.registers)) {
+      const cell = this.panel.querySelector(`.register-${register}`);
+      if (!cell) continue;
+
+      if (uneditable) {
+        cell.classList.add("uneditable");
+      } else {
+        cell.classList.remove("uneditable");
+      }
+    }
+  }
 
   updateRegisterCell(register: string): void {
     if (!this.panel) return;
@@ -311,7 +348,7 @@ class RegisterUI implements IModule {
               // We will receive the result of the write operation in the
               // `ui:memory:write:result` event, and will update the memory
               // cell accordingly, then.
-              this.et.emit("ui:memory:write", this.registerValues[name], newValue);
+              this.et.emit("dbg:register_update", name, newValue);
             },
             this.config.registers[name].bits / 8,
           ),
