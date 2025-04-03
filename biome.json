@@ -13,6 +13,19 @@
       },
       "complexity": {
         "useSimpleNumberKeys": "off"
+      },
+      "correctness": {
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "suggestedExtensions": {
+              "ts": {
+                "module": "js",
+                "component": "jsx"
+              }
+            }
+          }
+        }
       }
     }
   }

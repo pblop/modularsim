@@ -29,9 +29,9 @@ export function checkProperties(obj: { [key: string]: unknown }, properties: str
   }
 }
 
-export type SchemaType = "number" | "string" | "array" | "object";
+export type SchemaType = "number" | "string" | "array" | "object" | "boolean";
 export type PrimitiveSchema = {
-  type: "number" | "string";
+  type: "number" | "string" | "boolean";
   required?: boolean;
   default?: unknown;
   min?: number;
@@ -75,10 +75,10 @@ export function verify<T>(
 }
 
 function verifyProperty(
-  inValue: string | number,
+  inValue: string | number | boolean,
   fieldString: string,
   schema: PrimitiveSchema,
-): string | number {
+): string | number | boolean {
   let value = inValue;
   // Type checks
   if (schema.type === "number") {
@@ -88,6 +88,9 @@ function verifyProperty(
   }
   if (schema.type === "string" && typeof value !== "string") {
     throw new Error(`${fieldString} must be a string`);
+  }
+  if (schema.type === "boolean" && typeof value !== "boolean") {
+    throw new Error(`${fieldString} must be a boolean`);
   }
 
   // Value checks
