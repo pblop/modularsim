@@ -191,9 +191,9 @@ class RegisterUI implements IModule {
       cell.textContent = flagValues || "none";
     } else {
       cell.textContent = this.formatRegister(register, value);
-
-      cell.classList.remove("uneditable");
     }
+
+    cell.classList.remove("uneditable");
 
     // NOTE: this could be optimized by keeping a list of mirrors for each register,
     // and the number of bits to shift, instead of iterating over all registers every time,
