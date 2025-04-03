@@ -7,6 +7,7 @@
     "clean": "rm -rf ./dist/",
     "build-ts": "tsc && cp -r ./src/ ./dist/source/",
     "build-programs": "cd ./programs/ && make",
+    "build-test-programs": "cd ./programs/ && make test",
     "copy-static": "cp -r ./public/* ./dist/ && mkdir -p ./dist/m6809/programs/ && cp ./programs/*.{bin,s19,noi} ./dist/m6809/programs/",
     "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static",
     "start": "serve -n -C -l 6809 ./dist/",
