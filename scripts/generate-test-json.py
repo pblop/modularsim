@@ -6,55 +6,35 @@ from pathlib import Path
 import argparse
 import subprocess
 
-CC_ORDER = "CVZNIHFE"
-
-if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Generate test json file')
-  parser.add_argument('s19file', type=str, help='s19 file')
-  parser.add_argument('outfile', type=str, help='json output file')
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(description="Generate test json file")
+  parser.add_argument("s19file", type=str, help="s19 file")
+  parser.add_argument("outfile", type=str, help="json output file")
   args = parser.parse_args()
 
   if not Path(args.s19file).exists():
-    print('error: s19 file not found')
+    print("error: s19 file not found")
     sys.exit(1)
 
   if Path(args.outfile).exists():
-    print('error: output file already exists')
+    print("error: output file already exists")
     sys.exit(1)
 
-  cmd = ["pm6809-run", "-d", args.s19file]
-  ip = b'next' + b'\n'*100
-  result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, input=ip, check=False)
+  regdump_file = Path("regdump.json")
+  if regdump_file.exists():
+    regdump_file.unlink()
 
-  debuggerout = result.stdout.decode('utf-8')
-  
-  lines = debuggerout.splitlines()
-  snapshots = [line for line in lines if line.startswith('PCR:') or line.startswith('(dbg) PCR:')]
-  
-  jsonsnaps = []
+  cmd = ["m6809-run", "-d", args.s19file]
+  inpt = b"json\ns\n" * 1000
+  result = subprocess.run(
+    cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, input=inpt, check=False
+  )
 
-  for snap in snapshots:
-    if snap.startswith("(dbg) "):
-      snap = snap[6:]
+  # load the json dumps
+  with open("regdump.json", "r", encoding="utf-8") as f:
+    regdumps = json.load(f)
+  # remove the regdump file
+  regdump_file.unlink()
 
-    snap = [r.split(":") for r in snap.split()]
-    jsonsnap = {}
-
-    for r in snap:
-      name, value = r
-      # make sure all names are lowercase
-      name = name.lower() if name != "PCR" else "pc"
-
-      if name == "dp":
-        if value.endswith("00") and len(value) > 2:
-          value = value.removesuffix("00")
-
-      jsonsnap[name] = int(value, 16)
-
-    
-    jsonsnaps.append(jsonsnap)
-
-  with open(args.outfile, 'w', encoding="utf-8") as f:
-    json.dump(jsonsnaps, f, indent=2)
-
-
+  with open(args.outfile, "w", encoding="utf-8") as f:
+    json.dump(regdumps, f, indent=2)
