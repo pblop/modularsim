@@ -100,6 +100,13 @@ export function rewrittableTableElement(
 ): HTMLTableCellElement {
   const maxValue = 2 ** (bytes * 8) - 1;
 
+  if (options.title === undefined) {
+    // If options.title is undefined, the string "undefined" will be used as the
+    // title. This is not what we want, so we will delete the title property
+    // biome-ignore lint/performance/noDelete: it doesn't work without delete!!
+    delete options.title;
+  }
+
   return element("td", {
     ...options,
     onClick: (el) => {
