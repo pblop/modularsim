@@ -34,7 +34,7 @@ const instructions = [
   ['LDA', 'LDB', 'LDD', 'LDS', 'LDU', 'LDX', 'LDY'],
   ['LEAS', 'LEAU', 'LEAX', 'LEAY'], ['LSL', 'LSLA', 'LSLB'],
   ['LSR', 'LSRA', 'LSRB'], ['MUL'], ['NEG', 'NEGA', 'NEGB'], ['NOP'],
-  ['ORA', 'ORB', 'ORCC'], ['PSHS', 'PSHU'], ['PULS', 'PULU'], ['RESET'],
+  ['ORA', 'ORB', 'ORCC'], ['PSHS', 'PSHU'], ['PULS', 'PULU'], 
   ['ROL', 'ROLA', 'ROLB'], ['ROR', 'RORA', 'RORB'], ['RTI'], ['RTS'],
   ['SBCA', 'SBCB'], ['SEX'], ['STA', 'STB', 'STD', 'STS', 'STU', 'STX', 'STY'],
   ['SUBA', 'SUBB', 'SUBD'], ['SWI', 'SWI2', 'SWI3'], ['SYNC'], ['TFR'],
@@ -73,6 +73,8 @@ for (const mnemonics of instructions) {
     if (process.stdout.isTTY)
       console.error(`Partially implemented: ${mnemonics} (missing: ${missing})`);
     partially_implemented++;
+  } else {
+    if (process.stdout.isTTY) console.error(`Not implemented: ${mnemonics}`);
   }
 }
 
