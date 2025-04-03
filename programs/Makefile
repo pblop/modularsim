@@ -11,7 +11,7 @@ LINKFLAGS =
 TEST_FILES := $(foreach S,$(wildcard *.asm),$(if $(findstring interrupt,$(S)),,$(if $(findstring loop,$(S)),,$(S))))
 
 all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard *.asm)) $(patsubst %.asm,%.noi,$(wildcard *.asm))
-test: $(patsubst %.asm,%.bin,$(TEST_FILES)) $(patsubst %.asm,%.json,$(TEST_FILES))
+test: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.json,$(TEST_FILES))
 
 # Assemble .asm file
 %.rel: %.asm
