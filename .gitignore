@@ -14,3 +14,5 @@ node_modules
 *.noi
 # ignore SDCDB Debug files (symbol info)
 *.cdb
+# ignore JSON test files (instruction-for-instruction register dumps)
+programs/*.json
