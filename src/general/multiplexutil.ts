@@ -26,7 +26,7 @@ import { joinEventName } from "./event.js";
  */
 export function toMultiplexedProvideds(
   providedMemoryEvents: EventBaseName[],
-  multiplexer?: string,
+  multiplexer: string | undefined,
 ) {
   return providedMemoryEvents.map(
     (event: EventBaseName): EventName => (multiplexer ? joinEventName(event, multiplexer) : event),
@@ -42,16 +42,18 @@ export function toMultiplexedProvideds(
  * multiplexed version of.
  * @param multiplexer The name of the multiplexer to use. If not provided,
  * the provided events will be returned as-is.
+ * @param id The id of the module.
  * @returns The object of required/optional memory events where the event names
  * are multiplexed with the provided multiplexer name.
  */
 export function toMultiplexedListeners(
   requiredMemoryEvents: EventDeclarationListeners,
-  multiplexer?: string,
+  id: string,
+  multiplexer: string | undefined,
 ) {
   return Object.fromEntries(
     Object.entries(requiredMemoryEvents).map(([event, callback]) => [
-      multiplexer ? joinEventName(event as EventBaseName, multiplexer) : event,
+      multiplexer ? joinEventName(event as EventBaseName, id) : event,
       callback,
     ]),
   );

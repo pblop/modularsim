@@ -50,11 +50,11 @@ class Interrupter implements IModule {
     const providedMemoryEvents = this.config.device
       ? toMultiplexedProvideds(
           [
-            "memory:read",
-            "memory:write",
-            "ui:memory:read",
-            "ui:memory:write",
-            "ui:memory:bulk:write",
+            "memory:read:result",
+            "memory:write:result",
+            "ui:memory:read:result",
+            "ui:memory:write:result",
+            "ui:memory:bulk:write:result",
           ],
           this.config.multiplexer,
         )
@@ -69,13 +69,14 @@ class Interrupter implements IModule {
             "ui:memory:write": this.onUiMemoryWrite,
             "ui:memory:bulk:write": this.onUiMemoryBulkWrite,
           },
+          this.id,
           this.config.multiplexer,
         )
       : {};
 
     return {
       events: {
-        provided: [`signal:${this.config.type}`, ...providedMemoryEvents],
+        provided: ["signal:nmi", "signal:irq", "signal:firq", ...providedMemoryEvents],
         required: {
           ...requiredMemoryEvents,
         },
@@ -96,8 +97,6 @@ class Interrupter implements IModule {
     this.simulation = simulation;
     this.id = id;
 
-    console.log(`[${this.id}] Initializing module.`);
-
     // Verify that configuration is ok.
     this.config = verify<InterrupterConfig>(
       config,
@@ -115,7 +114,7 @@ class Interrupter implements IModule {
       this.id,
     );
 
-    console.log(`[${this.id}] Initialized module.`);
+    console.log(`[${this.id}] Initialized module (device: ${this.config.device}).`);
   }
 
   timerCallback = (cycle: number, subcycle: number): void => {
@@ -136,7 +135,7 @@ class Interrupter implements IModule {
 
       return (this.config.each & mask) >> displacement;
     } else if (address === 2) {
-      return this.config.type === "nmi" ? 0x01 : this.config.type === "irq" ? 0x02 : 0x03;
+      return this.config.type === "nmi" ? 0x00 : this.config.type === "irq" ? 0x01 : 0x02;
     } else {
       throw new Error(
         `[${this.id}] Attempted to read from invalid memory address ${address} (this device has only 3 bytes of mapped registers).`,
@@ -155,7 +154,7 @@ class Interrupter implements IModule {
       //                 clear the bits               set the bits
       this.config.each = (this.config.each & ~mask) | (data << displacement);
     } else if (address === 2) {
-      this.config.type = data === 0x01 ? "nmi" : data === 0x02 ? "irq" : "firq";
+      this.config.type = data === 0x00 ? "nmi" : data === 0x01 ? "irq" : "firq";
     } else {
       throw new Error(
         `[${this.id}] Attempted to write from invalid memory address ${address} (this device has only 3 bytes of mapped registers).`,
