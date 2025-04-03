@@ -88,12 +88,17 @@ const RegisterUIStrings = createLanguageStrings({
     unknown: "??",
     onlyHex: "Only hex values of the same length as the register are allowed.",
     uneditableMirror: "This register is a mirror of another register, and cannot be edited.",
+    uneditable: "Registers are uneditable while the CPU is executing an instruction.",
+    initialUneditable: "The register cannot be edited until the CPU has been initialized.",
   },
   es: {
     pointerRegister: "Registro apuntador",
     unknown: "??",
     onlyHex: "Sólo se permiten valores hexadecimales de la longitud del registro.",
     uneditableMirror: "Este registro es un espejismo de otro registro, y no se puede editar.",
+    uneditable:
+      "Los registros no se pueden editar mientras la CPU esté ejecutando una instrucción.",
+    initialUneditable: "No se puede editar el registro hasta que la CPU se haya inicializado.",
   },
 });
 
@@ -127,8 +132,9 @@ class RegisterUI implements IModule {
           "ui:memory:read:result": null,
         },
         optional: {
-          "cpu:instruction_begin": this.onInstructionBegin,
-          "cpu:instruction_finish": this.onInstructionFinish,
+          "cpu:instruction_begin": this.disableRegisterEditing,
+          "cpu:instruction_finish": this.enableRegisterEditing,
+          "cpu:reset_finish": this.enableRegisterEditing,
         },
       },
     };
@@ -172,19 +178,19 @@ class RegisterUI implements IModule {
     this.updatedRegisters.add(register);
     this.updateQueue.queueUpdate();
   };
-  onInstructionBegin = (pc: number): void => {
+  disableRegisterEditing = (): void => {
     if (!this.panel) return;
     if (!this.registerTable) return;
 
-    this.updateQueue.queueUpdate();
     this.editableRegisters = false;
+    this.updateQueue.queueUpdate();
   };
-  onInstructionFinish = (): void => {
+  enableRegisterEditing = (): void => {
     if (!this.panel) return;
     if (!this.registerTable) return;
 
-    this.updateQueue.queueUpdate();
     this.editableRegisters = true;
+    this.updateQueue.queueUpdate();
   };
 
   refreshUI = () => {
@@ -197,14 +203,15 @@ class RegisterUI implements IModule {
     this.markRegistersAs(this.editableRegisters);
   };
 
-  markRegistersAs(uneditable: boolean): void {
+  markRegistersAs(editable: boolean): void {
     if (!this.panel) return;
     if (!this.registerTable) return;
+
     for (const register of Object.keys(this.config.registers)) {
       const cell = this.panel.querySelector(`.register-${register}`);
       if (!cell) continue;
 
-      if (uneditable) {
+      if (!editable) {
         cell.classList.add("uneditable");
       } else if (this.config.registers[register].mirror === undefined) {
         cell.classList.remove("uneditable");
@@ -272,11 +279,35 @@ class RegisterUI implements IModule {
 
   generateTooltipFunction(register: string): (ev: MouseEvent) => Promise<void> {
     return async (ev: MouseEvent) => {
+      if (this.config.registers[register].mirror) return;
+
+      const cell = ev.target as HTMLTableCellElement;
+
+      const uneditableString = this.editableRegisters
+        ? ""
+        : this.registerValues[register] === undefined
+          ? this.localeStrings.initialUneditable
+          : this.localeStrings.uneditable;
+
+      // If the cell is uneditable, and it's not a pointer register, show a
+      // tooltip saying that it's uneditable, and why.
+      // The reason why pointer registers do not show this tooltip (even though
+      // they are also uneditable) is because they already show that info
+      // in their tooltip, a bit further down the code.
+      if (!this.config.registers[register].pointer) {
+        if (this.editableRegisters) {
+          cell.removeAttribute("title");
+        } else {
+          cell.title = uneditableString;
+        }
+        return;
+      }
+
       if (!ev.target) return;
 
       const address = this.registerValues[register];
       if (address === undefined) {
-        (ev.target as HTMLTableCellElement).title = this.localeStrings.unknown;
+        cell.title = `${this.localeStrings.unknown}\n${uneditableString}`.trimEnd();
         return;
       }
 
@@ -306,7 +337,7 @@ class RegisterUI implements IModule {
         row.push(str);
       }
 
-      (ev.target as HTMLTableCellElement).title = `${row.join(" ")}`;
+      cell.title = `${row.join(" ")}\n${uneditableString}`.trimEnd();
     };
   }
 
@@ -337,9 +368,7 @@ class RegisterUI implements IModule {
             {
               className: `register-${name} register-bytes-${this.config.registers[name].bits / 8} ${this.config.registers[name].pointer ? "pointer-register" : ""} uneditable`,
               textContent: this.localeStrings.unknown,
-              onmouseenter: this.config.registers[name].pointer
-                ? this.generateTooltipFunction(name)
-                : undefined,
+              onmouseenter: this.generateTooltipFunction(name),
               title: this.config.registers[name].mirror
                 ? this.localeStrings.uneditableMirror
                 : undefined,
