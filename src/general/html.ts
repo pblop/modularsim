@@ -98,15 +98,10 @@ export function rewrittableTableElement(
   onChange: (newValue: number) => void,
   bytes: number,
 ): HTMLTableCellElement {
-  const { className, textContent } = options;
-
   const maxValue = 2 ** (bytes * 8) - 1;
 
   return element("td", {
-    className,
-    textContent,
-    title: options.title,
-    onmouseenter: options.onmouseenter,
+    ...options,
     onClick: (el) => {
       // If the cell already has a child element, we will ignore the click.
       if (el.childElementCount > 0) return;
