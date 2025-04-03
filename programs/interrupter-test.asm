@@ -12,7 +12,7 @@
 
 ; numloc and typeloc are the locations where the interrupter is mapped
 ; in the memory. They are used to set the interrupt number and type.
-numloc  .equ 0xA000
+numloc  .equ 0xA000 ; in this example, the module is mapped to 0xA000
 typeloc .equ 0xA002
 ; these are the values that are used to set the interrupt number and type.
 interrupt_num .equ 300 ; the number of cycles between interrupts (0-ffff)
