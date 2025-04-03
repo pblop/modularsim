@@ -20,6 +20,8 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "dbg:symbol:add": [symbol: string, address: number, type: "global"];
   "dbg:symbol:clear": [];
 
+  "dbg:register_update": [register: string, value: number];
+
   // System syncronisation events. These act as a barrier.
   "system:load_finish": [];
 
@@ -30,9 +32,10 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "signal:firq": [];
 
   // CPU events
-  "cpu:instruction_finish": [];
+  "cpu:instruction_begin": [pc: number];
   "cpu:instruction_fetched": [instruction: InstructionData];
   "cpu:instruction_decoded": [instruction: InstructionData<AM>, addressing: CpuAddressingData<AM>];
+  "cpu:instruction_finish": [];
 
   "cpu:registers_update": [registers: Registers];
   "cpu:register_update": [register: string, value: number];

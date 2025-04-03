@@ -156,6 +156,8 @@ class Cpu implements IModule {
   // The current instruction being executed (if already decoded)
   instruction?: InstructionData;
   addressing?: CpuAddressingData<AddressingMode>;
+  // The number of cycles spent on the current instruction.
+  cyclesOnInstruction: number;
 
   pendingIRQ: boolean;
   pendingNMI: boolean;
@@ -177,6 +179,7 @@ class Cpu implements IModule {
           "cpu:instruction_fetched",
           "cpu:instruction_decoded",
           "cpu:instruction_finish",
+          "cpu:instruction_begin",
           "memory:read",
           "memory:write",
           "cpu:register_update",
@@ -190,6 +193,7 @@ class Cpu implements IModule {
           "signal:irq": this.irq,
           "signal:nmi": this.nmi,
           "signal:firq": this.firq,
+          "dbg:register_update": this.onExternalRegisterUpdate,
         },
       },
       cycles: {
@@ -248,6 +252,8 @@ class Cpu implements IModule {
     this.pendingIRQ = false;
     this.pendingNMI = false;
     this.pendingFIRQ = false;
+
+    this.cyclesOnInstruction = 0;
 
     console.log(`[${this.id}] Module initialized.`);
   }
@@ -311,6 +317,17 @@ class Cpu implements IModule {
     if (this.stateMachine.current !== "customfn") return;
 
     this.receivedFnRegisters = newRegisters;
+  };
+  onExternalRegisterUpdate = (register: string, value: number) => {
+    if (!(register in this.registers)) {
+      throw new Error(`[${this.id}] Invalid register in register change event: ${register}`);
+    } else if (this.cyclesOnInstruction !== 0) {
+      throw new Error(
+        `[${this.id}] Cannot update register ${register} while executing an instruction`,
+      );
+    }
+
+    this.registers[register as AllRegisters] = value;
   };
 
   reset = () => {
@@ -477,6 +494,12 @@ class Cpu implements IModule {
     // console.log(`[${this.id}] start state: ${this.stateMachine.current}`);
 
     if (this.stateMachine.current === "fetch" && this.stateMachine.ticksOnState === 0) {
+      this.cyclesOnInstruction = 0;
+      // Before beginning the instruction, we need to emit the instruction begin
+      // event, so that the UI properly tell that the CPU will not be responding
+      // to register change events, or other internal state changes.
+      this.et.emit("cpu:instruction_begin", this.registers.pc);
+
       // Before entering the fetch state for the first time, we need to check if
       // the PC is part of a module function.
       // If it is, we switch to the custom function state.
