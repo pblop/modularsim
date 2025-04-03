@@ -1,12 +1,12 @@
-import type Cpu from "../../hardware/cpu";
-import type { CpuAddressingData } from "../../hardware/cpu";
+import type Cpu from "../../hardware/cpu.js";
+import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, type Registers } from "../cpu_parts.js";
 import type {
-  addInstructions as addInstructionsType,
   ExecuteStateInfo,
   FunGen,
-} from "../instructions";
-import type { CpuInfo, StateInfo } from "../state_machine";
+  addInstructions as addInstructionsType,
+} from "../instructions.js";
+import type { CpuInfo, StateInfo } from "../state_machine.js";
 
 /**
  * Generic function that handles the execution of branching instructions (BEQ, BNE, BRA, BSR, etc.),

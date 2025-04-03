@@ -1,25 +1,6 @@
-import type { SimulatorConfig } from "../types/config.js";
-import type {
-  IModule,
-  ModuleConstructor,
-  ModuleDeclaration,
-  SimulationModuleInteraction,
-} from "../types/module.js";
-import type {
-  EventCallback,
-  EventParams,
-  EventDeclaration,
-  EventDeclarationListeners,
-  EventContext,
-  ModuleID,
-  EventCallbackArgs,
-  EventBaseName,
-  EventName,
-  TypedEventTransceiver,
-} from "../types/event.js";
-import type { ISimulator } from "../types/simulator.js";
-import { PriorityQueue } from "../general/priority.js";
 import { separateEventName } from "../general/event.js";
+import { PriorityQueue } from "../general/priority.js";
+import type { SimulatorConfig } from "../types/config.js";
 import type {
   CycleCallback,
   CycleDeclarationListener,
@@ -28,6 +9,25 @@ import type {
   ListenerPriority,
   SubcyclePriority,
 } from "../types/cycles.js";
+import type {
+  EventBaseName,
+  EventCallback,
+  EventCallbackArgs,
+  EventContext,
+  EventDeclaration,
+  EventDeclarationListeners,
+  EventName,
+  EventParams,
+  ModuleID,
+  TypedEventTransceiver,
+} from "../types/event.js";
+import type {
+  IModule,
+  ModuleConstructor,
+  ModuleDeclaration,
+  SimulationModuleInteraction,
+} from "../types/module.js";
+import type { ISimulator } from "../types/simulator.js";
 
 type ClockQueueElement = {
   callback: CycleCallback;

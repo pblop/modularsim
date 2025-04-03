@@ -1,5 +1,5 @@
 import { ConditionCodes } from "../../util/cpu_parts.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"resetting"> = (
   { memoryPending, queryMemoryRead, config },

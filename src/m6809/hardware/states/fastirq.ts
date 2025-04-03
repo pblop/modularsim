@@ -4,7 +4,7 @@ import {
   IRQNMI_STACK_REGISTERS,
   pushRegisters,
 } from "../../util/instructions/stack.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"firq"> = (cpuInfo, stateInfo) => {
   const { memoryPending, registers, queryMemoryRead, config, cpu } = cpuInfo;

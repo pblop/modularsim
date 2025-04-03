@@ -1,6 +1,6 @@
 import { signExtend, truncate } from "../../../general/numbers.js";
 import { REGISTER_SIZE } from "../../util/cpu_parts.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"relative"> = ({ memoryPending, queryMemoryRead, cpu }, _) => {
   if (memoryPending) return;

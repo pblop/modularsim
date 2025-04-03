@@ -1,16 +1,16 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import type { Registers } from "../util/cpu_parts.js";
+import { verify } from "../../general/config.js";
 import { element } from "../../general/html.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { Registers } from "../util/cpu_parts.js";
 import {
   DecompiledInstruction,
-  decompileInstruction,
   FailedDecompilation,
+  decompileInstruction,
   generateInstructionElement,
   generateRowData,
 } from "../util/decompile.js";
-import { UpdateQueue } from "../../general/updatequeue.js";
-import { verify } from "../../general/config.js";
 import { InstructionCache } from "./instruction_ui/inst_cache.js";
 
 type InstructionUIConfig = {

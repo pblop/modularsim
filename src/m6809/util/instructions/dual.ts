@@ -1,19 +1,19 @@
 import { isNegative, truncate, twosComplement } from "../../../general/numbers.js";
-import type Cpu from "../../hardware/cpu";
-import type { CpuAddressingData } from "../../hardware/cpu";
-import { ConditionCodes, REGISTER_SIZE, type ShortCCNames, type Registers } from "../cpu_parts.js";
+import type Cpu from "../../hardware/cpu.js";
+import type { CpuAddressingData } from "../../hardware/cpu.js";
+import { ConditionCodes, REGISTER_SIZE, type Registers, type ShortCCNames } from "../cpu_parts.js";
 import {
-  type addInstructions as addInstructionsType,
+  type Accumulator,
   type ExecuteStateInfo,
   type GeneralAddressingMode,
   type Register,
-  type Accumulator,
-  retrieveReadAddressing,
-  updateConditionCodes,
+  type addInstructions as addInstructionsType,
   queryReadAddressing,
   queryWrite,
+  retrieveReadAddressing,
+  updateConditionCodes,
 } from "../instructions.js";
-import type { CpuInfo, StateInfo } from "../state_machine";
+import type { CpuInfo, StateInfo } from "../state_machine.js";
 
 /**
  * A function that, given the current value of a register or memory location,

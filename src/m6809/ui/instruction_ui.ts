@@ -1,22 +1,22 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import type { Registers } from "../util/cpu_parts.js";
+import { verify } from "../../general/config.js";
 import { element, iconButton } from "../../general/html.js";
+import { createLanguageStrings } from "../../general/lang.js";
+import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { Registers } from "../util/cpu_parts.js";
 import {
   type AllInstructionRowData,
   type DecompiledInstruction,
+  type FailedDecompilation,
+  type InstructionRowData,
   decompileInstruction,
   eqDecompilation,
-  type FailedDecompilation,
   generateInstructionElement,
   generateRowData,
-  type InstructionRowData,
 } from "../util/decompile.js";
-import { verify } from "../../general/config.js";
-import { InstructionHistory } from "./instruction_ui/inst_history.js";
-import { createLanguageStrings } from "../../general/lang.js";
-import { UpdateQueue } from "../../general/updatequeue.js";
 import { InstructionCache } from "./instruction_ui/inst_cache.js";
+import { InstructionHistory } from "./instruction_ui/inst_history.js";
 
 type InstructionUIConfig = {
   lines: number;

@@ -1,12 +1,12 @@
-import { signExtend, numberToIntN, truncate } from "../../../general/numbers.js";
-import { parseIndexedPostbyte, IndexedAction } from "../../util/instructions.js";
+import { numberToIntN, signExtend, truncate } from "../../../general/numbers.js";
+import { IndexedAction, parseIndexedPostbyte } from "../../util/instructions.js";
 import type {
-  CycleStartFn,
-  CycleEndFn,
-  StateInfo,
-  CpuState,
   CpuInfo,
-} from "../../util/state_machine";
+  CpuState,
+  CycleEndFn,
+  CycleStartFn,
+  StateInfo,
+} from "../../util/state_machine.js";
 import type { CpuIndexedAddressingData } from "../cpu.js";
 
 const startIndexedPostbyte: CycleStartFn<"indexed_postbyte"> = (

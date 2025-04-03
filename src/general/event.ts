@@ -1,4 +1,4 @@
-import type { EventBaseName, EventName, EventGroup } from "../types/event";
+import type { EventBaseName, EventGroup, EventName } from "../types/event.js";
 
 /**
  * Separate the base name and group of an event name.

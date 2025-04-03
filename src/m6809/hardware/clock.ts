@@ -1,7 +1,11 @@
-import type { IModule, ModuleDeclaration, SimulationModuleInteraction } from "../../types/module";
-import type { ISimulator } from "../../types/simulator";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event";
 import { clearFastInterval, setFastInterval } from "../../general/intervals.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type {
+  IModule,
+  ModuleDeclaration,
+  SimulationModuleInteraction,
+} from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
 
 type ClockConfig = {
   // Frequency of the clock in Hz.

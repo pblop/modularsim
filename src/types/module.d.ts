@@ -1,5 +1,5 @@
-import type { CycleDeclaration, CycleManager } from "./cycles";
-import type { EventDeclaration, TypedEventTransceiver } from "./event";
+import type { CycleDeclaration, CycleManager } from "./cycles.js";
+import type { EventDeclaration, TypedEventTransceiver } from "./event.js";
 
 export type ModuleDeclaration = {
   events?: EventDeclaration;

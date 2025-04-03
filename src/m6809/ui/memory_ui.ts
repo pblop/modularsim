@@ -1,9 +1,9 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { ISimulator } from "../../types/simulator.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { element } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
 
 type MemoryUIConfig = {
   start: number;

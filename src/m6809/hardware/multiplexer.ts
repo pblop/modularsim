@@ -1,5 +1,5 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { ISimulator } from "../../types/simulator.js";
+import { verify } from "../../general/config.js";
+import { joinEventName, separateEventName } from "../../general/event.js";
 import type {
   EventBaseName,
   EventCallbackArgs,
@@ -10,8 +10,8 @@ import type {
   EventParams,
   TypedEventTransceiver,
 } from "../../types/event.js";
-import { verify } from "../../general/config.js";
-import { joinEventName, separateEventName } from "../../general/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
 
 type MultiplexerEntry = {
   module: string;

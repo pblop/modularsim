@@ -1,12 +1,12 @@
 import {
   type AllInstructionRowData,
   type DecompiledInstruction,
+  type FailedDecompilation,
+  type InstructionRowData,
   decompileInstruction,
   eqDecompilation,
-  type FailedDecompilation,
   generateInstructionElement,
   generateRowData,
-  type InstructionRowData,
 } from "../../util/decompile.js";
 
 const MAX_INSTRUCTION_SIZE = 5;

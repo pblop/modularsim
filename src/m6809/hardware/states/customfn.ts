@@ -1,5 +1,5 @@
 import { truncate } from "../../../general/numbers.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"customfn"> = ({ registers, et, cpu }, { ctx }) => {
   et.emit("cpu:function", registers.pc, registers.copy());

@@ -1,16 +1,16 @@
+import { verify } from "../../general/config.js";
+import {
+  emitMultiplexedEvent,
+  emitTimedMultiplexedEvent,
+  toMultiplexedListeners,
+  toMultiplexedProvideds,
+} from "../../general/multiplexutil.js";
+import type { EventContext } from "../../types/event.js";
 import type {
   IModule,
   ModuleDeclaration,
   SimulationModuleInteraction,
 } from "../../types/module.js";
-import type { EventContext } from "../../types/event.js";
-import { verify } from "../../general/config.js";
-import {
-  toMultiplexedProvideds,
-  toMultiplexedListeners,
-  emitMultiplexedEvent,
-  emitTimedMultiplexedEvent,
-} from "../../general/multiplexutil.js";
 
 type InterrupterConfig = {
   /**

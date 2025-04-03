@@ -1,9 +1,5 @@
-import type {
-  IModule,
-  ModuleDeclaration,
-  SimulationModuleInteraction,
-} from "../../types/module.js";
-import type { ISimulator } from "../../types/simulator.js";
+import { verify } from "../../general/config.js";
+import { joinEventName } from "../../general/event.js";
 import type {
   EventBaseName,
   EventCallback,
@@ -14,8 +10,12 @@ import type {
   EventParams,
   TypedEventTransceiver,
 } from "../../types/event.js";
-import { verify } from "../../general/config.js";
-import { joinEventName } from "../../general/event.js";
+import type {
+  IModule,
+  ModuleDeclaration,
+  SimulationModuleInteraction,
+} from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
 
 type MemoryType = "ram" | "rom";
 type MemoryConfig = {

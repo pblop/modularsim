@@ -1,7 +1,7 @@
-import type { IModule, ModuleDeclaration } from "../../types/module";
-import type { TypedEventTransceiver, EventDeclaration, EventBaseName } from "../../types/event";
 import { verify } from "../../general/config.js";
 import { joinEventName } from "../../general/event.js";
+import type { EventBaseName, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 
 type StopConfig = {
   multiplexer: string;

@@ -1,5 +1,5 @@
-import type { Registers } from "../m6809/util/cpu_parts.js";
 import type { CpuAddressingData } from "../m6809/hardware/cpu.js";
+import type { Registers } from "../m6809/util/cpu_parts.js";
 import type { AddressingMode, InstructionData } from "../m6809/util/instructions.js";
 
 export interface EventMap<AM extends AddressingMode = AddressingMode> {

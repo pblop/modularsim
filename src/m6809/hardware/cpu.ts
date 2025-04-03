@@ -1,30 +1,30 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import { verify } from "../../general/config.js";
+import { compose, decompose, truncate, twosComplement } from "../../general/numbers.js";
 import type {
   EventDeclarationListeners,
   EventName,
   TypedEventTransceiver,
 } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import { ConditionCodes, Registers } from "../util/cpu_parts.js";
 import type {
   AddressingMode,
   InstructionData,
   ParsedIndexedPostbyte,
 } from "../util/instructions.js";
-import { ConditionCodes, Registers } from "../util/cpu_parts.js";
+import type { AllRegisters } from "../util/instructions/loadstore.js";
 import { type CpuInfo, type CpuState, StateMachine } from "../util/state_machine.js";
-import { compose, decompose, truncate, twosComplement } from "../../general/numbers.js";
-import { verify } from "../../general/config.js";
-import ResettingState from "./states/resetting.js";
-import FetchState from "./states/fetch.js";
-import FailState from "./states/fail.js";
-import RelativeState from "./states/relative.js";
-import ExtendedState from "./states/extended.js";
+import CustomFnState from "./states/customfn.js";
 import DirectState from "./states/direct.js";
 import ExecuteState from "./states/execute.js";
-import { IndexedPostbyteState, IndexedMainState, IndexedIndirectState } from "./states/indexed.js";
-import IrqNmiState from "./states/irqnmi.js";
+import ExtendedState from "./states/extended.js";
+import FailState from "./states/fail.js";
 import FastIrqState from "./states/fastirq.js";
-import CustomFnState from "./states/customfn.js";
-import type { AllRegisters } from "../util/instructions/loadstore.js";
+import FetchState from "./states/fetch.js";
+import { IndexedIndirectState, IndexedMainState, IndexedPostbyteState } from "./states/indexed.js";
+import IrqNmiState from "./states/irqnmi.js";
+import RelativeState from "./states/relative.js";
+import ResettingState from "./states/resetting.js";
 
 export type CpuConfig = {
   resetVector: number;

@@ -1,20 +1,20 @@
+import {
+  decompose,
+  intNToNumber,
+  numberToIntN,
+  signExtend,
+  truncate,
+} from "../../general/numbers.js";
 import { REGISTER_SIZE, type Registers } from "../util/cpu_parts.js";
 import {
+  type AddressingMode,
+  INSTRUCTIONS,
+  IndexedAction,
   type InstructionData,
   type ParsedIndexedPostbyte,
-  IndexedAction,
   parseIndexedPostbyte,
-  INSTRUCTIONS,
-  type AddressingMode,
 } from "../util/instructions.js";
-import {
-  truncate,
-  signExtend,
-  numberToIntN,
-  intNToNumber,
-  decompose,
-} from "../../general/numbers.js";
-import { parseExgPostbyte, type AllRegisters } from "./instructions/loadstore.js";
+import { type AllRegisters, parseExgPostbyte } from "./instructions/loadstore.js";
 import { parseStackPostbyte } from "./instructions/stack.js";
 
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.

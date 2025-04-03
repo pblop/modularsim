@@ -1,6 +1,6 @@
 import { ConditionCodes } from "../../util/cpu_parts.js";
 import { IRQNMI_STACK_REGISTERS, pushRegisters } from "../../util/instructions/stack.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine.js";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"irqnmi"> = (cpuInfo, stateInfo) => {
   const { memoryPending, queryMemoryRead, config, cpu, registers } = cpuInfo;

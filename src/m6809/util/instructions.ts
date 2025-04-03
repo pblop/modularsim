@@ -1,13 +1,3 @@
-import type Cpu from "../hardware/cpu.js";
-import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
-import type { CpuInfo, StateInfo } from "./state_machine.js";
-import {
-  ConditionCodes,
-  REGISTER_SIZE,
-  SHORT_CC_NAME_MAP,
-  type ShortCCNames,
-  type Registers,
-} from "../util/cpu_parts.js";
 import {
   indexBit,
   isNegative,
@@ -16,13 +6,23 @@ import {
   twosComplement,
 } from "../../general/numbers.js";
 import M6809Simulator from "../base.js";
-import branching from "./instructions/branching.js";
-import test from "./instructions/test.js";
-import loadStore from "./instructions/loadstore.js";
+import type Cpu from "../hardware/cpu.js";
+import type { CpuAddressingData, CpuRelativeAddressingData } from "../hardware/cpu.js";
+import {
+  ConditionCodes,
+  REGISTER_SIZE,
+  type Registers,
+  SHORT_CC_NAME_MAP,
+  type ShortCCNames,
+} from "../util/cpu_parts.js";
 import arithmetic from "./instructions/arithmetic.js";
-import stack from "./instructions/stack.js";
-import interrupts from "./instructions/interrupts.js";
+import branching from "./instructions/branching.js";
 import dual from "./instructions/dual.js";
+import interrupts from "./instructions/interrupts.js";
+import loadStore from "./instructions/loadstore.js";
+import stack from "./instructions/stack.js";
+import test from "./instructions/test.js";
+import type { CpuInfo, StateInfo } from "./state_machine.js";
 
 export type ExecuteStateInfo = StateInfo<"execute">;
 

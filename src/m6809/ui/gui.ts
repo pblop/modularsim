@@ -1,9 +1,9 @@
+import { verify } from "../../general/config.js";
+import { timeAgo } from "../../general/dates.js";
+import { element } from "../../general/html.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../types/module.js";
 import type { ISimulator } from "../../types/simulator.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import { element } from "../../general/html.js";
-import { timeAgo } from "../../general/dates.js";
-import { verify } from "../../general/config.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.

@@ -1,10 +1,10 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { ISimulator } from "../../types/simulator.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import { isNumber, parseNumber } from "../../general/config.js";
 import { element } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
 
 type RegisterInfoConfig = {
   bits: number;
@@ -205,7 +205,6 @@ class RegisterUI implements IModule {
       const mirroredCell = this.panel.querySelector(`.register-${name}`);
       if (!mirroredCell) throw new Error(`[${this.id}] Missing cell for register ${name}`);
 
-      // biome-ignore lint/style/noNonNullAssertion: I've already checked for the mirror property's existence above.
       const mask = mirror!.mask;
       const mirroredValue = (value & mask) >> indexOfLsb(mask);
       this.registerValues[name] = mirroredValue;

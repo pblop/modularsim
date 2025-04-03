@@ -1,5 +1,5 @@
 import { truncate } from "../../../general/numbers.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"direct"> = ({ memoryPending, queryMemoryRead }, { ctx }) => {
   if (ctx.remainingTicks === undefined) ctx.remainingTicks = 1;

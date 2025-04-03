@@ -1,5 +1,5 @@
 import { performInstructionLogic } from "../../util/instructions.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"execute"> = (cpuInfo, stateInfo) => {
   if (stateInfo.ctx.isDone === undefined) {

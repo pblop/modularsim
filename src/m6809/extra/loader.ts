@@ -1,8 +1,8 @@
-import type { IModule, ModuleDeclaration } from "../../types/module.js";
-import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
-import { truncate } from "../../general/numbers.js";
 import { verify } from "../../general/config.js";
 import { element } from "../../general/html.js";
+import { truncate } from "../../general/numbers.js";
+import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 
 type LoaderConfig = {
   file: string;

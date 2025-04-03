@@ -1,11 +1,11 @@
-import type { IModule, ModuleDeclaration } from "../../types/module";
-import type { ISimulator } from "../../types/simulator";
-import type { TypedEventTransceiver, EventDeclaration, EventContext } from "../../types/event";
+import { verify } from "../../general/config.js";
 import { element, iconButton } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
-import { verify } from "../../general/config.js";
-import type { Registers } from "../util/cpu_parts";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
+import type { Registers } from "../util/cpu_parts.js";
 
 type BreakpointUIConfig = {
   frequency: number;

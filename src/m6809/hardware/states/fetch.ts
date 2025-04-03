@@ -1,6 +1,6 @@
 import { truncate, twosComplement } from "../../../general/numbers.js";
 import { INSTRUCTIONS } from "../../util/instructions.js";
-import type { CycleStartFn, CycleEndFn } from "../../util/state_machine";
+import type { CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 const start: CycleStartFn<"fetch"> = (
   { memoryPending, queryMemoryRead },

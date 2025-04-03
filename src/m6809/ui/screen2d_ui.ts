@@ -1,10 +1,10 @@
-import type { IModule, ModuleDeclaration } from "../../types/module";
-import type { TypedEventTransceiver, EventDeclaration, EventBaseName } from "../../types/event";
-import { element } from "../../general/html.js";
 import { verify } from "../../general/config.js";
-import { createLanguageStrings } from "../../general/lang.js";
 import { joinEventName } from "../../general/event.js";
+import { element } from "../../general/html.js";
+import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventBaseName, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
 
 type Screen2DConfig = {
   multiplexer?: string;

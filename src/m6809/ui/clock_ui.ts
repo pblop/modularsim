@@ -1,9 +1,9 @@
-import type { IModule, ModuleDeclaration } from "../../types/module";
-import type { ISimulator } from "../../types/simulator";
-import type { TypedEventTransceiver, EventDeclaration, EventContext } from "../../types/event";
 import { element, iconButton } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
+import type { EventContext, EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
+import type { IModule, ModuleDeclaration } from "../../types/module.js";
+import type { ISimulator } from "../../types/simulator.js";
 
 type ClockUIConfig = {
   frequency: number;

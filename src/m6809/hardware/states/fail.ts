@@ -1,5 +1,5 @@
 import { INSTRUCTIONS } from "../../util/instructions.js";
-import type { CycleStartFn, CycleEndFn, CpuState } from "../../util/state_machine";
+import type { CpuState, CycleEndFn, CycleStartFn } from "../../util/state_machine.js";
 
 // You might have noticed that all the other states' CycleStartFn and CycleEndFn
 // functions use the correct type parameter for the state they're in, and this

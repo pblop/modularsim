@@ -1,18 +1,18 @@
 import { isNegative, truncate, twosComplement } from "../../../general/numbers.js";
-import type Cpu from "../../hardware/cpu";
-import type { CpuAddressingData } from "../../hardware/cpu";
+import type Cpu from "../../hardware/cpu.js";
+import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, REGISTER_SIZE, type Registers } from "../cpu_parts.js";
 import {
-  type addInstructions as addInstructionsType,
+  type Accumulator,
   type ExecuteStateInfo,
   type GeneralAddressingMode,
   type Register,
-  type Accumulator,
+  type addInstructions as addInstructionsType,
+  queryReadAddressing,
   retrieveReadAddressing,
   updateConditionCodes,
-  queryReadAddressing,
 } from "../instructions.js";
-import type { CpuInfo, StateInfo } from "../state_machine";
+import type { CpuInfo, StateInfo } from "../state_machine.js";
 
 function cmp<M extends GeneralAddressingMode>(
   reg: Register | Accumulator,

@@ -1,19 +1,19 @@
 import { indexBit, isNegative, truncate, twosComplement } from "../../../general/numbers.js";
-import type Cpu from "../../hardware/cpu";
-import type { CpuAddressingData } from "../../hardware/cpu";
+import type Cpu from "../../hardware/cpu.js";
+import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, REGISTER_SIZE, type Registers } from "../cpu_parts.js";
 import {
-  type addInstructions as addInstructionsType,
+  type Accumulator,
   type ExecuteStateInfo,
   type GeneralAddressingMode,
   type Register,
-  type Accumulator,
-  retrieveReadAddressing,
-  updateConditionCodes,
+  type addInstructions as addInstructionsType,
   queryReadAddressing,
   queryWrite,
+  retrieveReadAddressing,
+  updateConditionCodes,
 } from "../instructions.js";
-import type { AnyStateInfo, CpuInfo, CpuState, StateInfo } from "../state_machine";
+import type { AnyStateInfo, CpuInfo, CpuState, StateInfo } from "../state_machine.js";
 import type { AllRegisters } from "./loadstore.js";
 
 // These are in the order of the bits in the postbyte (which is the same as the
