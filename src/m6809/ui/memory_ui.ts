@@ -1,4 +1,4 @@
-import { element } from "../../general/html.js";
+import { element, rewrittableTableElement } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
@@ -196,74 +196,21 @@ class MemoryUI implements IModule {
       const row = element("tr", element("th", { textContent: rowName }));
       for (let j = i; j < i + 16 && j < this.config.start + this.config.size; j++) {
         row.appendChild(
-          element("td", {
-            className: `byte-${j} contrast-color`,
-            textContent: this.formatMemoryData(0),
-            title: `0x${j.toString(16).padStart(4, "0")}`,
-            onClick: (el) => {
-              // If the cell already has a child element, we will ignore the click.
-              if (el.childElementCount > 0) return;
-
-              const text = el.textContent!;
-
-              // Create an input element to edit the memory value (in place)
-              const input = element("input", {
-                value: text,
-                type: "text",
-                pattern: "[0-9a-fA-F]{0,2}",
-                onblur: () => {
-                  // When the input loses focus, we will remove the input element
-                  // and restore the text content of the cell.
-                  // This happens when the user clicks outside the input element
-                  // or presses Enter!
-                  input.remove();
-                  el.textContent = text;
-                },
-                oninput: () => {
-                  input.setCustomValidity("");
-                  if (!input.checkValidity()) {
-                    input.setCustomValidity(this.localeStrings.onlyHex);
-                  }
-                  input.reportValidity();
-                },
-                onkeyup: ({ key }) => {
-                  if (key === "Enter") {
-                    // If the text hasn't changed, we don't have to do anything.
-                    if (text.toLowerCase() === input.value.toLowerCase()) {
-                      input.blur();
-                      return;
-                    }
-
-                    // When the user presses Enter, we will parse the input value,
-                    // and emit a memory write event.
-                    const data = Number.parseInt(input.value, 16);
-                    if (Number.isNaN(data) || data < 0 || data > 0xff) {
-                      input.setCustomValidity(this.localeStrings.onlyHex);
-                      input.reportValidity();
-                      return;
-                    }
-
-                    // We will receive the result of the write operation in the
-                    // `ui:memory:write:result` event, and will update the memory
-                    // cell accordingly, then.
-                    this.event_transceiver.emit("ui:memory:write", j, data);
-                  } else if (key === "Escape") {
-                    input.blur();
-                  }
-                },
-                onfocus: () => {
-                  // Select all text by default.
-                  input.select();
-                },
-              });
-
-              // Clear the text content of the cell and append the input element.
-              el.textContent = "";
-              el.appendChild(input);
-
-              input.focus();
+          rewrittableTableElement(
+            {
+              className: `byte-${j} contrast-color`,
+              textContent: this.formatMemoryData(0),
+              title: `0x${j.toString(16).padStart(4, "0")}`,
             },
-          }),
+            this.localeStrings,
+            (newValue) => {
+              // We will receive the result of the write operation in the
+              // `ui:memory:write:result` event, and will update the memory
+              // cell accordingly, then.
+              this.event_transceiver.emit("ui:memory:write", j, newValue);
+            },
+            1,
+          ),
         );
       }
       this.memoryTable.appendChild(row);
