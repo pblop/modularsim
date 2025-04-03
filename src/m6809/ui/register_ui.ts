@@ -87,11 +87,13 @@ const RegisterUIStrings = createLanguageStrings({
     pointerRegister: "Pointer register",
     unknown: "??",
     onlyHex: "Only hex values of the same length as the register are allowed.",
+    uneditableMirror: "This register is a mirror of another register, and cannot be edited.",
   },
   es: {
     pointerRegister: "Registro apuntador",
     unknown: "??",
     onlyHex: "Sólo se permiten valores hexadecimales de la longitud del registro.",
+    uneditableMirror: "Este registro es un espejismo de otro registro, y no se puede editar.",
   },
 });
 
@@ -110,7 +112,7 @@ class RegisterUI implements IModule {
 
   updateQueue: UpdateQueue;
   updatedRegisters: Set<string>;
-  duringInstruction: boolean;
+  editableRegisters: boolean;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -148,7 +150,7 @@ class RegisterUI implements IModule {
 
     this.updateQueue = new UpdateQueue(this.refreshUI);
     this.updatedRegisters = new Set();
-    this.duringInstruction = false;
+    this.editableRegisters = false;
 
     console.log(`[${this.id}] Initializing module.`);
   }
@@ -175,14 +177,14 @@ class RegisterUI implements IModule {
     if (!this.registerTable) return;
 
     this.updateQueue.queueUpdate();
-    this.duringInstruction = true;
+    this.editableRegisters = false;
   };
   onInstructionFinish = (): void => {
     if (!this.panel) return;
     if (!this.registerTable) return;
 
     this.updateQueue.queueUpdate();
-    this.duringInstruction = false;
+    this.editableRegisters = true;
   };
 
   refreshUI = () => {
@@ -192,7 +194,7 @@ class RegisterUI implements IModule {
       this.updateRegisterCell(register);
     }
 
-    this.markRegistersAs(this.duringInstruction);
+    this.markRegistersAs(this.editableRegisters);
   };
 
   markRegistersAs(uneditable: boolean): void {
@@ -204,7 +206,7 @@ class RegisterUI implements IModule {
 
       if (uneditable) {
         cell.classList.add("uneditable");
-      } else {
+      } else if (this.config.registers[register].mirror === undefined) {
         cell.classList.remove("uneditable");
       }
     }
@@ -230,8 +232,6 @@ class RegisterUI implements IModule {
       cell.textContent = this.formatRegister(register, value);
     }
 
-    cell.classList.remove("uneditable");
-
     // NOTE: this could be optimized by keeping a list of mirrors for each register,
     // and the number of bits to shift, instead of iterating over all registers every time,
     // and calculating the number of bits to shift every time (which is constant for a mask).
@@ -250,8 +250,6 @@ class RegisterUI implements IModule {
       const mirroredValue = (value & mask) >> indexOfLsb(mask);
       this.registerValues[name] = mirroredValue;
       mirroredCell.textContent = this.formatRegister(name, mirroredValue);
-
-      mirroredCell.classList.remove("uneditable");
     }
   }
 
@@ -341,6 +339,9 @@ class RegisterUI implements IModule {
               textContent: this.localeStrings.unknown,
               onmouseenter: this.config.registers[name].pointer
                 ? this.generateTooltipFunction(name)
+                : undefined,
+              title: this.config.registers[name].mirror
+                ? this.localeStrings.uneditableMirror
                 : undefined,
             },
             this.localeStrings,
