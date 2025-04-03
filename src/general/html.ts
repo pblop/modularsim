@@ -152,6 +152,7 @@ export function rewrittableTableElement(
             // to the actual memory, and update the cell accordingly, then.
             // This makes sure that the cell is always in sync with the memory.
             onChange(data);
+            input.blur();
           } else if (key === "Escape") {
             input.blur();
           }
