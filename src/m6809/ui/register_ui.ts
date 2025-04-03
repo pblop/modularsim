@@ -85,11 +85,11 @@ function indexOfLsb(mask: number): number {
 const RegisterUIStrings = createLanguageStrings({
   en: {
     pointerRegister: "Pointer register",
-    unknown: "unk.",
+    unknown: "??",
   },
   es: {
     pointerRegister: "Registro apuntador",
-    unknown: "desc.",
+    unknown: "??",
   },
 });
 
@@ -234,7 +234,10 @@ class RegisterUI implements IModule {
       if (!ev.target) return;
 
       const address = this.registerValues[register];
-      if (address === undefined) return;
+      if (address === undefined) {
+        (ev.target as HTMLTableCellElement).title = this.localeStrings.unknown;
+        return;
+      }
 
       const data = [];
 
