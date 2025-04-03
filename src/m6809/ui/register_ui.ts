@@ -1,5 +1,5 @@
 import { isNumber, parseNumber } from "../../general/config.js";
-import { element } from "../../general/html.js";
+import { element, rewrittableTableElement } from "../../general/html.js";
 import { createLanguageStrings } from "../../general/lang.js";
 import { UpdateQueue } from "../../general/updatequeue.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
@@ -86,10 +86,12 @@ const RegisterUIStrings = createLanguageStrings({
   en: {
     pointerRegister: "Pointer register",
     unknown: "??",
+    onlyHex: "Only hex values of the same length as the register are allowed.",
   },
   es: {
     pointerRegister: "Registro apuntador",
     unknown: "??",
+    onlyHex: "Sólo se permiten valores hexadecimales de la longitud del registro.",
   },
 });
 
@@ -189,6 +191,8 @@ class RegisterUI implements IModule {
       cell.textContent = flagValues || "none";
     } else {
       cell.textContent = this.formatRegister(register, value);
+
+      cell.classList.remove("uneditable");
     }
 
     // NOTE: this could be optimized by keeping a list of mirrors for each register,
@@ -209,6 +213,8 @@ class RegisterUI implements IModule {
       const mirroredValue = (value & mask) >> indexOfLsb(mask);
       this.registerValues[name] = mirroredValue;
       mirroredCell.textContent = this.formatRegister(name, mirroredValue);
+
+      mirroredCell.classList.remove("uneditable");
     }
   }
 
@@ -292,13 +298,23 @@ class RegisterUI implements IModule {
       element(
         "tr",
         ...Object.keys(this.config.registers).map((name) =>
-          element("td", {
-            className: `register-${name} ${this.config.registers[name].pointer ? "pointer-register-value" : ""}`,
-            textContent: this.localeStrings.unknown,
-            onmouseenter: this.config.registers[name].pointer
-              ? this.generateTooltipFunction(name)
-              : undefined,
-          }),
+          rewrittableTableElement(
+            {
+              className: `register-${name} register-bytes-${this.config.registers[name].bits / 8} ${this.config.registers[name].pointer ? "pointer-register" : ""} uneditable`,
+              textContent: this.localeStrings.unknown,
+              onmouseenter: this.config.registers[name].pointer
+                ? this.generateTooltipFunction(name)
+                : undefined,
+            },
+            this.localeStrings,
+            (newValue) => {
+              // We will receive the result of the write operation in the
+              // `ui:memory:write:result` event, and will update the memory
+              // cell accordingly, then.
+              this.et.emit("ui:memory:write", this.registerValues[name], newValue);
+            },
+            this.config.registers[name].bits / 8,
+          ),
         ),
       ),
     );
