@@ -34,7 +34,7 @@ const instructions = [
   ['LDA', 'LDB', 'LDD', 'LDS', 'LDU', 'LDX', 'LDY'],
   ['LEAS', 'LEAU', 'LEAX', 'LEAY'], ['LSL', 'LSLA', 'LSLB'],
   ['LSR', 'LSRA', 'LSRB'], ['MUL'], ['NEG', 'NEGA', 'NEGB'], ['NOP'],
-  ['ORA', 'ORB', 'ORCC'], ['PSHS', 'PSHU'], ['PULS', 'PULU'], 
+  ['ORA', 'ORB', 'ORCC'], ['PSHS', 'PSHU'], ['PULS', 'PULU'], ['RESET'],
   ['ROL', 'ROLA', 'ROLB'], ['ROR', 'RORA', 'RORB'], ['RTI'], ['RTS'],
   ['SBCA', 'SBCB'], ['SEX'], ['STA', 'STB', 'STD', 'STS', 'STU', 'STX', 'STY'],
   ['SUBA', 'SUBB', 'SUBD'], ['SWI', 'SWI2', 'SWI3'], ['SYNC'], ['TFR'],
