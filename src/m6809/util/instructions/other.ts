@@ -24,7 +24,32 @@ function nop(_: Cpu, __: CpuInfo, { ticksOnState }: ExecuteStateInfo) {
   return ticksOnState === 1;
 }
 
+function daa(_: Cpu, { registers }: CpuInfo, { ticksOnState }: ExecuteStateInfo) {
+  let untruncated = registers.A;
+  const msn = registers.A & 0xf0; // most significant nibble
+  const lsn = registers.A & 0x0f; // least significant nibble
+
+  if (registers.cc & ConditionCodes.HALF_CARRY || lsn > 0x09) untruncated += 0x06;
+  if (registers.cc & ConditionCodes.CARRY || msn > 0x90 || (msn > 0x80 && lsn > 0x09))
+    untruncated += 0x60;
+
+  const result = truncate(untruncated, 8);
+  registers.A = result;
+
+  // CC: N, Z, V(undefined), C
+  updateConditionCodes(registers, {
+    N: isNegative(result, 8),
+    Z: result === 0,
+    C: untruncated & 0x100,
+  });
+
+  return true;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // nop
   addInstructions("nop", [[0x12, undefined, "inherent", "2"]], () => nop);
+
+  // daa
+  addInstructions("daa", [[0x19, undefined, "inherent", "2"]], () => daa);
 }
