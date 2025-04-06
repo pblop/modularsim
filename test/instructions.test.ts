@@ -182,3 +182,4 @@ describe("9.asm", generateDescribe("9"));
 describe("stack.asm", generateDescribe("stack"));
 describe("restar.asm", generateDescribe("restar"));
 describe("sumar.asm", generateDescribe("sumar"));
+describe("10.asm", generateDescribe("10"));
