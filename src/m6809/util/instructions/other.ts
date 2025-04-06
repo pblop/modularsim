@@ -20,8 +20,8 @@ import {
 } from "../instructions.js";
 import type { CpuInfo, StateInfo } from "../state_machine.js";
 
-function nop(_: Cpu, __: CpuInfo, { ticksOnState }: ExecuteStateInfo) {
-  return ticksOnState === 1;
+function nop() {
+  return true;
 }
 
 function daa(_: Cpu, { registers }: CpuInfo, { ticksOnState }: ExecuteStateInfo) {
