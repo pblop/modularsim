@@ -17,8 +17,8 @@ import type { CpuInfo, StateInfo } from "../state_machine.js";
 
 /**
  * A function that, given the current value of a register or memory location,
- * returns the new value and the condition code updates for one of the dual
- * instructions
+ * and the carry flag (for bitwise operations), returns the new value and the
+ * condition code updates for one of the dual instructions.
  */
 type DualDataFn = (v: number, c: number) => [number, { [K in ShortCCNames]?: boolean | number }];
 const clr: DualDataFn = (_: number) => {
