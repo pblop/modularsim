@@ -7,77 +7,51 @@ import {
 } from "../../../general/numbers.js";
 import type Cpu from "../../hardware/cpu.js";
 import type { CpuAddressingData } from "../../hardware/cpu.js";
-import { ConditionCodes, REGISTER_SIZE, type Registers } from "../cpu_parts.js";
+import { ConditionCodes, REGISTER_SIZE, ShortCCNames, type Registers } from "../cpu_parts.js";
 import {
   type Accumulator,
   type ExecuteStateInfo,
   type GeneralAddressingMode,
+  GeneralDataFn,
   type Register,
   type addInstructions as addInstructionsType,
+  generalInstructionHelper,
   queryReadAddressing,
   retrieveReadAddressing,
   updateConditionCodes,
 } from "../instructions.js";
 import type { CpuInfo, StateInfo } from "../state_machine.js";
 
-function add<M extends GeneralAddressingMode>(
-  reg: Register | Accumulator,
-  mode: M,
-  cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-  withCarry = false,
-) {
-  // The size of the register (in bytes).
-  const size = REGISTER_SIZE[reg];
-  const bits = size * 8;
-  const { ticksOnState, ctx } = stateInfo;
+function add(withCarry: boolean): GeneralDataFn {
+  return (a: number, b: number, bits: number, regs: Registers) => {
+    const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
-  if (ticksOnState === 0) {
-    // add16 takes 1 cycle to do internal calculations, after the read.
-    ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
-  }
+    const untruncated = a + b + carryIn;
+    const result = truncate(untruncated, bits);
 
-  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo); // second operand
-  if (b === null) return false;
+    // Check if the bit after the last bit is set.
+    const carryOut = (untruncated >> 1) & (1 << (bits - 1));
 
-  // the remaining cycles are for the add16 operation.
-  if (ctx.instructionCtx.remainingCycles !== 0) {
-    ctx.instructionCtx.remainingCycles--;
-    return false;
-  }
+    // carries contains the bits that have been carried into.
+    // that means that the 4th bit is set if the half carry has been set, the
+    // 7th bit is set if overflow happened, and the 8th bit is set if
+    // the carry has been set.
 
-  const a = regs[reg]; // first operand
-  const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
+    const carries = a ^ b ^ result ^ carryOut;
+    const H = bits === 16 ? undefined : carries & (1 << (bits / 2));
 
-  const untruncated = a + b + carryIn;
-  const result = truncate(untruncated, bits);
-
-  regs[reg] = result;
-
-  // Check if the bit after the last bit is set.
-  const carryOut = (untruncated >> 1) & (1 << (bits - 1));
-
-  // carries contains the bits that have been carried into.
-  // that means that the 4th bit is set if the half carry has been set, the
-  // 7th bit is set if overflow happened, and the 8th bit is set if
-  // the carry has been set.
-
-  const carries = a ^ b ^ result ^ carryOut;
-  const H = bits === 16 ? undefined : carries & (1 << (bits / 2));
-
-  // CC: H, N, Z, V, C
-  updateConditionCodes(regs, {
-    H,
-    N: isNegative(result, bits),
-    Z: result === 0,
-    C: carryOut,
-    V: carries & (1 << (bits - 1)),
-  });
-
-  return true;
+    // CC: H, N, Z, V, C
+    return [
+      result,
+      {
+        H,
+        N: isNegative(result, bits),
+        Z: result === 0,
+        C: carryOut,
+        V: carries & (1 << (bits - 1)),
+      },
+    ];
+  };
 }
 
 function abx(cpuInfo: CpuInfo, stateInfo: ExecuteStateInfo) {
@@ -109,59 +83,31 @@ function sex({ registers }: CpuInfo, _: ExecuteStateInfo) {
   return true;
 }
 
-function sub<M extends GeneralAddressingMode>(
-  reg: Register | Accumulator,
-  mode: M,
-  cpu: Cpu,
-  cpuInfo: CpuInfo,
-  stateInfo: ExecuteStateInfo,
-  addr: CpuAddressingData<M>,
-  regs: Registers,
-  withCarry = false,
-) {
-  // The size of the register (in bytes).
-  const size = REGISTER_SIZE[reg];
-  const bits = size * 8;
-  const { ticksOnState, ctx } = stateInfo;
+function sub(withCarry: boolean): GeneralDataFn {
+  return (a: number, b: number, bits: number, regs: Registers) => {
+    const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
-  if (ticksOnState === 0) {
-    // add16 takes 1 cycle to do internal calculations, after the read.
-    ctx.instructionCtx.remainingCycles = size === 2 ? 1 : 0;
-  }
+    const negB = twosComplement(b, bits);
+    const negCarryIn = twosComplement(carryIn, bits);
+    const untruncated = a + negB + negCarryIn;
+    const result = truncate(untruncated, bits);
 
-  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo);
-  if (b === null) return false;
-
-  // the remaining cycles are for the add16 operation.
-  if (ctx.instructionCtx.remainingCycles !== 0) {
-    ctx.instructionCtx.remainingCycles--;
-    return false;
-  }
-
-  const a = regs[reg];
-  const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
-
-  const negB = twosComplement(b, bits);
-  const negCarryIn = twosComplement(carryIn, bits);
-  const untruncated = a + negB + negCarryIn;
-  const result = truncate(untruncated, bits);
-
-  regs[reg] = result;
-
-  // CC: ??H, N, Z, V, C
-  updateConditionCodes(regs, {
-    // H is undefined for sub8, not set for sub16. So I just... don't set it.
-    N: isNegative(result, bits),
-    Z: result === 0,
-    // I tried to calculate the carry flag by using the same logic as in the
-    // add function (but using the negB val), but couldn't get it to work :(
-    C: b + carryIn >= a,
-    // I calculate the overflow flag following the logic explained here:
-    // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-    V: (a ^ result) & (negB ^ result) & (1 << (bits - 1)),
-  });
-
-  return true;
+    // CC: ??H, N, Z, V, C
+    return [
+      result,
+      {
+        // H is undefined for sub8, not set for sub16. So I just... don't set it.
+        N: isNegative(result, bits),
+        Z: result === 0,
+        // I tried to calculate the carry flag by using the same logic as in the
+        // add function (but using the negB val), but couldn't get it to work :(
+        C: b + carryIn >= a,
+        // I calculate the overflow flag following the logic explained here:
+        // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        V: (a ^ result) & (negB ^ result) & (1 << (bits - 1)),
+      },
+    ];
+  };
 }
 
 export default function (addInstructions: typeof addInstructionsType) {
@@ -186,7 +132,16 @@ export default function (addInstructions: typeof addInstructionsType) {
       start: (cpu, cpuInfo, stateInfo, addr, regs) =>
         queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
+        generalInstructionHelper(
+          reg,
+          mode,
+          cpu,
+          cpuInfo,
+          stateInfo,
+          addr,
+          add(false),
+          reg === "D" ? 2 : 0,
+        ),
     }),
   );
   // adc8 (adca, adcb)
@@ -206,7 +161,7 @@ export default function (addInstructions: typeof addInstructionsType) {
       start: (cpu, cpuInfo, stateInfo, addr, regs) =>
         queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        add(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
+        generalInstructionHelper(reg, mode, cpu, cpuInfo, stateInfo, addr, add(true), 0),
     }),
   );
 
@@ -252,7 +207,16 @@ export default function (addInstructions: typeof addInstructionsType) {
       start: (cpu, cpuInfo, stateInfo, addr, regs) =>
         queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        sub(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, false),
+        generalInstructionHelper(
+          reg,
+          mode,
+          cpu,
+          cpuInfo,
+          stateInfo,
+          addr,
+          sub(false),
+          reg === "D" ? 2 : 0,
+        ),
     }),
   );
 
@@ -273,7 +237,7 @@ export default function (addInstructions: typeof addInstructionsType) {
       start: (cpu, cpuInfo, stateInfo, addr, regs) =>
         queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        sub(reg, mode, cpu, cpuInfo, stateInfo, addr, regs, true),
+        generalInstructionHelper(reg, mode, cpu, cpuInfo, stateInfo, addr, sub(true), 0),
     }),
   );
 }

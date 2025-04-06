@@ -274,6 +274,39 @@ export function addInstructions<
   }
 }
 
+export type GeneralDataFn = (
+  a: number,
+  b: number,
+  bits: number,
+  regs: Registers,
+) => [number, { [K in ShortCCNames]?: boolean | number }];
+export function generalInstructionHelper<M extends GeneralAddressingMode>(
+  reg: Register | Accumulator,
+  mode: M,
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addr: CpuAddressingData<M>,
+  fn: GeneralDataFn,
+  cycles: number,
+) {
+  // The size of the register (in bytes).
+  const size = REGISTER_SIZE[reg];
+  const bits = size * 8;
+
+  const b = retrieveReadAddressing(addr, cpuInfo, stateInfo); // second operand
+  if (b === null) return false;
+
+  if (stateInfo.ticksOnState < cycles) return false;
+
+  const [result, ccs] = fn(cpuInfo.registers[reg], b, bits, cpuInfo.registers);
+
+  cpuInfo.registers[reg] = result;
+  updateConditionCodes(cpuInfo.registers, ccs);
+
+  return true;
+}
+
 export function performInstructionLogic<M extends AddressingMode>(
   part: "start" | "end",
   cpuInfo: CpuInfo,
