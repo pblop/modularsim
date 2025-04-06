@@ -133,7 +133,7 @@ const lsl: DualDataFn = (r: number) => {
     {
       N: isNegative(rp, 8),
       Z: rp === 0,
-      V: r === 0x80,
+      V: indexBit(r, 7) !== indexBit(r, 6),
       C,
     },
   ];
@@ -155,9 +155,9 @@ const ror: DualDataFn = (r: number, cIn: number) => {
 };
 
 const rol: DualDataFn = (r: number, cIn: number) => {
+  console.error(cIn);
   const C = r & 0x80;
-  const V = indexBit(r, 7) !== indexBit(r, 6);
-  const rp = (r << 1) | cIn;
+  const rp = ((r << 1) & 0xff) | cIn;
 
   // CC: N, Z, V, C
   return [
@@ -165,7 +165,7 @@ const rol: DualDataFn = (r: number, cIn: number) => {
     {
       N: isNegative(rp, 8),
       Z: rp === 0,
-      V,
+      V: indexBit(r, 7) !== indexBit(r, 6),
       C,
     },
   ];
@@ -189,10 +189,7 @@ function dualStart(
       const readValue = retrieveReadAddressing(addr, cpuInfo, stateInfo);
       // The readValue cannot be null, because we read 1 byte from memory,
       // which takes 1 cycle.
-      const [rp, cc] = dualDataFn(
-        readValue!,
-        +!!(stateInfo.ctx.instructionCtx.cc && ConditionCodes.CARRY),
-      );
+      const [rp, cc] = dualDataFn(readValue!, +!!(cpuInfo.registers.cc & ConditionCodes.CARRY));
       stateInfo.ctx.instructionCtx.cc = cc;
       queryWrite(1, rp, addr, cpuInfo, stateInfo);
     }
@@ -209,7 +206,7 @@ function dualEnd(
   if (addr.mode === "inherent") {
     // Inherent mode: operate directly on the registers.
     const readValue = registers[reg!];
-    const [rp, cc] = dualDataFn(readValue, +!!(instructionCtx.cc && ConditionCodes.CARRY));
+    const [rp, cc] = dualDataFn(readValue, +!!(registers.cc & ConditionCodes.CARRY));
     registers[reg!] = rp;
     instructionCtx.cc = cc;
   }
