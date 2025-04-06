@@ -274,18 +274,18 @@ export function addInstructions<
   }
 }
 
-export type GeneralDataFn = (
+export type ReadModifyInstruction = (
   a: number,
   b: number,
   bits: number,
   regs: Registers,
 ) => [number, { [K in ShortCCNames]?: boolean | number }];
-export function generalInstructionHelper<M extends GeneralAddressingMode>(
+export function readModifyHelper<M extends GeneralAddressingMode>(
   reg: Register | Accumulator | "cc" | "pc",
   cpuInfo: CpuInfo,
   stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
-  fn: GeneralDataFn,
+  fn: ReadModifyInstruction,
   cycles: number,
 ) {
   // The size of the register (in bytes).
@@ -311,7 +311,7 @@ export function addReadModifyInstructions<
 >(
   mnemonicPattern: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
-  dataFun: GeneralDataFn,
+  dataFun: ReadModifyInstruction,
   cyclePattern: ((register: R) => number) | number,
   extraIn?: Partial<ExtraInstructionData>,
 ) {
@@ -341,7 +341,7 @@ export function addReadModifyInstructions<
           stateInfo,
         ),
       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        generalInstructionHelper(
+        readModifyHelper(
           register,
           cpuInfo,
           stateInfo,

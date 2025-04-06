@@ -9,21 +9,15 @@ import type Cpu from "../../hardware/cpu.js";
 import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, REGISTER_SIZE, ShortCCNames, type Registers } from "../cpu_parts.js";
 import {
-  type Accumulator,
   type ExecuteStateInfo,
-  type GeneralAddressingMode,
-  GeneralDataFn,
-  type Register,
+  type ReadModifyInstruction,
   type addInstructions as addInstructionsType,
   addReadModifyInstructions,
-  generalInstructionHelper,
-  queryReadAddressing,
-  retrieveReadAddressing,
   updateConditionCodes,
 } from "../instructions.js";
-import type { CpuInfo, StateInfo } from "../state_machine.js";
+import type { CpuInfo } from "../state_machine.js";
 
-function add(withCarry: boolean): GeneralDataFn {
+function add(withCarry: boolean): ReadModifyInstruction {
   return (a: number, b: number, bits: number, regs: Registers) => {
     const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
@@ -84,7 +78,7 @@ function sex({ registers }: CpuInfo, _: ExecuteStateInfo) {
   return true;
 }
 
-function sub(withCarry: boolean): GeneralDataFn {
+function sub(withCarry: boolean): ReadModifyInstruction {
   return (a: number, b: number, bits: number, regs: Registers) => {
     const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
