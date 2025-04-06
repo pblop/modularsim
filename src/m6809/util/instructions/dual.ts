@@ -189,7 +189,10 @@ function dualStart(
       const readValue = retrieveReadAddressing(addr, cpuInfo, stateInfo);
       // The readValue cannot be null, because we read 1 byte from memory,
       // which takes 1 cycle.
-      const [rp, cc] = dualDataFn(readValue!);
+      const [rp, cc] = dualDataFn(
+        readValue!,
+        +!!(stateInfo.ctx.instructionCtx.cc && ConditionCodes.CARRY),
+      );
       stateInfo.ctx.instructionCtx.cc = cc;
       queryWrite(1, rp, addr, cpuInfo, stateInfo);
     }
