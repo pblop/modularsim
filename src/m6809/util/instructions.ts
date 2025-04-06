@@ -214,14 +214,14 @@ export type ExtraInstructionData = {
 export type InstructionData<T extends AddressingMode = AddressingMode> = {
   mnemonic: string;
   cycles: string;
-  register: Accumulator | Register | "pc" | undefined;
+  register: Accumulator | Register | "cc" | "pc" | undefined;
   mode: T;
   start?: InstructionStartFn<T>;
   end?: InstructionEndFn<T>;
   extra: ExtraInstructionData;
 };
 export type FunGen<
-  R extends Accumulator | Register | "pc" | undefined,
+  R extends Accumulator | Register | "cc" | "pc" | undefined,
   M extends AddressingMode,
 > = (
   mnemonic: string,
@@ -242,7 +242,7 @@ export const INSTRUCTIONS: Record<number, InstructionData> = {};
  * or just an `end` function.
  */
 export function addInstructions<
-  R extends Accumulator | Register | "pc" | undefined,
+  R extends Accumulator | Register | "pc" | "cc" | undefined,
   M extends AddressingMode,
 >(
   mnemonicPattern: string,
@@ -281,9 +281,7 @@ export type GeneralDataFn = (
   regs: Registers,
 ) => [number, { [K in ShortCCNames]?: boolean | number }];
 export function generalInstructionHelper<M extends GeneralAddressingMode>(
-  reg: Register | Accumulator,
-  mode: M,
-  cpu: Cpu,
+  reg: Register | Accumulator | "cc" | "pc",
   cpuInfo: CpuInfo,
   stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
@@ -305,6 +303,55 @@ export function generalInstructionHelper<M extends GeneralAddressingMode>(
   updateConditionCodes(cpuInfo.registers, ccs);
 
   return true;
+}
+
+export function addReadModifyInstructions<
+  R extends Accumulator | Register | "pc" | "cc",
+  M extends GeneralAddressingMode,
+>(
+  mnemonicPattern: string,
+  modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
+  dataFun: GeneralDataFn,
+  cyclePattern: ((register: R) => number) | number,
+  extraIn?: Partial<ExtraInstructionData>,
+) {
+  // Default extra information.
+  const extra: ExtraInstructionData = {
+    isLongBranch: false,
+    postbyte: false,
+    swi: 0,
+    ...extraIn,
+  };
+
+  for (const [opcode, register, mode, docsCycles] of modes) {
+    const mnemonic = mnemonicPattern.replace("{register}", register ? register.toLowerCase() : "");
+
+    const cycles = typeof cyclePattern === "number" ? cyclePattern : cyclePattern(register);
+
+    INSTRUCTIONS[opcode] = {
+      mnemonic,
+      register,
+      mode,
+      cycles: docsCycles,
+      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        queryReadAddressing(
+          REGISTER_SIZE[register],
+          addr as CpuAddressingData<M>,
+          cpuInfo,
+          stateInfo,
+        ),
+      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+        generalInstructionHelper(
+          register,
+          cpuInfo,
+          stateInfo,
+          addr as CpuAddressingData<M>,
+          dataFun,
+          cycles,
+        ),
+      extra,
+    };
+  }
 }
 
 export function performInstructionLogic<M extends AddressingMode>(

@@ -15,6 +15,7 @@ import {
   GeneralDataFn,
   type Register,
   type addInstructions as addInstructionsType,
+  addReadModifyInstructions,
   generalInstructionHelper,
   queryReadAddressing,
   retrieveReadAddressing,
@@ -112,7 +113,7 @@ function sub(withCarry: boolean): GeneralDataFn {
 
 export default function (addInstructions: typeof addInstructionsType) {
   // add8 (adda, addb) and add16 (addd)
-  addInstructions(
+  addReadModifyInstructions(
     "add{register}",
     [
       [0x8b, "A", "immediate", "2"],
@@ -128,24 +129,12 @@ export default function (addInstructions: typeof addInstructionsType) {
       [0xe3, "D", "indexed", "6+"],
       [0xf3, "D", "extended", "7"],
     ],
-    (_, reg, mode, cycles) => ({
-      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        generalInstructionHelper(
-          reg,
-          mode,
-          cpu,
-          cpuInfo,
-          stateInfo,
-          addr,
-          add(false),
-          reg === "D" ? 2 : 0,
-        ),
-    }),
+    add(false),
+    (reg) => (reg === "D" ? 2 : 0),
   );
+
   // adc8 (adca, adcb)
-  addInstructions(
+  addReadModifyInstructions(
     "adc{register}",
     [
       [0x89, "A", "immediate", "2"],
@@ -157,12 +146,8 @@ export default function (addInstructions: typeof addInstructionsType) {
       [0xe9, "B", "indexed", "4+"],
       [0xf9, "B", "extended", "5"],
     ],
-    (_, reg, mode, cycles) => ({
-      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        generalInstructionHelper(reg, mode, cpu, cpuInfo, stateInfo, addr, add(true), 0),
-    }),
+    add(true),
+    0,
   );
 
   // abx
@@ -187,7 +172,7 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
 
   // sub8 (suba, subb) and sub16 (subd)
-  addInstructions(
+  addReadModifyInstructions(
     "sub{register}",
     [
       [0x80, "A", "immediate", "2"],
@@ -203,25 +188,12 @@ export default function (addInstructions: typeof addInstructionsType) {
       [0xa3, "D", "indexed", "6+"],
       [0xb3, "D", "extended", "7"],
     ],
-    (_, reg, mode, cycles) => ({
-      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        generalInstructionHelper(
-          reg,
-          mode,
-          cpu,
-          cpuInfo,
-          stateInfo,
-          addr,
-          sub(false),
-          reg === "D" ? 2 : 0,
-        ),
-    }),
+    sub(false),
+    (reg) => (reg === "D" ? 2 : 0),
   );
 
   // sbc8 (sbca, sbcb)
-  addInstructions(
+  addReadModifyInstructions(
     "sbc{register}",
     [
       [0x82, "A", "immediate", "2"],
@@ -233,11 +205,7 @@ export default function (addInstructions: typeof addInstructionsType) {
       [0xe2, "B", "indexed", "4+"],
       [0xf2, "B", "extended", "5"],
     ],
-    (_, reg, mode, cycles) => ({
-      start: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        queryReadAddressing(REGISTER_SIZE[reg], addr, cpuInfo, stateInfo),
-      end: (cpu, cpuInfo, stateInfo, addr, regs) =>
-        generalInstructionHelper(reg, mode, cpu, cpuInfo, stateInfo, addr, sub(true), 0),
-    }),
+    sub(true),
+    0,
   );
 }
