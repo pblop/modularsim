@@ -10,14 +10,14 @@ import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, REGISTER_SIZE, ShortCCNames, type Registers } from "../cpu_parts.js";
 import {
   type ExecuteStateInfo,
-  type ReadModifyInstruction,
+  type TwoOpInstructionFunction,
+  addInstructions2Operand,
   type addInstructions as addInstructionsType,
-  addReadModifyInstructions,
   updateConditionCodes,
 } from "../instructions.js";
 import type { CpuInfo } from "../state_machine.js";
 
-function add(withCarry: boolean): ReadModifyInstruction {
+function add(withCarry: boolean): TwoOpInstructionFunction {
   return (a: number, b: number, bits: number, regs: Registers) => {
     const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
@@ -78,7 +78,7 @@ function sex({ registers }: CpuInfo, _: ExecuteStateInfo) {
   return true;
 }
 
-function sub(withCarry: boolean): ReadModifyInstruction {
+function sub(withCarry: boolean): TwoOpInstructionFunction {
   return (a: number, b: number, bits: number, regs: Registers) => {
     const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
@@ -107,7 +107,7 @@ function sub(withCarry: boolean): ReadModifyInstruction {
 
 export default function (addInstructions: typeof addInstructionsType) {
   // add8 (adda, addb) and add16 (addd)
-  addReadModifyInstructions(
+  addInstructions2Operand(
     "add{register}",
     [
       [0x8b, "A", "immediate", "2"],
@@ -128,7 +128,7 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
 
   // adc8 (adca, adcb)
-  addReadModifyInstructions(
+  addInstructions2Operand(
     "adc{register}",
     [
       [0x89, "A", "immediate", "2"],
@@ -166,7 +166,7 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
 
   // sub8 (suba, subb) and sub16 (subd)
-  addReadModifyInstructions(
+  addInstructions2Operand(
     "sub{register}",
     [
       [0x80, "A", "immediate", "2"],
@@ -187,7 +187,7 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
 
   // sbc8 (sbca, sbcb)
-  addReadModifyInstructions(
+  addInstructions2Operand(
     "sbc{register}",
     [
       [0x82, "A", "immediate", "2"],

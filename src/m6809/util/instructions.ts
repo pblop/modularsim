@@ -16,6 +16,7 @@ import {
   type ShortCCNames,
 } from "../util/cpu_parts.js";
 import arithmetic from "./instructions/arithmetic.js";
+import bit from "./instructions/bit.js";
 import branching from "./instructions/branching.js";
 import dual from "./instructions/dual.js";
 import interrupts from "./instructions/interrupts.js";
@@ -274,18 +275,19 @@ export function addInstructions<
   }
 }
 
-export type ReadModifyInstruction = (
+export type TwoOpInstructionFunction = (
   a: number,
   b: number,
   bits: number,
   regs: Registers,
 ) => [number, { [K in ShortCCNames]?: boolean | number }];
+
 export function readModifyHelper<M extends GeneralAddressingMode>(
   reg: Register | Accumulator | "cc" | "pc",
   cpuInfo: CpuInfo,
   stateInfo: ExecuteStateInfo,
   addr: CpuAddressingData<M>,
-  fn: ReadModifyInstruction,
+  fn: TwoOpInstructionFunction,
   cycles: number,
 ) {
   // The size of the register (in bytes).
@@ -305,13 +307,13 @@ export function readModifyHelper<M extends GeneralAddressingMode>(
   return true;
 }
 
-export function addReadModifyInstructions<
+export function addInstructions2Operand<
   R extends Accumulator | Register | "pc" | "cc",
   M extends GeneralAddressingMode,
 >(
   mnemonicPattern: string,
   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
-  dataFun: ReadModifyInstruction,
+  instructionFn: TwoOpInstructionFunction,
   cyclePattern: ((register: R) => number) | number,
   extraIn?: Partial<ExtraInstructionData>,
 ) {
@@ -346,13 +348,68 @@ export function addReadModifyInstructions<
           cpuInfo,
           stateInfo,
           addr as CpuAddressingData<M>,
-          dataFun,
+          instructionFn,
           cycles,
         ),
       extra,
     };
   }
 }
+
+function modifyHelper(
+  reg: Register | Accumulator | "cc" | "pc",
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addr: CpuAddressingData<"inherent">,
+  fn: TwoOpInstructionFunction,
+  cycles: number,
+) {
+  // The size of the register (in bytes).
+  const size = REGISTER_SIZE[reg];
+  const bits = size * 8;
+}
+
+// export function addModifyInstructions<
+//   R extends Accumulator | Register | "pc" | "cc",
+//   M extends "inherent",
+// >(
+//   mnemonicPattern: string,
+//   modes: [number, R, M, string][], // [opcode, register, addressing mode, cycles]
+//   dataFun: TwoOpInstructionFunction,
+//   cyclePattern: ((register: R) => number) | number,
+//   extraIn?: Partial<ExtraInstructionData>,
+// ) {
+//   // Default extra information.
+//   const extra: ExtraInstructionData = {
+//     isLongBranch: false,
+//     postbyte: false,
+//     swi: 0,
+//     ...extraIn,
+//   };
+
+//   for (const [opcode, register, mode, docsCycles] of modes) {
+//     const mnemonic = mnemonicPattern.replace("{register}", register ? register.toLowerCase() : "");
+
+//     const cycles = typeof cyclePattern === "number" ? cyclePattern : cyclePattern(register);
+
+//     INSTRUCTIONS[opcode] = {
+//       mnemonic,
+//       register,
+//       mode,
+//       cycles: docsCycles,
+//       end: (cpu, cpuInfo, stateInfo, addr, regs) =>
+//         readModifyHelper(
+//           register,
+//           cpuInfo,
+//           stateInfo,
+//           addr as CpuAddressingData<M>,
+//           dataFun,
+//           cycles,
+//         ),
+//       extra,
+//     };
+//   }
+// }
 
 export function performInstructionLogic<M extends AddressingMode>(
   part: "start" | "end",
@@ -381,3 +438,4 @@ stack(addInstructions);
 interrupts(addInstructions);
 dual(addInstructions);
 other(addInstructions);
+bit(addInstructions);
