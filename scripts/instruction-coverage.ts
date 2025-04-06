@@ -54,6 +54,7 @@ add_alias("bcc", "bhs");
 add_alias("bcs", "blo");
 add_alias("lbcc", "lbhs");
 add_alias("lbcs", "lblo");
+add_alias("lsl", "asl");
 
 // For all in `instructions`, check if they are implemented.
 let fully_implemented = 0;
