@@ -1,4 +1,4 @@
-import { isNegative, truncate, twosComplement } from "../../../general/numbers.js";
+import { indexBit, isNegative, truncate, twosComplement } from "../../../general/numbers.js";
 import type Cpu from "../../hardware/cpu.js";
 import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, REGISTER_SIZE, type Registers, type ShortCCNames } from "../cpu_parts.js";
@@ -20,7 +20,7 @@ import type { CpuInfo, StateInfo } from "../state_machine.js";
  * returns the new value and the condition code updates for one of the dual
  * instructions
  */
-type DualDataFn = (v: number) => [number, { [K in ShortCCNames]?: boolean | number }];
+type DualDataFn = (v: number, c: number) => [number, { [K in ShortCCNames]?: boolean | number }];
 const clr: DualDataFn = (_: number) => {
   return [
     0,
@@ -90,6 +90,87 @@ const tst: DualDataFn = (r: number) => {
   ];
 };
 
+const asr: DualDataFn = (r: number) => {
+  const C = r & 1;
+  // The MSB of the input is replicated into the MSB of the output (>> in C).
+  const rp = (r & 0x80) | (r >>> 1);
+
+  // CC: H(undefined), N, Z, C
+  return [
+    rp,
+    {
+      N: isNegative(rp, 8),
+      Z: rp === 0,
+      C,
+    },
+  ];
+};
+
+const lsr: DualDataFn = (r: number) => {
+  const C = r & 1;
+  // The MSB of the input is replicated into the MSB of the output (>> in C).
+  const rp = r >>> 1;
+
+  // CC: N, Z, C
+  return [
+    rp,
+    {
+      N: 0,
+      Z: rp === 0,
+      C,
+    },
+  ];
+};
+
+// asl = lsl
+const lsl: DualDataFn = (r: number) => {
+  const rp = (r << 1) & 0xff;
+  const C = r & 0x80;
+
+  // CC: H(undefined), N, Z, V, C
+  return [
+    rp,
+    {
+      N: isNegative(rp, 8),
+      Z: rp === 0,
+      V: r === 0x80,
+      C,
+    },
+  ];
+};
+
+const ror: DualDataFn = (r: number, cIn: number) => {
+  const C = r & 1;
+  const rp = (cIn << 7) | (r >>> 1);
+
+  // CC: N, Z, C
+  return [
+    rp,
+    {
+      N: isNegative(rp, 8),
+      Z: rp === 0,
+      C,
+    },
+  ];
+};
+
+const rol: DualDataFn = (r: number, cIn: number) => {
+  const C = r & 0x80;
+  const V = indexBit(r, 7) !== indexBit(r, 6);
+  const rp = (r << 1) | cIn;
+
+  // CC: N, Z, V, C
+  return [
+    rp,
+    {
+      N: isNegative(rp, 8),
+      Z: rp === 0,
+      V,
+      C,
+    },
+  ];
+};
+
 function dualStart(
   cpuInfo: CpuInfo,
   stateInfo: ExecuteStateInfo,
@@ -125,7 +206,7 @@ function dualEnd(
   if (addr.mode === "inherent") {
     // Inherent mode: operate directly on the registers.
     const readValue = registers[reg!];
-    const [rp, cc] = dualDataFn(readValue);
+    const [rp, cc] = dualDataFn(readValue, +!!(instructionCtx.cc && ConditionCodes.CARRY));
     registers[reg!] = rp;
     instructionCtx.cc = cc;
   }
@@ -148,14 +229,19 @@ export default function (addInstructions: typeof addInstructionsType) {
     ["inc{register}", inc, [0x4c, 0x5c, 0x0c, 0x6c, 0x7c]],
     ["neg{register}", neg, [0x40, 0x50, 0x00, 0x60, 0x70]],
     ["tst{register}", tst, [0x4d, 0x5d, 0x0d, 0x6d, 0x7d]],
+    ["asr{register}", asr, [0x47, 0x57, 0x07, 0x67, 0x77]],
+    ["lsl{register}", lsl, [0x48, 0x58, 0x08, 0x68, 0x78]],
+    ["lsr{register}", lsr, [0x44, 0x54, 0x04, 0x64, 0x74]],
+    ["ror{register}", ror, [0x46, 0x56, 0x06, 0x66, 0x76]],
+    ["rol{register}", rol, [0x49, 0x59, 0x09, 0x69, 0x79]],
   ] as const;
 
   for (const [name, dualDataFn, opcodes] of dualInstructions) {
     addInstructions(
       name,
       [
-        [opcodes[0], "A", "inherent", "1"],
-        [opcodes[1], "B", "inherent", "1"],
+        [opcodes[0], "A", "inherent", "2"],
+        [opcodes[1], "B", "inherent", "2"],
         [opcodes[2], undefined, "direct", "6"],
         [opcodes[3], undefined, "indexed", "6+"],
         [opcodes[4], undefined, "extended", "7"],
