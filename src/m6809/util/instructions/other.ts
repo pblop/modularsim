@@ -40,6 +40,9 @@ function daa(_: Cpu, { registers }: CpuInfo, { ticksOnState }: ExecuteStateInfo)
   updateConditionCodes(registers, {
     N: isNegative(result, 8),
     Z: result === 0,
+    // This C flag is not actually exactly what the 6809 does, but it is what
+    // the manual says, source:
+    // https://github.com/cavnex/mc6809/blob/17e94a6ef163be8b79a9b15b2e814847b6062f0f/mc6809i.v#L1921
     C: untruncated & 0x100,
   });
 
