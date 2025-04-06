@@ -124,5 +124,5 @@ export default function (addInstructions: typeof addInstructionsType) {
     0,
   );
   // orcc
-  addInstructions2Operand("orcc", [[0x1d, "cc", "immediate", "3"]], orcc, 0);
+  addInstructions2Operand("orcc", [[0x1a, "cc", "immediate", "3"]], orcc, 0);
 }
