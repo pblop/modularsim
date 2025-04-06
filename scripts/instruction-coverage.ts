@@ -40,6 +40,7 @@ const instructions = [
   ['SUBA', 'SUBB', 'SUBD'], ['SWI', 'SWI2', 'SWI3'], ['SYNC'], ['TFR'],
   ['TST', 'TSTA', 'TSTB']
 ].map(x => x.map(m => m.toLowerCase()));
+const flatInstructions = instructions.flat();
 
 let implemented_mnemonics = Object.values(IMPLEMENTED).map((x) => x.mnemonic.toLowerCase());
 // There are duplicated entries (multiple addressing modes).
@@ -47,8 +48,15 @@ implemented_mnemonics = [...new Set(implemented_mnemonics)];
 
 // Add aliases
 function add_alias(alias: string, mnemonic: string) {
-  if (implemented_mnemonics.includes(mnemonic)) implemented_mnemonics.push(alias);
-  if (implemented_mnemonics.includes(alias)) implemented_mnemonics.push(mnemonic);
+  if (!implemented_mnemonics.includes(alias) && !implemented_mnemonics.includes(mnemonic)) return;
+
+  // If one of them is implemented, we make sure the one that's in the implemented
+  // mnemonics list is the one that is in the instructions list.
+  if (flatInstructions.includes(alias) && implemented_mnemonics.includes(mnemonic)) {
+    implemented_mnemonics.splice(implemented_mnemonics.indexOf(mnemonic), 1, alias);
+  } else if (flatInstructions.includes(mnemonic) && implemented_mnemonics.includes(alias)) {
+    implemented_mnemonics.splice(implemented_mnemonics.indexOf(alias), 1, mnemonic);
+  }
 }
 add_alias("bcc", "bhs");
 add_alias("bcs", "blo");
@@ -82,7 +90,7 @@ for (const mnemonics of instructions) {
 const fully_perc = perc(fully_implemented, total);
 const partially_perc = perc(partially_implemented, total);
 const atleast_partially_perc = perc(fully_implemented + partially_implemented, total);
-const mnemonic_perc = perc(implemented_mnemonics.length, instructions.flat().length);
+const mnemonic_perc = perc(implemented_mnemonics.length, flatInstructions.length);
 if (process.stdout.isTTY) {
   console.log(`Fully implemented: ${fully_implemented}/${total} (${fully_perc}%)`);
   console.log(`Partially implemented: ${partially_implemented}/${total} (${partially_perc}%)`);
@@ -90,7 +98,7 @@ if (process.stdout.isTTY) {
     `At least partially implemented: ${fully_implemented + partially_implemented}/${total} (${atleast_partially_perc}%)`,
   );
   console.log(
-    `Implemented mnemonics: ${implemented_mnemonics.length}/${instructions.flat().length} (${mnemonic_perc}%)`,
+    `Implemented mnemonics: ${implemented_mnemonics.length}/${flatInstructions.length} (${mnemonic_perc}%)`,
   );
 } else {
   console.log(
@@ -110,7 +118,7 @@ if (process.stdout.isTTY) {
       ...gist_file("mnemonics.json", {
         schemaVersion: 1,
         label: "Mnemonics",
-        message: `${implemented_mnemonics.length}/${instructions.flat().length} (${mnemonic_perc}%)`,
+        message: `${implemented_mnemonics.length}/${flatInstructions.length} (${mnemonic_perc}%)`,
         color: perc_colour(Number(mnemonic_perc)),
       }),
     }),
