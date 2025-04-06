@@ -38,7 +38,7 @@ export function toMultiplexedProvideds(
  * multiplexed format, if a multiplexer is provided.
  * Useful for working with multiplexer-aware hardware device modules.
  * @param requiredMemoryEvents The object of required memory events
- * (e.g. { "memory:read": callback }) the module is interested in providing a
+ * (e.g. \{ "memory:read": callback \}) the module is interested in providing a
  * multiplexed version of.
  * @param multiplexer The name of the multiplexer to use. If not provided,
  * the provided events will be returned as-is.
