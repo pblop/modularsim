@@ -25,7 +25,7 @@ virtual.
 
 :::tip
 
-**[Aquí](./guides/making-modules.md)** puedes encontrar una guía para crear tus
+**[Aquí](./guides/modules/introduction.md)** puedes encontrar una guía para crear tus
 propios módulos.
 
 :::
@@ -70,7 +70,7 @@ También soporta el uso de
 que permiten ejecutar el código de forma asíncrona, pero no es recomendable
 utilizarlas, ya que puede provocar problemas de sincronización entre los
 módulos.  Hay más información sobre este tema en la guía de [creación de
-módulos](./guides/making-modules.md).
+módulos](./guides/modules/introduction.md).
 
 ### Mensajes vs ciclos de reloj
 
