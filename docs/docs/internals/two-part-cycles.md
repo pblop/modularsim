@@ -1,3 +1,6 @@
+---
+sidebar_position: 1
+---
 # Ciclos en dos partes
 
 Ahora que ya tenemos una visión general de cómo funciona el sistema de módulos,
