@@ -26,6 +26,8 @@ function calculateAnimationFrameTime(callback: (time: number) => void, amount = 
   calculateOnce(0);
 }
 
+const BATCH_TIME = 16; // 10ms
+
 // NOTA: Esto tiene el problema de que ahora que hay varios ciclos por cada
 // Task de JavaScript. Y ahora las partes del código que utilizan Promises se
 // van a desincronizar, porque se ejecutan una vez por cada varios ciclos.
@@ -42,18 +44,43 @@ function setFastInterval<A extends unknown[]>(
 
   // Number of calls per 10ms (we ignore the decimal part. setInterval doesn't
   // guarantee exact time either, so there's no need to be extremely precise).
-  const callsPer10ms = 10 / time;
+  const callsPerBatch = BATCH_TIME / time;
 
   // To avoid calling the function while another call is waiting for the result
   // of a Promise, we use this variable.
   let hasLastIntervalFinished = true;
+  let lastIntervalEndTime = 0;
+  let isTooSlow = false;
 
   const intervalCode = setInterval(async () => {
-    if (!hasLastIntervalFinished) return;
+    if (!hasLastIntervalFinished) {
+      console.warn("Interval called before last interval finished!!");
+      return;
+    }
     hasLastIntervalFinished = false;
+
+    // We want to match the time of the interval with the time of the frame, and
+    // be called immediately after the last interval finished.
+    // We use the time of the last interval to calculate the time of the next
+    // interval.
     const intervalStartTime = performance.now();
-    // Calls function 'callsPer10ms' times for every 10ms
-    for (let i = 0; i < callsPer10ms; i++) {
+    // if there was a previous interval
+    if (lastIntervalEndTime > 0 && isTooSlow) {
+      // we want the time between the last interval and the current one to be
+      // as close to zero as possible.
+      const timeBetweenCalls = intervalStartTime - lastIntervalEndTime;
+
+      if (timeBetweenCalls > 0) {
+        console.warn(`Interval called too late: ${timeBetweenCalls}ms, when it should be 0ms`);
+
+        // If we've been called too late, we want to add more calls per batch
+        // to make up for the time lost.
+      }
+    }
+
+    isTooSlow = false;
+    // Calls function 'callsPerBatch' times for every BATCH_TIME ms.
+    for (let i = 0; i < callsPerBatch; i++) {
       // Stops for loop when 'clearInterval' is called
       if (breakInterval[intervalCode]) {
         delete breakInterval[intervalCode];
@@ -63,7 +90,13 @@ function setFastInterval<A extends unknown[]>(
       const now = performance.now();
       // If we have already taken more than 16ms (1/60Hz), we stop the loop, and
       // allow the browser to do other stuff (like rendering).
-      if (now - intervalStartTime > 16) break;
+      if (now - intervalStartTime > BATCH_TIME) {
+        console.warn(
+          `Interval took too long: ${now - intervalStartTime}ms, when it should be ${BATCH_TIME}ms`,
+        );
+        isTooSlow = true;
+        break;
+      }
 
       const ret = func(...args);
       // If the function returns a Promise, we wait for it to resolve
@@ -71,14 +104,17 @@ function setFastInterval<A extends unknown[]>(
     }
 
     const intervalEndTime = performance.now();
-    const diff = intervalEndTime - intervalStartTime;
-    const isAhead = diff < time;
-    console.log(
-      `Interval took: ${diff}ms (${Math.abs(diff - time)}ms ${isAhead ? "ahead" : "behind"} of ${time}ms target)`,
-    );
+    // const diff = intervalEndTime - intervalStartTime;
+    // const isAhead = diff < time;
+    // console.log(
+    //   `Interval took: ${diff}ms (${Math.abs(diff - time)}ms ${
+    //     isAhead ? "ahead" : "behind"
+    //   } of ${time}ms target)`,
+    // );
 
+    lastIntervalEndTime = intervalEndTime;
     hasLastIntervalFinished = true;
-  }, 10);
+  }, BATCH_TIME); // 0 = call us as fast as possible
 
   breakInterval[intervalCode] = false;
   return intervalCode;
