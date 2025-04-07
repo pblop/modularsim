@@ -25,7 +25,6 @@ class Clock implements IModule {
   interval_id?: number;
 
   mode: "normal" | "instruction" | "fast_reset";
-  prevCycle: number;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -60,16 +59,11 @@ class Clock implements IModule {
     this.simulation = simulation;
 
     this.mode = "normal";
-    this.prevCycle = 0;
 
     console.log(`[${this.id}] Module initialized.`);
   }
 
   sendCycleEvent = (): Promise<void> => {
-    const now = performance.now();
-    console.info(`[${this.id}] Clock cycle started ${now - this.prevCycle}ms after the last cycle`);
-    this.prevCycle = now;
-
     // The function that will be called every clock cycle.
     return this.simulation.performCycle();
   };
