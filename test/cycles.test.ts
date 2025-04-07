@@ -66,4 +66,5 @@ describe("Cycles", () => {
   it("6.asm", genCycleTest("6.bin", 10));
   it("7.asm", genCycleTest("7.bin", 13));
   it("8.asm", genCycleTest("8.bin", 12));
+  it("holalargo.asm", genCycleTest("holalargo.bin", 21252));
 });
