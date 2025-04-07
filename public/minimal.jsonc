@@ -1,0 +1,103 @@
+{
+  "simulator": {
+    // "url" es la ruta del archivo que contiene el simulador
+    "url": "./m6809/base.js",
+    "modules": [
+      {
+        // "id" es un identificador único para cada módulo
+        "id": "main_memory",
+        "type": "memory",
+        // "url" es la ruta del archivo que contiene el módulo
+        "url": "./m6809/hardware/memory.js",
+        "config": {
+          "multiplexer": "multiplexer",
+          "size": 65536,
+          "type": "ram"
+        }
+      },
+      {
+        "id": "gui",
+        "type": "gui",
+        "url": "./m6809/ui/gui.js",
+        "css": ["./m6809/ui/reset.css", "./m6809/ui/gui.css", "./config-colors.css"],
+        "config": {
+          "language": "es",
+          "panels": [
+            {
+              "id": "clock_ui",
+              "column": "-3 / -1",
+              "row": "1 / span 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "clock",
+        "type": "clock",
+        "url": "./m6809/hardware/clock.js",
+        "config": {
+          "frequency": 100000000000 // Hz
+        }
+      },
+      {
+        "id": "clock_ui",
+        "type": "ui",
+        "url": "./m6809/ui/clock_ui.js",
+        "css": ["./m6809/ui/clock_ui.css"],
+        "config": {
+          "frequency": 100000000000
+        }
+      },
+      {
+        "id": "cpu",
+        "type": "cpu",
+        "url": "./m6809/hardware/cpu.js",
+        "config": {
+          // "functions": {
+          //   "0x8000": "myfunctionmodule"
+          // }
+        }
+      },
+      {
+        "id": "loader",
+        "type": "extra",
+        "url": "./m6809/extra/loader.js",
+        "css": ["./m6809/extra/loader.css"],
+        "config": {
+          "file": "./m6809/programs/holalargo.s19",
+          "symbolsFile": "./m6809/programs/2d.noi"
+          // "file": "http://localhost:6809/m6809/programs/loop.bin"
+        }
+      },
+      {
+        "id": "stopper",
+        "type": "extra",
+        "url": "./m6809/extra/stop.js",
+        "config": {
+          "multiplexer": "multiplexer"
+        }
+      },
+      {
+        "id": "multiplexer",
+        "type": "hw",
+        "url": "./m6809/hardware/multiplexer.js",
+        "config": {
+          "entries": [
+            {
+              "start": "0xFF01",
+              "size": 1,
+              "module": "stopper",
+              "priority": 0
+            },
+            {
+              "start": "0x0",
+              "module": "main_memory",
+              "size": 65536,
+              "priority": 1
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
