@@ -49,6 +49,7 @@ function setFastInterval<A extends unknown[]>(
   // To avoid calling the function while another call is waiting for the result
   // of a Promise, we use this variable.
   let hasLastIntervalFinished = true;
+  // Info about the last interval, to provide some feedback on the console.
   let lastIntervalEndTime = 0;
   let isTooSlow = false;
 
@@ -90,9 +91,10 @@ function setFastInterval<A extends unknown[]>(
       const now = performance.now();
       // If we have already taken more than 16ms (1/60Hz), we stop the loop, and
       // allow the browser to do other stuff (like rendering).
-      if (now - intervalStartTime > BATCH_TIME) {
+      const timeInBatch = now - intervalStartTime;
+      if (timeInBatch > BATCH_TIME) {
         console.warn(
-          `Interval took too long: ${now - intervalStartTime}ms, when it should be ${BATCH_TIME}ms`,
+          `Interval took too long: ${timeInBatch}ms > ${BATCH_TIME}ms, ${(i / callsPerBatch) * 100}% done`,
         );
         isTooSlow = true;
         break;
