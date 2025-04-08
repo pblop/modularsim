@@ -117,7 +117,7 @@ class ClockUI implements IModule {
   };
 
   setState(stateChange: Partial<ClockUIState>): void {
-    this.state = { ...this.state, ...stateChange };
+    Object.assign(this.state, stateChange);
     this.updateQueue.queueUpdate(stateChange);
   }
 
