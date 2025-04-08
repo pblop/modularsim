@@ -78,9 +78,6 @@ class Clock implements IModule {
 
   createInterval(): void {
     this.startTime = performance.now();
-    // Emit a cycle start event immediately, because setInterval will wait for
-    // the delay before calling the function the first time.
-    this.sendCycleEvent();
 
     // Send a clock cycle start event every 1/frequency seconds.
     this.interval_id = setFastInterval(this.sendCycleEvent, 1000 / this.config.frequency);

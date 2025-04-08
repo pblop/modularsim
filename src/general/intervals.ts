@@ -34,6 +34,7 @@ const BATCH_TIME = 16; // 10ms
 function setFastInterval<A extends unknown[]>(
   func: (...args: A) => unknown,
   time = MIN_TIME,
+  options: { immediate?: boolean } = { immediate: true },
   ...args: A
 ): number {
   // If the time is greater than 10ms, we don't need to do any magic.
@@ -53,7 +54,7 @@ function setFastInterval<A extends unknown[]>(
   let lastIntervalEndTime = 0;
   let isTooSlow = false;
 
-  const intervalCode = setInterval(async () => {
+  const intervalFn = async () => {
     if (!hasLastIntervalFinished) {
       console.warn("Interval called before last interval finished!!");
       return;
@@ -116,7 +117,13 @@ function setFastInterval<A extends unknown[]>(
 
     lastIntervalEndTime = intervalEndTime;
     hasLastIntervalFinished = true;
-  }, BATCH_TIME); // 0 = call us as fast as possible
+  };
+
+  const intervalCode = setInterval(intervalFn, BATCH_TIME);
+  if (options.immediate) {
+    intervalFn(); // setInterval doesn't call the function immediately, so we call it
+    // manually the first time.
+  }
 
   breakInterval[intervalCode] = false;
   return intervalCode;
