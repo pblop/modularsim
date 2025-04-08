@@ -1,10 +1,11 @@
 import type Cpu from "../../hardware/cpu.js";
 import type { CpuAddressingData } from "../../hardware/cpu.js";
 import { ConditionCodes, type Registers } from "../cpu_parts.js";
-import type {
-  ExecuteStateInfo,
-  FunGen,
-  addInstructions as addInstructionsType,
+import {
+  queryReadAddressing,
+  type ExecuteStateInfo,
+  type FunGen,
+  type addInstructions as addInstructionsType,
 } from "../instructions.js";
 import type { CpuInfo, StateInfo } from "../state_machine.js";
 
@@ -40,6 +41,17 @@ function branching<M extends "relative">(
     registers.pc = addr.address;
   }
 
+  return true;
+}
+
+function jmp(
+  cpu: Cpu,
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addressingData: CpuAddressingData<"direct" | "indexed" | "extended">,
+  registers: Registers,
+): boolean {
+  cpuInfo.registers.pc = addressingData.address;
   return true;
 }
 
@@ -105,4 +117,14 @@ export default function (addInstructions: typeof addInstructionsType) {
       isLongBranch: true,
     });
   }
+
+  addInstructions(
+    "jmp",
+    [
+      [0x0e, "pc", "direct", "3"],
+      [0x6e, "pc", "indexed", "3+"],
+      [0x7e, "pc", "extended", "5(6)"],
+    ],
+    () => jmp,
+  );
 }
