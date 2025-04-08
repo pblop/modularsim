@@ -78,7 +78,7 @@ function sex({ registers }: CpuInfo, _: ExecuteStateInfo) {
   return true;
 }
 
-function sub(withCarry: boolean): TwoOpInstructionFunction {
+function sub(withCarry: boolean, modifyAccumulator = true): TwoOpInstructionFunction {
   return (a: number, b: number, bits: number, regs: Registers) => {
     const carryIn = withCarry && regs.cc & ConditionCodes.CARRY ? 1 : 0;
 
@@ -89,7 +89,7 @@ function sub(withCarry: boolean): TwoOpInstructionFunction {
 
     // CC: ??H, N, Z, V, C
     return [
-      result,
+      modifyAccumulator ? result : null,
       {
         // H is undefined for sub8, not set for sub16. So I just... don't set it.
         N: isNegative(result, bits),
@@ -200,6 +200,42 @@ export default function (addInstructions: typeof addInstructionsType) {
       [0xf2, "B", "extended", "5"],
     ],
     sub(true),
+    0,
+  );
+
+  addInstructions2Operand(
+    "cmp{register}",
+    [
+      [0x81, "A", "immediate", "2"],
+      [0x91, "A", "direct", "4"],
+      [0xa1, "A", "indexed", "4+"],
+      [0xb1, "A", "extended", "5"],
+      [0xc1, "B", "immediate", "2"],
+      [0xd1, "B", "direct", "4"],
+      [0xe1, "B", "indexed", "4+"],
+      [0xf1, "B", "extended", "5"],
+      [0x1083, "D", "immediate", "3"],
+      [0x1093, "D", "direct", "7"],
+      [0x10a3, "D", "indexed", "7+"],
+      [0x10b3, "D", "extended", "8"],
+      [0x118c, "S", "immediate", "3"],
+      [0x119c, "S", "direct", "7"],
+      [0x11ac, "S", "indexed", "7+"],
+      [0x11bc, "S", "extended", "8"],
+      [0x1183, "U", "immediate", "5"],
+      [0x1193, "U", "direct", "7"],
+      [0x11a3, "U", "indexed", "7+"],
+      [0x11b3, "U", "extended", "8"],
+      [0x8c, "X", "immediate", "4"],
+      [0x9c, "X", "direct", "6"],
+      [0xac, "X", "indexed", "6+"],
+      [0xbc, "X", "extended", "7"],
+      [0x108c, "Y", "immediate", "5"],
+      [0x109c, "Y", "direct", "7"],
+      [0x10ac, "Y", "indexed", "7+"],
+      [0x10bc, "Y", "extended", "8"],
+    ],
+    sub(false, false),
     0,
   );
 }

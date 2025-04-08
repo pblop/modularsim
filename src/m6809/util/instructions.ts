@@ -280,7 +280,7 @@ export type TwoOpInstructionFunction = (
   b: number,
   bits: number,
   regs: Registers,
-) => [number, { [K in ShortCCNames]?: boolean | number }];
+) => [number | null, { [K in ShortCCNames]?: boolean | number }];
 
 export function readModifyHelper<M extends GeneralAddressingMode>(
   reg: Register | Accumulator | "cc" | "pc",
@@ -301,7 +301,7 @@ export function readModifyHelper<M extends GeneralAddressingMode>(
 
   const [result, ccs] = fn(cpuInfo.registers[reg], b, bits, cpuInfo.registers);
 
-  cpuInfo.registers[reg] = result;
+  if (result != null) cpuInfo.registers[reg] = result;
   updateConditionCodes(cpuInfo.registers, ccs);
 
   return true;
