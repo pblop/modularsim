@@ -1,7 +1,16 @@
 // Copied and modified from:
 // https://gist.github.com/EvitanRelta/c3d69dde4ab6879d4126dc3f676c4bdd
 
+// Add declaration for scheduler in globalThis (experimental)
+
 const breakInterval: { [key: number]: boolean } = {};
+/**
+ * The return value of setInterva/setTimeout is a positive integer
+ * (https://developer.mozilla.org/en-US/docs/Web/API/Window/setInterval#return_value).
+ * So, to make sure the yieldingTimer numbers are unique, we start at -1 and
+ * go down. So our numbers will be negative.
+ */
+let nextYieldingTimerId = -1;
 const MIN_TIME = 0.001;
 
 function calculateAnimationFrameTime(callback: (time: number) => void, amount = 100) {
@@ -28,21 +37,88 @@ function calculateAnimationFrameTime(callback: (time: number) => void, amount = 
 
 const BATCH_TIME = 16; // 10ms
 
+function setTimer<A extends unknown[]>(
+  func: (...args: A) => unknown,
+  time = MIN_TIME,
+  ...args: A
+): number {
+  // If the time is greater than 10ms, we don't need to do any magic.
+  if (time >= BATCH_TIME) return setInterval(func, time, ...args);
+
+  // To avoid zero or negative timings
+  if (time <= 0) time = MIN_TIME;
+
+  // if (globalThis?.scheduler?.yield) {
+  //   console.log("Using yielding timer");
+  //   return yieldingTimer(func, time, {}, ...args);
+  // } else {
+  //   console.log("Using interval timer");
+  return intervalTimer(func, time, { immediate: true }, ...args);
+  // }
+}
+
+function yieldingTimer<A extends unknown[]>(
+  func: (...args: A) => unknown,
+  time = MIN_TIME,
+  // biome-ignore lint/complexity/noBannedTypes: <explanation>
+  options: {} = {},
+  ...args: A
+): number {
+  const id = nextYieldingTimerId--;
+
+  // Number of calls per 10ms (we ignore the decimal part)..
+  const callsPerBatch = BATCH_TIME / time;
+
+  async function yieldingTimerAsyncFunc() {
+    breakInterval[id] = false;
+    let lastEndTime = 0;
+    while (true) {
+      const startTime = performance.now();
+      if (lastEndTime > 0) console.warn(`Yielding took ${startTime - lastEndTime}ms`);
+      let endTime = 0;
+      for (let i = 0; i < callsPerBatch; i++) {
+        if (breakInterval[id]) {
+          delete breakInterval[id];
+          return;
+        }
+
+        const ret = func(...args);
+        // If the function returns a Promise, we wait for it to resolve
+        if (ret instanceof Promise) await ret;
+
+        const isBatchDone = callsPerBatch - 1 === i;
+        if (isBatchDone || i % 1000 === 0) {
+          endTime = performance.now();
+          if (!isBatchDone) {
+            const timeInBatch = endTime - startTime;
+            if (timeInBatch > BATCH_TIME) {
+              console.warn(
+                `Interval took too long: ${timeInBatch}ms > ${BATCH_TIME}ms, ${(i / callsPerBatch) * 100}% done`,
+              );
+              break;
+            }
+          }
+        }
+      }
+
+      lastEndTime = endTime;
+      await globalThis!.scheduler!.yield!();
+    }
+  }
+
+  yieldingTimerAsyncFunc();
+  return id;
+}
+
 // NOTA: Esto tiene el problema de que ahora que hay varios ciclos por cada
 // Task de JavaScript. Y ahora las partes del código que utilizan Promises se
 // van a desincronizar, porque se ejecutan una vez por cada varios ciclos.
-function setFastInterval<A extends unknown[]>(
+function intervalTimer<A extends unknown[]>(
   func: (...args: A) => unknown,
   time = MIN_TIME,
   options: { immediate?: boolean } = { immediate: true },
   ...args: A
 ): number {
-  // If the time is greater than 10ms, we don't need to do any magic.
-  if (time >= 10) return setInterval(func, time, ...args);
-
-  // To avoid zero or negative timings
-  if (time <= 0) time = MIN_TIME;
-
   // Number of calls per 10ms (we ignore the decimal part. setInterval doesn't
   // guarantee exact time either, so there's no need to be extremely precise).
   const callsPerBatch = BATCH_TIME / time;
@@ -129,15 +205,21 @@ function setFastInterval<A extends unknown[]>(
   return intervalCode;
 }
 
-function clearFastInterval(intervalCode: number): void {
-  // Default 'clearInterval' behaviour
-  if (breakInterval[intervalCode] === undefined) {
+function clearTimer(intervalCode: number): void {
+  // If the intervalCode is positive, it's a normal setInterval, and we can just
+  // clear it.
+  if (intervalCode >= 0) {
+    // Default 'clearInterval' behaviour
     clearInterval(intervalCode);
-    return;
   }
 
-  clearInterval(intervalCode);
+  // If we don't have a key in breakInterval, it means that the interval was not
+  // created by us, so we don't need to do anything.
+  if (breakInterval[intervalCode] === undefined) return;
+
+  // Mark the interval as broken, so we can stop the loop in the next
+  // iteration.
   breakInterval[intervalCode] = true;
 }
 
-export { setFastInterval, clearFastInterval };
+export { setTimer, clearTimer };

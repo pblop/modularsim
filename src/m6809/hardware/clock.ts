@@ -1,4 +1,4 @@
-import { clearFastInterval, setFastInterval } from "../../general/intervals.js";
+import { clearTimer, setTimer } from "../../general/intervals.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../types/event.js";
 import type {
   IModule,
@@ -72,7 +72,7 @@ class Clock implements IModule {
     if (this.interval_id == null) return;
     console.log(`[${this.id}] Clock paused after ${performance.now() - this.startTime}ms`);
 
-    clearFastInterval(this.interval_id);
+    clearTimer(this.interval_id);
     this.interval_id = undefined;
   }
 
@@ -80,7 +80,7 @@ class Clock implements IModule {
     this.startTime = performance.now();
 
     // Send a clock cycle start event every 1/frequency seconds.
-    this.interval_id = setFastInterval(this.sendCycleEvent, 1000 / this.config.frequency);
+    this.interval_id = setTimer(this.sendCycleEvent, 1000 / this.config.frequency);
   }
 
   onResetSignal = (): void => {
