@@ -93,6 +93,10 @@ class ClockQueue {
 type SubscribersType = {
   [B in EventBaseName as B | `${B}/${string}`]?: EventCallback<B>[];
 };
+
+type DeclarationWithMap = ModuleDeclaration & {
+  providedMap?: Map<EventName, boolean>;
+};
 // NOTA: Ahora mismo estoy utilizando un método init para cargar los módulos y
 // preparar el simulador. Veo otras opciones:
 // - Crear un método estático para cargar los módulos, y una vez cargados,
@@ -101,7 +105,7 @@ type SubscribersType = {
 //   ahí, y luego cargar los módulos en un método init.
 class M6809Simulator implements ISimulator {
   modules: Record<string, IModule> = {};
-  declarations: Record<string, ModuleDeclaration> = {};
+  declarations: Record<string, DeclarationWithMap> = {};
 
   // Any is used here because the event names can be dynamic (while developing
   // the app, all events are known, but because of the extensibility of the
@@ -152,13 +156,18 @@ class M6809Simulator implements ISimulator {
         this.asSimulation({ module: moduleId, secure: true }),
       );
 
-      const declaration = module.getModuleDeclaration();
+      const declaration: DeclarationWithMap = module.getModuleDeclaration();
       if (declaration.events != null) {
         required_events.push(...Object.keys(declaration.events.required));
         provided_events.push(...declaration.events.provided);
       }
       if (declaration.cycles) {
         if (declaration.cycles.initiator) initiators++;
+      }
+      if (declaration.events != null) {
+        declaration.providedMap = new Map(
+          declaration.events.provided.map((event) => [event, true]),
+        );
       }
 
       // Store the event declaration and the module instance.
@@ -505,10 +514,9 @@ class M6809Simulator implements ISimulator {
 
   permissionsCheckEmit(caller: string, event: EventName): void {
     if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
-    const evtDeclaration = this.declarations[caller].events;
-    if (evtDeclaration == null) throw new Error(`[${caller}] Module has no event declaration`);
-    if (!evtDeclaration.provided.includes(event))
-      throw new Error(`[${caller}] Cannot emit event ${event}.`);
+    const providedMap = this.declarations[caller].providedMap;
+    if (providedMap == null) throw new Error(`[${caller}] Module has no event declaration`);
+    if (!providedMap.has(event)) throw new Error(`[${caller}] Cannot emit event ${event}.`);
   }
   permissionsCheckListen(caller: string, event: EventName): void {
     if (this.declarations[caller] == null) throw new Error(`[${caller}] Module has no declaration`);
