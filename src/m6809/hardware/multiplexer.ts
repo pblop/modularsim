@@ -46,6 +46,7 @@ class Multiplexer implements IModule {
   id: string;
 
   config: MultiplexerConfig;
+  perModuleEntries: Record<string, MultiplexerEntry> = {};
 
   getModuleDeclaration(): ModuleDeclaration {
     const incomingEventHandlers = IncomingEvents.map((event) => [event, this.passEventDown(event)]);
@@ -96,19 +97,29 @@ class Multiplexer implements IModule {
       this.id,
     );
 
+    for (const entry of this.config.entries) this.perModuleEntries[entry.module] = entry;
+
     console.log(`[${this.id}] Initializing Multiplexer module.`);
   }
 
   getCorrespondingEntry = (address: number): MultiplexerEntry | undefined => {
-    const entries = this.config.entries
-      .filter((e) => e.start <= address && address < e.start + e.size)
-      .sort((a, b) => a.priority - b.priority);
-    if (entries.length === 0) {
-      console.error(`[${this.id}] No module found for address 0x${address.toString(16)}`);
-      return;
+    let selected: MultiplexerEntry | undefined = undefined;
+
+    for (const entry of this.config.entries) {
+      // Check if the address is within the range of the entry,
+      // and find the one with the highest priority.
+      if (
+        entry.start <= address &&
+        address < entry.start + entry.size &&
+        (selected === undefined || selected.priority > entry.priority)
+      )
+        selected = entry;
     }
+    if (selected === undefined)
+      console.error(`[${this.id}] No module found for address 0x${address.toString(16)}`);
+
     // TODO: Enviar a varios módulos si tienen la misma prioridad.
-    return entries[0];
+    return selected;
   };
 
   passEventDown<I extends IncomingEvents>(
@@ -142,7 +153,7 @@ class Multiplexer implements IModule {
 
       // We need to find the starting address of the module that emitted the event,
       // so we can calculate the absolute address.
-      const entry = this.config.entries.find((e) => e.module === ctx.emitter);
+      const entry = this.perModuleEntries[ctx.emitter];
       if (!entry) return;
 
       // Calculate the address relative to the module, and pass it as the first argument to the
