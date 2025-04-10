@@ -72,7 +72,7 @@ class ClockQueue {
     return elem.callback;
   }
   debugView() {
-    const sorted = this.queue._heap.slice().sort(this.cmp);
+    const sorted = this.queue.heap.slice().sort(this.cmp);
     return sorted.reduce((acc: Map<string, CycleCallback[]>, el) => {
       const str = `${el.priority.cycle}|${el.priority.subcycle}`;
       if (!acc.has(str)) acc.set(str, []);
