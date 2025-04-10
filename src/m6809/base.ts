@@ -467,31 +467,37 @@ class M6809Simulator implements ISimulator {
    */
   permissionsWrapper = (
     caller: string,
-    actions: ("listen" | "emit")[],
+    actions: [] | ["emit" | "listen"] | ["emit", "listen"] | ["listen", "emit"],
     // biome-ignore lint/suspicious/noExplicitAny: <above>
     fun: (caller: ModuleID, event: EventName, ...args: any) => any,
     // biome-ignore lint/suspicious/noExplicitAny: <above>
   ): ((event: EventName, ...args: any) => any) => {
-    const listen = actions.includes("listen");
-    const emit = actions.includes("emit");
     if (actions.length === 0) {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
       return (event: EventName, ...args: any) => fun.bind(this)(caller, event, ...args);
     } else if (actions.length === 1) {
-      // biome-ignore lint/suspicious/noExplicitAny: <above>
-      return (event: EventName, ...args: any) => {
-        if (listen) this.permissionsCheckListen(caller, event);
-        if (emit) this.permissionsCheckEmit(caller, event);
-        return fun.bind(this)(caller, event, ...args);
-      };
+      const listen = actions.includes("listen");
+      if (listen) {
+        // biome-ignore lint/suspicious/noExplicitAny: <above>
+        return (event: EventName, ...args: any) => {
+          this.permissionsCheckListen(caller, event);
+          return fun.bind(this)(caller, event, ...args);
+        };
+      } else {
+        // biome-ignore lint/suspicious/noExplicitAny: <above>
+        return (event: EventName, ...args: any) => {
+          this.permissionsCheckEmit(caller, event);
+          return fun.bind(this)(caller, event, ...args);
+        };
+      }
     } else {
       // This is a special case, as we need to get the name of the event being
       // emitted and listened to.
       // biome-ignore lint/suspicious/noExplicitAny: <above>
       return (listened: EventName, ...args: any) => {
         const emitted = args[0] instanceof Function ? args[1] : args[0];
-        if (listen) this.permissionsCheckListen(caller, listened);
-        if (emit) this.permissionsCheckEmit(caller, emitted);
+        this.permissionsCheckListen(caller, listened);
+        this.permissionsCheckEmit(caller, emitted);
         return fun.bind(this)(caller, listened, ...args);
       };
     }
