@@ -2,11 +2,6 @@
 // Based on the implementation in the heaps library, with some modifications.
 // https://github.com/gcnew/heaps/blob/master/src/mutable/bin_heap.ts
 
-enum Ordering {
-  LessThan = -1,
-  Equal = 0,
-  GreaterThan = 1,
-}
 /**
  * A function that compares two values, returning:
  * - a negative number if x < y
@@ -29,14 +24,6 @@ export class PriorityQueue<T> {
       this._heap = [a as T];
       this._comparator = b;
     }
-  }
-
-  _compare(x: T, y: T): Ordering {
-    const cmp = this._comparator(x, y);
-
-    if (cmp < 0) return Ordering.LessThan;
-    else if (cmp > 0) return Ordering.GreaterThan;
-    else return Ordering.Equal;
   }
 
   size(): number {
@@ -70,7 +57,8 @@ export class PriorityQueue<T> {
     while (idx > 0) {
       const pidx = this._parentIdx(idx);
 
-      if (this._compare(this._heap[idx], this._heap[pidx]) !== Ordering.LessThan) {
+      // >= 0 means a >= b
+      if (this._comparator(this._heap[idx], this._heap[pidx]) >= 0) {
         break;
       }
 
@@ -90,12 +78,14 @@ export class PriorityQueue<T> {
       const ridx = this._rightIdx(idx);
       const childIdx =
         ridx < this._heap.length
-          ? this._compare(this._heap[lidx], this._heap[ridx]) === Ordering.LessThan
+          ? // < 0 means a < b
+            this._comparator(this._heap[lidx], this._heap[ridx]) < 0
             ? lidx
             : ridx
           : lidx;
 
-      if (this._compare(this._heap[childIdx], this._heap[idx]) !== Ordering.LessThan) {
+      // >=0 means a >= b
+      if (this._comparator(this._heap[childIdx], this._heap[idx]) >= 0) {
         break;
       }
 
