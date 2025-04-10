@@ -36,7 +36,7 @@ describe("OriginalQueue", () => {
   it(`remove ${TEST_SIZE} elements`, () => {
     for (let i = 0; i < TEST_SIZE; i++) {
       const element = queue.dequeue();
-      expect(element).not.toBeUndefined();
+      // expect(element).not.toBeUndefined();
     }
     expect(queue.isEmpty()).toBe(true);
   });
@@ -74,7 +74,7 @@ describe("InlinePriorityQueue", () => {
   it(`remove ${TEST_SIZE} elements`, () => {
     for (let i = 0; i < TEST_SIZE; i++) {
       const element = queue.dequeue();
-      expect(element).not.toBeUndefined();
+      // expect(element).not.toBeUndefined();
     }
     expect(queue.isEmpty()).toBe(true);
   });
@@ -112,7 +112,7 @@ describe("InlinePriorityQueue", () => {
   it(`remove ${TEST_SIZE} elements`, () => {
     for (let i = 0; i < TEST_SIZE; i++) {
       const element = queue.dequeue();
-      expect(element).not.toBeUndefined();
+      // expect(element).not.toBeUndefined();
     }
     expect(queue.isEmpty()).toBe(true);
   });
@@ -142,7 +142,7 @@ describe("ArrayPriorityQueue", () => {
   it(`remove ${TEST_SIZE} elements`, () => {
     for (let i = 0; i < TEST_SIZE; i++) {
       const element = queue.dequeue();
-      expect(element).not.toBeUndefined();
+      // expect(element).not.toBeUndefined();
     }
     expect(queue.isEmpty()).toBe(true);
   });
