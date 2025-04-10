@@ -472,14 +472,16 @@ class M6809Simulator implements ISimulator {
     fun: (caller: ModuleID, event: EventName, ...args: any) => any,
     // biome-ignore lint/suspicious/noExplicitAny: <above>
   ): ((event: EventName, ...args: any) => any) => {
+    const listen = actions.includes("listen");
+    const emit = actions.includes("emit");
     if (actions.length === 0) {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
       return (event: EventName, ...args: any) => fun.bind(this)(caller, event, ...args);
     } else if (actions.length === 1) {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
       return (event: EventName, ...args: any) => {
-        if (actions.includes("listen")) this.permissionsCheckListen(caller, event);
-        if (actions.includes("emit")) this.permissionsCheckEmit(caller, event);
+        if (listen) this.permissionsCheckListen(caller, event);
+        if (emit) this.permissionsCheckEmit(caller, event);
         return fun.bind(this)(caller, event, ...args);
       };
     } else {
@@ -488,8 +490,8 @@ class M6809Simulator implements ISimulator {
       // biome-ignore lint/suspicious/noExplicitAny: <above>
       return (listened: EventName, ...args: any) => {
         const emitted = args[0] instanceof Function ? args[1] : args[0];
-        if (actions.includes("listen")) this.permissionsCheckListen(caller, listened);
-        if (actions.includes("emit")) this.permissionsCheckEmit(caller, emitted);
+        if (listen) this.permissionsCheckListen(caller, listened);
+        if (emit) this.permissionsCheckEmit(caller, emitted);
         return fun.bind(this)(caller, listened, ...args);
       };
     }
