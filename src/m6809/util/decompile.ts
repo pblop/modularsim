@@ -366,7 +366,7 @@ export function generateRowData(
       case "indexed": {
         let idxStr = " ";
 
-        const { parsedPostbyte } = addressing;
+        const { parsedPostbyte, result } = addressing;
         // The offset.
         switch (parsedPostbyte.action) {
           case IndexedAction.Offset0:
@@ -376,9 +376,12 @@ export function generateRowData(
           case IndexedAction.Offset8:
           case IndexedAction.Offset16:
           case IndexedAction.OffsetPC8:
-          case IndexedAction.OffsetPC16:
-            idxStr += "??";
+          case IndexedAction.OffsetPC16: {
+            const offset = intNToNumber(result.offset, 16);
+            idxStr += `${offset >= 0 ? "+" : ""}${offset}`;
+            extra += ` <${formatAddress(result.effectiveAddress)}>`;
             break;
+          }
           case IndexedAction.OffsetA:
             idxStr += "A";
             break;
