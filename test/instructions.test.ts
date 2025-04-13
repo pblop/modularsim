@@ -1,13 +1,25 @@
-import { generateCpuOnlySimulator } from "./common";
+import { generateCpuOnlySimulator } from "./common.ts";
 import type M6809Simulator from "../src/m6809/base.ts";
 
 import { describe, it, expect, test, beforeEach, afterAll, afterEach } from "bun:test";
-import { ccToShortStrings, type Registers } from "../src/m6809/util/cpu_parts.ts";
+import type { ccToShortStrings, Registers } from "../src/m6809/util/cpu_parts.ts";
 import {
   decompileInstruction,
   generateRowData,
   type InstructionRowData,
 } from "../src/m6809/util/decompile.ts";
+
+type SnapshotType = {
+  a: number;
+  b: number;
+  x: number;
+  y: number;
+  u: number;
+  s: number;
+  dp: number;
+  cc: number;
+  pc: number;
+};
 
 function RegisterTester(): (memory: Uint8Array) => Promise<Registers[]> {
   return (memory: Uint8Array) => {
@@ -85,7 +97,7 @@ function snapshotToHumanReadable(regObject: Record<string, unknown>) {
   }
   return output;
 }
-function registersToSnapshot(registers: Registers) {
+function registersToSnapshot(registers: Registers): SnapshotType {
   return {
     dp: registers.dp,
     cc: registers.cc,
