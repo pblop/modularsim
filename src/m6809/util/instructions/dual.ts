@@ -155,7 +155,6 @@ const ror: DualDataFn = (r: number, cIn: number) => {
 };
 
 const rol: DualDataFn = (r: number, cIn: number) => {
-  console.error(cIn);
   const C = r & 0x80;
   const rp = ((r << 1) & 0xff) | cIn;
 
