@@ -10,7 +10,7 @@ import {
 import type { CpuInfo, StateInfo } from "../state_machine.js";
 
 /**
- * Generic function that handles the execution of branching instructions (BEQ, BNE, BRA, BSR, etc.),
+ * Generic function that handles the execution of branching instructions (BEQ, BNE, BRA, etc.),
  * both short and long.
  */
 function branching<M extends "relative">(
@@ -34,12 +34,7 @@ function branching<M extends "relative">(
   // If the branch is taken, we take TWO cycles.
   if (isLongBranch && ticksOnState === 0) return false;
 
-  if (instructionCtx.taken) {
-    if (mnemonic === "bsr" || mnemonic === "lbsr") {
-      console.error("BSR/LBSR not implemented");
-    }
-    registers.pc = addr.address;
-  }
+  if (instructionCtx.taken) registers.pc = addr.address;
 
   return true;
 }

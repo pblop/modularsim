@@ -23,6 +23,7 @@ import interrupts from "./instructions/interrupts.js";
 import loadStore from "./instructions/loadstore.js";
 import other from "./instructions/other.js";
 import stack from "./instructions/stack.js";
+import subroutines from "./instructions/subroutines.js";
 import test from "./instructions/test.js";
 import type { CpuInfo, StateInfo } from "./state_machine.js";
 
@@ -439,3 +440,4 @@ interrupts(addInstructions);
 dual(addInstructions);
 other(addInstructions);
 bit(addInstructions);
+subroutines(addInstructions);
