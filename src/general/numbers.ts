@@ -2,6 +2,12 @@ export function truncate(val: number, bits: number): number {
   const mask = (1 << bits) - 1;
   return val & mask;
 }
+export function int8(val: number): number {
+  return val & 0xff;
+}
+export function int16(val: number): number {
+  return val & 0xffff;
+}
 
 export function indexBit(val: number, index: number): boolean {
   return !!(val & (1 << index));
@@ -12,16 +18,8 @@ export function isNegative(val: number, bits: number): boolean {
   return !!(val & (1 << (bits - 1)));
 }
 
-export function signExtend(val: number, valBits: number, outBits: number): number {
-  const signBit = 1 << (valBits - 1);
-  // (1 << outBits) - 1 is a mask with the bottom outBits bits set to 1.
-  // (1 << valBits) - 1 is a mask with the bottom valBits bits set to 1.
-  // Subtracting the two gives a mask with the bottom valBits bits set to 0,
-  // and the rest set to 1.
-  const mask = (1 << outBits) - 1 - ((1 << valBits) - 1);
-
-  // If the number is negative, set the bits on top to 1s, otherwise set them to 0s.
-  return val & signBit ? val | mask : val;
+export function signExtend(val: number, valBits: number, outBits: 8 | 16): number {
+  return truncate((val << (32 - valBits)) >> (32 - valBits), outBits);
 }
 
 export function twosComplement(val: number, bits: number): number {
