@@ -144,8 +144,11 @@ const indexedMainActionTable: ActionTable<"indexed_main"> = {
       ctx.offset = memoryAction!.valueRead;
       queryMemoryRead("pc", 1);
     },
-    4: ({ memoryAction }, { ctx }) => {
-      ctx.offset = memoryAction!.valueRead;
+    4: ({ memoryAction, registers }, { ctx }) => {
+      ctx.offset = (ctx.offset << 8) | memoryAction!.valueRead;
+      // We have read from the PC (and incremented it), so we need to update
+      // the base address to the new PC value.
+      ctx.baseAddress = registers.pc;
     },
     3: dontCare,
     2: dontCare,
@@ -166,7 +169,10 @@ const indexedMainActionTable: ActionTable<"indexed_main"> = {
   [IndexedAction.OffsetPC8]: {
     2: ({ queryMemoryRead }) => queryMemoryRead("pc", 1),
     1: dontCare,
-    logic: ({ memoryAction }, { ctx }) => {
+    logic: ({ memoryAction, registers }, { ctx }) => {
+      // We have read from the PC (and incremented it), so we need to update
+      // the base address to the new PC value.
+      ctx.baseAddress = registers.pc;
       ctx.offset = signExtend(memoryAction!.valueRead, 8, 16);
     },
   },
