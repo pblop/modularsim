@@ -21,6 +21,7 @@ import { parseStackPostbyte } from "./instructions/stack.js";
 export type ReadFunction = (address: number, bytes?: number) => Promise<number>;
 
 type DisassIdxAddressingResult = {
+  bytes: number[];
   // The number of bytes read from the PC
   bytesReadOffPC: number;
   baseAddress: number;
@@ -36,6 +37,7 @@ export async function disassIdxAdressing(
 ): Promise<DisassIdxAddressingResult> {
   const { action, register, indirect, rest } = parsedPostbyte;
   let bytesReadOffPC = 0;
+  const bytes = [];
 
   let baseAddress: number = registers[register];
   let offset: number; // A signed 16-bit offset
@@ -47,15 +49,20 @@ export async function disassIdxAdressing(
       offset = signExtend(rest, 5, 16);
       break;
     case IndexedAction.Offset8:
-    case IndexedAction.OffsetPC8:
-      offset = signExtend(await read(pc, 1), 8, 16);
+    case IndexedAction.OffsetPC8: {
+      const byte = await read(pc, 1);
+      bytes.push(byte);
+      offset = signExtend(byte, 8, 16);
       bytesReadOffPC++;
       break;
+    }
     case IndexedAction.Offset16:
-    case IndexedAction.OffsetPC16:
+    case IndexedAction.OffsetPC16: {
       offset = await read(pc, 2);
-      bytesReadOffPC++;
+      bytes.push(...decompose(offset, 2));
+      bytesReadOffPC += 2;
       break;
+    }
     case IndexedAction.OffsetA:
       offset = registers.A;
       break;
@@ -79,6 +86,7 @@ export async function disassIdxAdressing(
       break;
     case IndexedAction.ExtendedIndirect:
       baseAddress = await read(pc, 2);
+      bytes.push(...decompose(baseAddress, 2));
       bytesReadOffPC += 2;
       offset = 0;
       break;
@@ -93,6 +101,7 @@ export async function disassIdxAdressing(
   }
 
   return {
+    bytes,
     bytesReadOffPC,
     baseAddress,
     offset,
@@ -230,6 +239,8 @@ export async function decompileInstruction(
         startAddress + size,
         registers,
       );
+      bytes.push(...idxResult.bytes);
+      args.push(...idxResult.bytes);
       size += idxResult.bytesReadOffPC;
       address = idxResult.address;
 
