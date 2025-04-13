@@ -222,6 +222,22 @@ function tfr(
   return true;
 }
 
+function lea(
+  reg: "X" | "Y" | "S" | "U",
+  cpuInfo: CpuInfo,
+  stateInfo: ExecuteStateInfo,
+  addr: CpuAddressingData<"indexed">,
+): boolean {
+  const address = addr.address;
+  if (reg === "X" || reg === "Y") {
+    updateConditionCodes(cpuInfo.registers, {
+      Z: address === 0,
+    });
+  }
+  cpuInfo.registers[reg] = address;
+  return true;
+}
+
 export default function (addInstructions: typeof addInstructionsType) {
   // ld8 (lda, ldb) and ld16 (ldd, lds, ldu, ldx, ldy)
   addInstructions(
@@ -326,5 +342,16 @@ export default function (addInstructions: typeof addInstructionsType) {
       end: (cpu, cpuInfo, stateInfo, addr, regs) => tfr(cpuInfo, stateInfo, addr),
     }),
     { postbyte: true },
+  );
+
+  addInstructions(
+    "lea{register}",
+    [
+      [0x32, "S", "indexed", "4+"],
+      [0x33, "U", "indexed", "4+"],
+      [0x30, "X", "indexed", "4+"],
+      [0x31, "Y", "indexed", "4+"],
+    ],
+    (_, reg, __, ___) => (_, cpuInfo, stateInfo, addr) => lea(reg, cpuInfo, stateInfo, addr),
   );
 }
