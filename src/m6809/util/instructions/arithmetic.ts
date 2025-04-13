@@ -96,7 +96,7 @@ function sub(withCarry: boolean, modifyAccumulator = true): TwoOpInstructionFunc
         Z: result === 0,
         // I tried to calculate the carry flag by using the same logic as in the
         // add function (but using the negB val), but couldn't get it to work :(
-        C: b + carryIn >= a,
+        C: b + carryIn > a,
         // I calculate the overflow flag following the logic explained here:
         // https://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         V: (a ^ result) & (negB ^ result) & (1 << (bits - 1)),
