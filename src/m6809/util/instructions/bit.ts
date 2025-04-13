@@ -35,6 +35,20 @@ const and8: TwoOpInstructionFunction = (a: number, b: number, bits: number, regs
   ];
 };
 
+const bit8: TwoOpInstructionFunction = (a: number, b: number, bits: number, regs: Registers) => {
+  const result = a & b;
+
+  // CC: N, Z, V
+  return [
+    null,
+    {
+      N: isNegative(result, bits),
+      Z: result === 0,
+      V: 0,
+    },
+  ];
+};
+
 const andcc: TwoOpInstructionFunction = (a: number, b: number, bits: number, regs: Registers) => {
   return [a & b, {}];
 };
@@ -125,4 +139,21 @@ export default function (addInstructions: typeof addInstructionsType) {
   );
   // orcc
   addInstructions2Operand("orcc", [[0x1a, "cc", "immediate", "3"]], orcc, 0);
+
+  // bit8 (bita, bitb)
+  addInstructions2Operand(
+    "bit{register}",
+    [
+      [0x85, "A", "immediate", "2"],
+      [0x95, "A", "direct", "4"],
+      [0xa5, "A", "indexed", "4+"],
+      [0xb5, "A", "extended", "5"],
+      [0xc5, "B", "immediate", "2"],
+      [0xd5, "B", "direct", "4"],
+      [0xe5, "B", "indexed", "4+"],
+      [0xf5, "B", "extended", "5"],
+    ],
+    bit8,
+    0,
+  );
 }
