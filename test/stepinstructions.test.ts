@@ -265,3 +265,4 @@ function generateDescribe(basefile: string) {
 }
 
 describe("subroutines.asm", generateDescribe("subroutines"));
+describe("recumples.asm", generateDescribe("recumples"));

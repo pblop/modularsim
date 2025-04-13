@@ -25,7 +25,7 @@ if __name__ == "__main__":
     regdump_file.unlink()
 
   cmd = ["m6809-run", "-d", args.s19file]
-  inpt = b"json\ns\n" * 1000
+  inpt = b"json\ns\n" * 1000000
   result = subprocess.run(
     cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, input=inpt, check=False
   )
