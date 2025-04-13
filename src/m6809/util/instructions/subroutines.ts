@@ -45,12 +45,12 @@ const branchSubroutine = <R extends "pc", M extends "relative" | "direct" | "ext
     },
     end: (
       cpu: Cpu,
-      { registers }: CpuInfo,
+      { registers, memoryPending }: CpuInfo,
       { ticksOnState, ctx }: ExecuteStateInfo,
       addr: CpuAddressingData<M>,
     ) => {
       // if finishedPush is undefined or false, we're not done yet.
-      if (!ctx.instructionCtx.finishedPush) return false;
+      if (!ctx.instructionCtx.finishedPush || memoryPending) return false;
 
       registers.pc = addr.address;
 
@@ -70,9 +70,6 @@ const rts = <R extends "pc", M extends "inherent">(
   _: string,
   { isLongBranch }: ExtraInstructionData,
 ) => {
-  // The number of cycles in the instruction before the "pc" is pushed to the
-  // stack.
-  const cycles = mnemonic === "bsr" ? 3 : mnemonic === "lbsr" ? 4 : 2;
   return {
     start: (
       cpu: Cpu,
@@ -94,10 +91,12 @@ const rts = <R extends "pc", M extends "inherent">(
         ticksOnState,
         ctx: { instructionCtx },
       } = stateInfo;
-      // if finishedPush is undefined or false, we're not done yet.
+      // 1st cycle: no operation
       if (ticksOnState < 1) return false;
-
+      // 2nd cycle: pull the PC from the stack
+      // 3rd cycle: pull the PC from the stack
       pullRegisters(cpuInfo, stateInfo, "S", ["pc"], instructionCtx, "pulledRegisters");
+      // 4th cycle: no operation
       if (ticksOnState < 4) return false;
 
       return true;
