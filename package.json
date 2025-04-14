@@ -8,7 +8,7 @@
     "build-ts": "tsc && cp -r ./src/ ./dist/source/",
     "build-programs": "cd ./programs/ && make",
     "build-test-programs": "cd ./programs/ && make test",
-    "copy-static": "cp -r ./public/* ./dist/ && mkdir -p ./dist/m6809/programs/ && cp ./programs/*.{bin,s19,noi} ./dist/m6809/programs/",
+    "copy-static": "cp -r ./public/* ./dist/ && copyfiles -u 1 src/**/*.{css,svg} ./dist/ && mkdir -p ./dist/programs/ && cp ./programs/*.{bin,s19,noi} ./dist/programs/",
     "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static",
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'",
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "copyfiles": "^2.4.1",
     "nodemon": "^3.1.7",
     "serve": "^14.2.4",
     "typescript": "^4.3.5"
