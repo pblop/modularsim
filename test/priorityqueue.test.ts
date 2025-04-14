@@ -1,5 +1,5 @@
-import { PriorityQueue } from "../src/general/priority.ts";
-import type { CycleCallback, FinalListenerPriority } from "../types/cycles.js";
+import { PriorityQueue } from "../src/utils/priority.ts";
+import type { CycleCallback, FinalListenerPriority } from "../src/types/cycles.d.ts";
 import { describe, expect, it, before } from "bun:test";
 
 const TEST_SIZE = 100000;

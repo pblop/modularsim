@@ -1,13 +1,13 @@
 import { generateCpuOnlySimulator } from "./common.ts";
-import type M6809Simulator from "../src/m6809/base.ts";
+import type M6809Simulator from "../src/modules/simulator.ts";
 
 import { describe, it, expect, test, beforeEach, afterAll, afterEach } from "bun:test";
-import { ccToShortStrings, Registers } from "../src/m6809/util/cpu_parts.ts";
+import { ccToShortStrings, Registers } from "../src/modules/m6809/cpu/cpu_parts.ts";
 import {
   decompileInstruction,
   generateRowData,
   type InstructionRowData,
-} from "../src/m6809/util/decompile.ts";
+} from "../src/modules/m6809/cpu/decompile.ts";
 import type { SimulationModuleInteraction } from "../src/types/module.d.ts";
 
 class RegisterTesterClass {

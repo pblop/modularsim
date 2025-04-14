@@ -1,6 +1,6 @@
-import type { CpuAddressingData } from "../m6809/hardware/cpu.js";
-import type { Registers } from "../m6809/util/cpu_parts.js";
-import type { AddressingMode, InstructionData } from "../m6809/util/instructions.js";
+import type { CpuAddressingData } from "../modules/m6809/cpu/cpu.js";
+import type { Registers } from "../modules/m6809/cpu/cpu_parts.js";
+import type { AddressingMode, InstructionData } from "../modules/m6809/cpu/instructions.js";
 
 export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "memory:read": [address: number];

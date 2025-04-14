@@ -1,5 +1,4 @@
-import { generateCpuOnlySimulator } from "./common";
-import type M6809Simulator from "../src/m6809/base.ts";
+import { generateCpuOnlySimulator } from "./common.ts";
 
 import { describe, it, expect, beforeEach, afterAll, beforeAll } from "bun:test";
 
