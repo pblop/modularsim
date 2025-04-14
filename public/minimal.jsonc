@@ -1,14 +1,14 @@
 {
   "simulator": {
     // "url" es la ruta del archivo que contiene el simulador
-    "url": "./m6809/base.js",
+    "url": "./modules/simulator.js",
     "modules": [
       {
         // "id" es un identificador único para cada módulo
         "id": "main_memory",
         "type": "memory",
         // "url" es la ruta del archivo que contiene el módulo
-        "url": "./m6809/hardware/memory.js",
+        "url": "./modules/m6809/memory/memory.js",
         "config": {
           "multiplexer": "multiplexer",
           "size": 65536,
@@ -18,8 +18,12 @@
       {
         "id": "gui",
         "type": "gui",
-        "url": "./m6809/ui/gui.js",
-        "css": ["./m6809/ui/reset.css", "./m6809/ui/gui.css", "./config-colors.css"],
+        "url": "./modules/m6809/gui/gui.js",
+        "css": [
+          "./modules/m6809/gui/reset.css",
+          "./modules/m6809/gui/gui.css",
+          "./config-colors.css"
+        ],
         "config": {
           "language": "es",
           "panels": [
@@ -34,7 +38,7 @@
       {
         "id": "clock",
         "type": "clock",
-        "url": "./m6809/hardware/clock.js",
+        "url": "./modules/m6809/clock/clock.js",
         "config": {
           "frequency": 100000000000 // Hz
         }
@@ -42,7 +46,7 @@
       {
         "id": "clock_ui",
         "type": "ui",
-        "url": "./m6809/ui/clock_ui.js",
+        "url": "./modules/m6809/clock_ui/clock_ui.js",
         "css": ["./m6809/ui/clock_ui.css"],
         "config": {
           "frequency": 100000000000
@@ -51,7 +55,7 @@
       {
         "id": "cpu",
         "type": "cpu",
-        "url": "./m6809/hardware/cpu.js",
+        "url": "./modules/m6809/cpu/cpu.js",
         "config": {
           // "functions": {
           //   "0x8000": "myfunctionmodule"
@@ -61,18 +65,18 @@
       {
         "id": "loader",
         "type": "extra",
-        "url": "./m6809/extra/loader.js",
-        "css": ["./m6809/extra/loader.css"],
+        "url": "./modules/m6809/loader/loader.js",
+        "css": ["./modules/m6809/loader/loader.css"],
         "config": {
-          "file": "./m6809/programs/holalargo.s19",
-          "symbolsFile": "./m6809/programs/2d.noi"
+          "file": "./programs/holalargo.s19",
+          "symbolsFile": "./programs/2d.noi"
           // "file": "http://localhost:6809/m6809/programs/loop.bin"
         }
       },
       {
         "id": "stopper",
         "type": "extra",
-        "url": "./m6809/extra/stop.js",
+        "url": "./modules/m6809/stop/stop.js",
         "config": {
           "multiplexer": "multiplexer"
         }
@@ -80,7 +84,7 @@
       {
         "id": "multiplexer",
         "type": "hw",
-        "url": "./m6809/hardware/multiplexer.js",
+        "url": "./modules/m6809/multiplexer/multiplexer.js",
         "config": {
           "entries": [
             {
