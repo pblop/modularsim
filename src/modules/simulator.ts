@@ -103,7 +103,7 @@ type DeclarationWithMap = ModuleDeclaration & {
 //   crear una instancia del simulador, y que él los inicialice.
 // - Cargar la configuración en el constructor del simulador, hacer comprobaciones
 //   ahí, y luego cargar los módulos en un método init.
-class M6809Simulator implements ISimulator {
+class Simulator implements ISimulator {
   modules: Record<string, IModule> = {};
   declarations: Record<string, DeclarationWithMap> = {};
 
@@ -530,4 +530,4 @@ class M6809Simulator implements ISimulator {
   }
 }
 
-export default M6809Simulator;
+export default Simulator;

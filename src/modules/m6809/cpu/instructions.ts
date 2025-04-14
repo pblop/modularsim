@@ -5,7 +5,6 @@ import {
   truncate,
   twosComplement,
 } from "../../../utils/numbers.js";
-import M6809Simulator from "../../simulator.js";
 import type Cpu from "cpu.js";
 import type { CpuAddressingData, CpuRelativeAddressingData } from "cpu.js";
 import {
