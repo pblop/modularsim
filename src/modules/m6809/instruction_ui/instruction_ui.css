@@ -6,13 +6,13 @@
 
  
   .gui-icon.clear-icon {
-    --icon: url("icons/playlist-x.svg");
+    --icon: url("../gui/icons/playlist-x.svg");
   }
   .gui-icon.lock-icon {
-    --icon: url("icons/lock.svg");
+    --icon: url("../gui/icons/lock.svg");
   }
   .gui-icon.unlock-icon {
-    --icon: url("icons/lock-open.svg");
+    --icon: url("../gui/icons/lock-open.svg");
   }
 
   overflow: hidden;

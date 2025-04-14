@@ -7,29 +7,29 @@
     border-radius: 4px;
   }
   .gui-icon.reset {
-    --icon: url("icons/reload.svg")
+    --icon: url("../gui/icons/reload.svg")
   }
   .gui-icon.fast-reset {
-    --icon: url("icons/refresh-dot.svg")
+    --icon: url("../gui/icons/refresh-dot.svg")
   }
   .gui-icon.pause {
-    --icon: url("icons/player-pause.svg")
+    --icon: url("../gui/icons/player-pause.svg")
   }
   .gui-icon.continue{
-    --icon: url("icons/player-play.svg")
+    --icon: url("../gui/icons/player-play.svg")
   }
   .gui-icon.step-cycle {
-    --icon: url("icons/arrow-right-circle.svg")
+    --icon: url("../gui/icons/arrow-right-circle.svg")
   }
   .gui-icon.step-instruction {
-    --icon: url("icons/player-skip-forward.svg")
+    --icon: url("../gui/icons/player-skip-forward.svg")
   }
   .gui-icon.cycle-counter {
-    --icon: url("icons/stopwatch.svg");
+    --icon: url("../gui/icons/stopwatch.svg");
     display: inline-block;
   }
   .gui-icon.heartbeat {
-    --icon: url("icons/heart.svg");
+    --icon: url("../gui/icons/heart.svg");
     --icon-color: var(--gui-color-red-background);
   }
 
