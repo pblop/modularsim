@@ -1,4 +1,4 @@
-import { INSTRUCTIONS as IMPLEMENTED } from "../src/m6809/util/instructions";
+import { INSTRUCTIONS as IMPLEMENTED } from "../src/modules/m6809/cpu/instructions.ts";
 
 function perc(n: number, total: number): string {
   return ((n / total) * 100).toFixed(2);
