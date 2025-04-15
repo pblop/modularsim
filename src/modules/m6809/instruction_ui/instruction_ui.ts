@@ -401,12 +401,9 @@ class InstructionUI implements IModule {
       }
 
       // We disassemble instructions from the current group start forwards (
-      // overwriting if already disassembled), and then we populate the panel,
-      // stopping at the end of the group, or at a maximum of this.config.lines
+      // overwriting if already disassembled), at a maximum of this.config.lines
       // instructions.
-      const nextGroup = groups[i + 1];
-      if (nextGroup) this.#disassembleFuture(end, { address: nextGroup.entries[0].address });
-      else this.#disassembleFuture(end, { number: this.config.lines });
+      await this.#disassembleFuture(end, { number: this.config.lines });
     }
   }
 
