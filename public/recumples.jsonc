@@ -1,0 +1,242 @@
+{
+  "simulator": {
+    // "url" es la ruta del archivo que contiene el simulador
+    "url": "./modules/simulator.js",
+    "modules": [
+      {
+        // "id" es un identificador único para cada módulo
+        "id": "main_memory",
+        "type": "memory",
+        // "url" es la ruta del archivo que contiene el módulo
+        "url": "./modules/m6809/memory/memory.js",
+        "config": {
+          "multiplexer": "multiplexer",
+          "size": 65536,
+          "type": "ram"
+        }
+      },
+      {
+        "id": "main_memory_ui",
+        "type": "ui",
+        "url": "./modules/m6809/memory_ui/memory_ui.js",
+        "css": ["./modules/m6809/memory_ui/memory_ui.css"],
+        "config": {
+          "start": 256,
+          "size": 256
+        }
+      },
+      {
+        "id": "gui",
+        "type": "gui",
+        "url": "./modules/m6809/gui/gui.js",
+        "css": [
+          "./modules/m6809/gui/reset.css",
+          "./modules/m6809/gui/gui.css",
+          "./config-colors.css"
+        ],
+        "config": {
+          "language": "es",
+          "panels": [
+            {
+              "id": "register_ui",
+              "column": "1 / span 3",
+              "row": "1 / span 2"
+            },
+            {
+              "id": "instruction_ui",
+              "column": "1 / span 3",
+              "row": "3 / span 6"
+            },
+            {
+              "id": "main_memory_ui",
+              "column": "5 / span 3",
+              "row": "3 / span 6"
+            },
+            {
+              "id": "screen_ui",
+              "column": "1 / span 3",
+              "row": "9 / span 2"
+            },
+            // {
+            //   "id": "history_ui",
+            //   "column": "4 / span 3",
+            //   "row": "9 / span 2"
+            // },
+            {
+              "id": "breakpoint_ui",
+              "column": "4 / span 1",
+              "row": "3 / span 6"
+            },
+            // {
+            //   "id": "ui2",
+            //   "column": 1,
+            //   "row": 2
+            // },
+            {
+              "id": "clock_ui",
+              "column": "-3 / -1",
+              "row": "1 / span 2"
+            }
+          ]
+        }
+      },
+      {
+        "id": "clock",
+        "type": "clock",
+        "url": "./modules/m6809/clock/clock.js",
+        "config": {
+          "frequency": 10000000 // Hz
+        }
+      },
+      {
+        "id": "clock_ui",
+        "type": "ui",
+        "url": "./modules/m6809/clock_ui/clock_ui.js",
+        "css": ["./modules/m6809/clock_ui/clock_ui.css"],
+        "config": {
+          "frequency": 10000000
+        }
+      },
+      {
+        "id": "cpu",
+        "type": "cpu",
+        "url": "./modules/m6809/cpu/cpu.js",
+        "config": {
+          // "functions": {
+          //   "0x8000": "myfunctionmodule"
+          // }
+        }
+      },
+      {
+        "id": "loader",
+        "type": "extra",
+        "url": "./modules/m6809/loader/loader.js",
+        "css": ["./modules/m6809/loader/loader.css"],
+        "config": {
+          "file": "./programs/recumples.s19",
+          "symbolsFile": "./programs/recumples.noi"
+          // "file": "http://localhost:6809/programs/loop.bin"
+        }
+      },
+      {
+        "id": "instruction_ui",
+        "type": "ui",
+        "url": "./modules/m6809/instruction_ui/instruction_ui.js",
+        "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "breakpoint_ui",
+        "type": "ui",
+        "url": "./modules/m6809/breakpoint_ui/breakpoint_ui.js",
+        "css": ["./modules/m6809/breakpoint_ui/breakpoint_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "history_ui",
+        "type": "ui",
+        "url": "./modules/m6809/history_ui/history_ui.js",
+        "css": ["./modules/m6809/history_ui/history_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "screen_ui",
+        "type": "ui",
+        "url": "./modules/m6809/screen_ui/screen_ui.js",
+        "css": ["./modules/m6809/screen_ui/screen_ui.css"],
+        "config": {
+          "multiplexer": "multiplexer"
+        }
+      },
+      {
+        "id": "stopper",
+        "type": "extra",
+        "url": "./modules/m6809/stop/stop.js",
+        "config": {
+          "multiplexer": "multiplexer"
+        }
+      },
+      {
+        "id": "register_ui",
+        "type": "ui",
+        "url": "./modules/m6809/register_ui/register_ui.js",
+        "css": ["./modules/m6809/register_ui/register_ui.css"],
+        "config": {
+          "registers": {
+            "A": {
+              "bits": 8,
+              "mirror": {
+                "register": "D",
+                "mask": "0xFF00"
+              }
+            },
+            "B": {
+              "bits": 8,
+              "mirror": {
+                "register": "D",
+                "mask": "0x00FF"
+              }
+            },
+            "D": {
+              "bits": 16
+            },
+            "X": {
+              "bits": 16,
+              "pointer": true
+            },
+            "Y": {
+              "bits": 16,
+              "pointer": true
+            },
+            "U": {
+              "bits": 16,
+              "pointer": true
+            },
+            "S": {
+              "bits": 16,
+              "pointer": true
+            },
+            "pc": {
+              "bits": 16,
+              "pointer": true
+            },
+            "cc": {
+              "bits": 8,
+              "flags": ["E", "F", "H", "I", "N", "Z", "V", "C"]
+            },
+            "dp": {
+              "bits": 8
+            }
+          }
+        }
+      },
+      {
+        "id": "multiplexer",
+        "type": "hw",
+        "url": "./modules/m6809/multiplexer/multiplexer.js",
+        "config": {
+          "entries": [
+            {
+              "start": "0xFF00",
+              "size": 1,
+              "module": "screen_ui",
+              "priority": 0
+            },
+            {
+              "start": "0xFF01",
+              "size": 1,
+              "module": "stopper",
+              "priority": 0
+            },
+            {
+              "start": "0x0",
+              "module": "main_memory",
+              "size": 65536,
+              "priority": 1
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
