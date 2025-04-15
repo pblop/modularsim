@@ -382,6 +382,9 @@ class InstructionUI implements IModule {
     // disassembles until the last successful disassembly.
     const groups = this.history.getAllConsecutiveEntryGroups(true);
     for (let i = 0; i < groups.length; i++) {
+      // TODO: Disassemble instructions backwards from the current group on
+      // _all_ groups, not just the first one, and stop when we reach
+      // this.config.lines / 2 or an instruction we've already disassembled.
       // We disassemble instructions from the current group start backwards (
       // overwriting if already disassembled), and then we populate the panel.
       if (i === 0) await this.#disassemblePast(groups[i].entries[0].address, this.config.lines / 2);
