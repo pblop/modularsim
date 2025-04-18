@@ -7,7 +7,7 @@
 
   .header-row {
     th:first-child {
-      width: 6ch;
+      min-width: 6ch;
     }
   }
   .virtual-row {
