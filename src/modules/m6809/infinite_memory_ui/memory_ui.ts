@@ -9,7 +9,6 @@ import { VirtualListElement } from "../../../utils/VirtualListElement.js";
 
 type MemoryUIConfig = {
   start: number;
-  size: number;
 };
 
 const MemoryUIStrings = createLanguageStrings({
@@ -87,8 +86,7 @@ class MemoryUI implements IModule {
     this.config = verify<MemoryUIConfig>(
       config,
       {
-        start: { type: "number", required: true },
-        size: { type: "number", required: true },
+        start: { type: "number", required: false, default: 0 },
       },
       `[${this.id}] configuration error: `,
     );
