@@ -178,10 +178,9 @@ class MemoryUI implements IModule {
       element(
         "tr",
         {
-          className: "header-row",
+          className: "virtual-row header-row",
         },
-        element("th", { textContent: "0x0000" }),
-        ...Array.from({ length: 16 }).map((_, i) =>
+        ...Array.from({ length: 17 }).map((_, i) =>
           element("th", {
             textContent: i === 0 ? "" : `_${(i - 1).toString(16)}`,
           }),
@@ -195,44 +194,9 @@ class MemoryUI implements IModule {
     this.panel.appendChild(this.memoryTable);
 
     this.memoryTable.itemGenerator = this.itemGenerator;
-    this.memoryTable.itemCount = 0x1000; // +1 to include the header row
-    // this.memoryTable = element(
-    //   "table",
-    //   { className: "memory-table" },
-    //   element(
-    //     "tr",
-    //     ...Array.from({ length: 17 }).map((_, i) =>
-    //       element("th", {
-    //         textContent: i === 0 ? "" : `_${(i - 1).toString(16)}`,
-    //       }),
-    //     ),
-    //   ),
-    // );
-
-    // for (let i = this.config.start; i < this.config.start + this.config.size; i += 16) {
-    //   const rowName = `0x${i.toString(16).padStart(4, "0")}`;
-    //   const row = element("tr", element("th", { textContent: rowName }));
-    //   for (let j = i; j < i + 16 && j < this.config.start + this.config.size; j++) {
-    //     row.appendChild(
-    //       rewrittableTableElement(
-    //         {
-    //           className: `byte-${j} contrast-color`,
-    //           textContent: this.formatMemoryData(0),
-    //           title: `0x${j.toString(16).padStart(4, "0")}`,
-    //         },
-    //         this.localeStrings,
-    //         (newValue) => {
-    //           // We will receive the result of the write operation in the
-    //           // `ui:memory:write:result` event, and will update the memory
-    //           // cell accordingly, then.
-    //           this.event_transceiver.emit("ui:memory:write", j, newValue);
-    //         },
-    //         1,
-    //       ),
-    //     );
-    //   }
-    //   this.memoryTable.appendChild(row);
-    // }
+    this.memoryTable.itemCount = 0x1000;
+    this.memoryTable.itemHeight = 1.5;
+    this.memoryTable.itemHeightUnits = "rem";
   }
 
   itemGenerator = (i: number | null, node: HTMLElement | null): HTMLElement => {
@@ -243,7 +207,7 @@ class MemoryUI implements IModule {
           className: "virtual-row",
         },
         element("th"),
-        ...Array.from({ length: 17 }).map((_, i) => element("td")),
+        ...Array.from({ length: 16 }).map((_, i) => element("td")),
       );
     } else {
       const row = node as HTMLTableRowElement;
