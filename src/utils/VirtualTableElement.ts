@@ -113,7 +113,7 @@ export class VirtualTableElement extends HTMLElement {
     for (let i = 0; i < this.#nodes.length; i++) {
       const node = this.#nodes[i];
       if (i < end) {
-        this.#itemGenerator(i, node); // Update the content of the node
+        this.#itemGenerator(this.#start + i, node); // Update the content of the node
         // Update the position of the node based on its index in the data array.
         node.style.top = `${(this.#start + i) * this.#itemHeight}${this.#itemHeightUnits}`;
         node.style.display = ""; // Show the node if it's in the visible range
