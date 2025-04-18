@@ -78,6 +78,20 @@ export class VirtualListElement extends HTMLElement {
   get itemCount() {
     return this.#itemCount;
   }
+  set itemHeight(height: number) {
+    this.#itemHeight = height;
+    this.updateContents();
+  }
+  get itemHeight() {
+    return this.#itemHeight;
+  }
+  set itemHeightUnits(units: string) {
+    this.#itemHeightUnits = units;
+    this.updateContents();
+  }
+  get itemHeightUnits() {
+    return this.#itemHeightUnits;
+  }
 
   /**
    * After the items are changed, this function is called to update the
@@ -112,7 +126,7 @@ export class VirtualListElement extends HTMLElement {
     const end = Math.min(this.#end, this.#itemCount);
     for (let i = 0; i < this.#nodes.length; i++) {
       const node = this.#nodes[i];
-      if (i < end) {
+      if (this.#start + i < end) {
         this.#itemGenerator(this.#start + i, node); // Update the content of the node
         // Update the position of the node based on its index in the data array.
         node.style.top = `${(this.#start + i) * this.#itemHeight}${this.#itemHeightUnits}`;
@@ -138,13 +152,17 @@ export class VirtualListElement extends HTMLElement {
     }
   }
 
+  get #itemHeightPx() {
+    return convertToPixels(this.#itemHeight, this.#itemHeightUnits);
+  }
+
   updateRenderBounds() {
-    this.#start = Math.floor(this.scrollTop / this.#itemHeight);
+    this.#start = Math.floor(this.scrollTop / this.#itemHeightPx);
     this.#end = this.#start + this.#visibleCount;
   }
 
   updateVisibleItems() {
-    this.#visibleCount = Math.ceil(this.clientHeight / this.#itemHeight) * 2;
+    this.#visibleCount = Math.ceil(this.clientHeight / this.#itemHeightPx) * 2;
     this.createNodes();
   }
 
@@ -155,4 +173,22 @@ export class VirtualListElement extends HTMLElement {
       customElements.define(tagName, VirtualListElement);
     }
   }
+}
+
+function convertToPixels(value: number, unit: string): number {
+  // Handle common units directly
+  if (unit === "px") return value;
+
+  // For other units, create a temporary element to measure
+  const tempElement = document.createElement("div");
+  tempElement.style.visibility = "hidden";
+  tempElement.style.position = "absolute";
+  tempElement.style.height = `${value}${unit}`;
+  document.body.appendChild(tempElement);
+
+  // Get the computed height in pixels
+  const pixels = tempElement.getBoundingClientRect().height;
+  document.body.removeChild(tempElement);
+
+  return pixels;
 }
