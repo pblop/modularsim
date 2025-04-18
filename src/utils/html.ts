@@ -1,4 +1,4 @@
-import { VirtualTableElement } from "./VirtualTableElement";
+import { VirtualListElement } from "./VirtualListElement";
 
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
@@ -24,7 +24,7 @@ function setProperties<T>(target: T, properties: T) {
 }
 
 type CustomElementTags = {
-  "virtual-table": VirtualTableElement;
+  "virtual-list": VirtualListElement;
 };
 type ElementTags = keyof HTMLElementTagNameMap | keyof CustomElementTags;
 type TagNameMap = {

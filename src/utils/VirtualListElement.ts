@@ -5,7 +5,7 @@ type ItemGeneratorFunction = {
   (i: null, node: null): HTMLElement;
 };
 
-export class VirtualTableElement extends HTMLElement {
+export class VirtualListElement extends HTMLElement {
   // Number of items that are rendered at once
   #visibleCount = 0;
   // Height of each item in the specified units
@@ -148,11 +148,11 @@ export class VirtualTableElement extends HTMLElement {
     this.createNodes();
   }
 
-  static define(tagName = "virtual-table") {
+  static define(tagName = "virtual-list") {
     if (customElements.get(tagName)) {
       console.warn(`Custom element ${tagName} is already defined.`);
     } else {
-      customElements.define(tagName, VirtualTableElement);
+      customElements.define(tagName, VirtualListElement);
     }
   }
 }

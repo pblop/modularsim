@@ -5,7 +5,7 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../../types/eve
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import { verify } from "../../../utils/config.js";
-import { VirtualTableElement } from "../../../utils/VirtualTableElement.js";
+import { VirtualListElement } from "../../../utils/VirtualListElement.js";
 
 type MemoryUIConfig = {
   start: number;
@@ -41,7 +41,7 @@ class MemoryUI implements IModule {
   config: MemoryUIConfig;
 
   panel?: HTMLElement;
-  memoryTable?: VirtualTableElement;
+  memoryTable?: VirtualListElement;
 
   memory: Uint8Array = new Uint8Array(0x10000);
 
@@ -182,7 +182,7 @@ class MemoryUI implements IModule {
   createMemoryUI(): void {
     if (!this.panel) return;
 
-    this.memoryTable = element("virtual-table", {
+    this.memoryTable = element("virtual-list", {
       className: "memory-table",
     });
     // Add the table to the panel to initialize its properties.
