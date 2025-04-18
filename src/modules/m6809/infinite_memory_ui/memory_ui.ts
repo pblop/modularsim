@@ -34,11 +34,6 @@ type UpdateQueueElement =
   | { address: number; type: "write_result"; data: number }
   | { address: number; type: "bulk_write"; data: Uint8Array };
 
-type TableItem = {
-  address: number;
-  value: number;
-};
-
 class MemoryUI implements IModule {
   event_transceiver: TypedEventTransceiver;
   id: string;
@@ -46,14 +41,9 @@ class MemoryUI implements IModule {
   config: MemoryUIConfig;
 
   panel?: HTMLElement;
-  memoryTable?: VirtualTableElement<TableItem>;
+  memoryTable?: VirtualTableElement;
 
-  memory: TableItem[][] = new Array(0x1000).fill(0).map((_, i) =>
-    new Array(0x10).fill(0).map((_, j) => ({
-      address: i * 0x10 + j,
-      value: 0,
-    })),
-  );
+  memory: Uint8Array = new Uint8Array(0x10000);
 
   lastMemoryRead?: number;
   lastMemoryWrite?: number;
@@ -193,20 +183,19 @@ class MemoryUI implements IModule {
     if (!this.panel) return;
 
     this.memoryTable = element("virtual-table", {
-      // className: "memory-table",
-    }) as VirtualTableElement<TableItem>;
+      className: "memory-table",
+    });
     // Add the table to the panel to initialize its properties.
     this.panel.appendChild(this.memoryTable);
 
-    this.memoryTable.itemGenerator = (_, node) => {
+    this.memoryTable.itemGenerator = (i, node) => {
       if (!node) {
         return element("tr", { className: "memory-row" });
       } else {
         return node;
       }
     };
-    this.memoryTable.items = this.memory;
-    console.log(this.memoryTable.items);
+    this.memoryTable.itemCount = 0x1000;
     // this.memoryTable = element(
     //   "table",
     //   { className: "memory-table" },

@@ -24,7 +24,7 @@ function setProperties<T>(target: T, properties: T) {
 }
 
 type CustomElementTags = {
-  "virtual-table": VirtualTableElement<unknown>;
+  "virtual-table": VirtualTableElement;
 };
 type ElementTags = keyof HTMLElementTagNameMap | keyof CustomElementTags;
 type TagNameMap = {

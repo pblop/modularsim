@@ -1,27 +1,26 @@
-type ItemGeneratorFunction<T> = {
-  // Update the content of the node with the items
-  (items: T[], node: HTMLElement): HTMLElement;
+type ItemGeneratorFunction = {
+  // Update the content of the node
+  (i: number, node: HTMLElement): HTMLElement;
   // Make a new node
-  (items: null, node: null): HTMLElement;
+  (i: null, node: null): HTMLElement;
 };
 
-export class VirtualTableElement<T> extends HTMLElement {
+export class VirtualTableElement extends HTMLElement {
   // Number of items that are rendered at once
   #visibleCount = 0;
   // Height of each item in the specified units
   #itemHeight = 40;
   #itemHeightUnits = "px";
-  // Array of items to be displayed in the table
-  #items: T[][] = [];
   // The elements whose content will be swapped
   #nodes: HTMLElement[] = [];
   // The indices of the items that are currently visible
   #start = 0;
   #end = 0;
-  #itemGenerator: ItemGeneratorFunction<T> = (_, node) => {
+  #itemGenerator: ItemGeneratorFunction = (_, node) => {
     // Default item generator function
     return node || document.createElement("div");
   };
+  #itemCount = 0;
 
   // The height of the element before resizes (we only want to update the
   // visible items when the height changes).
@@ -39,6 +38,7 @@ export class VirtualTableElement<T> extends HTMLElement {
 
   connectedCallback() {
     this.style.display = "block";
+    this.style.overflowY = "auto";
 
     this.list = document.createElement("table");
     this.appendChild(this.list);
@@ -61,24 +61,22 @@ export class VirtualTableElement<T> extends HTMLElement {
 
   updatePlaceholder() {
     // The total height of the table is the height of each item * num of items.
-    this.placeholder.style.height = `${this.#items.length * this.#itemHeight}${this.#itemHeightUnits}`;
+    this.placeholder.style.height = `${this.#itemCount * this.#itemHeight}${this.#itemHeightUnits}`;
   }
 
-  set itemGenerator(generator: ItemGeneratorFunction<T>) {
+  set itemGenerator(generator: ItemGeneratorFunction) {
     this.#itemGenerator = generator;
     this.updateContents();
   }
   get itemGenerator() {
     return this.#itemGenerator;
   }
-
-  set items(newItems: T[][]) {
-    this.#items = newItems;
-    console.log("Items updated", newItems);
+  set itemCount(count: number) {
+    this.#itemCount = count;
     this.updateContents();
   }
-  get items() {
-    return this.#items;
+  get itemCount() {
+    return this.#itemCount;
   }
 
   /**
@@ -111,14 +109,14 @@ export class VirtualTableElement<T> extends HTMLElement {
   }
 
   render() {
-    const visibleItems = this.#items.slice(this.#start, Math.min(this.#end, this.#items.length));
+    const end = Math.min(this.#end, this.#itemCount);
     for (let i = 0; i < this.#nodes.length; i++) {
       const node = this.#nodes[i];
-      if (i < visibleItems.length) {
-        const item = visibleItems[i];
-        this.#itemGenerator(item, node); // Update the content of the node
+      if (i < end) {
+        this.#itemGenerator(i, node); // Update the content of the node
         // Update the position of the node based on its index in the data array.
-        node.style.top = `${(this.#start + i) * this.#itemHeight}px`;
+        node.style.top = `${(this.#start + i) * this.#itemHeight}${this.#itemHeightUnits}`;
+        node.style.display = ""; // Show the node if it's in the visible range
       } else {
         node.style.display = "none"; // Hide the node if it's not in the visible range
       }
@@ -135,12 +133,13 @@ export class VirtualTableElement<T> extends HTMLElement {
     if (height !== this.#prevHeight) {
       this.#prevHeight = height;
       this.updateVisibleItems();
+      this.updateRenderBounds();
+      this.render();
     }
   }
 
   updateRenderBounds() {
-    const scrollTop = this.scrollTop;
-    this.#start = Math.floor(scrollTop / 40); // Assuming each item has a height of 40px
+    this.#start = Math.floor(this.scrollTop / this.#itemHeight);
     this.#end = this.#start + this.#visibleCount;
   }
 

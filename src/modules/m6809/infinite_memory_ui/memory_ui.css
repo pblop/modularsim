@@ -5,6 +5,7 @@
     font-family: 'Courier New', Courier, monospace;
     text-align: center;
     width: 100%;
+    height: 100%;
 
     --cr: var(--gui-color-blue-background);
     --cw: var(--gui-color-red-background);
