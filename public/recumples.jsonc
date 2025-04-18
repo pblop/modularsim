@@ -18,8 +18,8 @@
       {
         "id": "main_memory_ui",
         "type": "ui",
-        "url": "./modules/m6809/memory_ui/memory_ui.js",
-        "css": ["./modules/m6809/memory_ui/memory_ui.css"],
+        "url": "./modules/m6809/infinite_memory_ui/memory_ui.js",
+        "css": ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
         "config": {
           "start": 256,
           "size": 256
