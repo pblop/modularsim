@@ -18,6 +18,10 @@
     flex-direction: row;
     /* justify-content: center; */
     align-items: center;
+
+    > * {
+      flex: 1;
+    }
     
     justify-content: space-between;
     width: 100%;
@@ -64,20 +68,5 @@
       height: 1lh;
       text-align: center;
     }
-    .header-row {
-
-
-    }
-    /* td {
-      width: 2ch;
-    } */
-  }
-  .memory-grid {
-    /* display: table */
-    /* display: grid; */
-    /* The first column is the base address number column */
-    /* grid-template-columns: repeat(17, 1fr); */
-    /* grid-gap: 1px; */
-    /* padding: 1px; */
   }
 }
