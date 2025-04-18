@@ -3,6 +3,7 @@
   text-align: center;
   width: 100%;
   height: 100%;
+  overflow-y: hidden !important;
 
   .header-row {
     th:first-child {
@@ -24,7 +25,8 @@
 
   .memory-table {
     width: 100%;
-    height: 100%;
+    /* Subtract the header row height */
+    height: calc(100% - 1.5em); 
     position: relative;
 
     --cr: var(--gui-color-blue-background);
