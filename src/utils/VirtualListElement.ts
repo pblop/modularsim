@@ -93,6 +93,17 @@ export class VirtualListElement extends HTMLElement {
     return this.#itemHeightUnits;
   }
 
+  set start(value: number) {
+    this.scrollTop = value * this.#itemHeightPx;
+    this.updateContents();
+  }
+  get start() {
+    return this.#start;
+  }
+  get end() {
+    return this.#end;
+  }
+
   /**
    * After the items are changed, this function is called to update the
    * visible items and the placeholder.
