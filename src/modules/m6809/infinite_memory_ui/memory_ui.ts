@@ -150,15 +150,7 @@ class MemoryUI implements IModule {
     if (!this.panel) return;
     if (!this.memoryTable) return;
 
-    // If the bulk write is completely outside the memory table, we can ignore
-    // it.
-    if (
-      // If it ends before the memory table
-      dataStart + data.length <= this.config.start ||
-      // If it starts after the memory
-      dataStart >= this.config.start + this.config.size
-    )
-      return;
+    this.memory.set(data, dataStart);
 
     this.updateQueue.queueUpdate({ type: "bulk_write", address: dataStart, data });
   };
@@ -166,7 +158,7 @@ class MemoryUI implements IModule {
     if (!this.panel) return;
     if (!this.memoryTable) return;
 
-    if (address < this.config.start || address >= this.config.start + this.config.size) return;
+    this.memory[address] = data;
 
     this.updateQueue.queueUpdate({ type: "write_result", address, data });
   };
@@ -182,20 +174,28 @@ class MemoryUI implements IModule {
   createMemoryUI(): void {
     if (!this.panel) return;
 
+    this.panel.appendChild(
+      element(
+        "tr",
+        {
+          className: "header-row",
+        },
+        element("th", { textContent: "0x0000" }),
+        ...Array.from({ length: 16 }).map((_, i) =>
+          element("th", {
+            textContent: i === 0 ? "" : `_${(i - 1).toString(16)}`,
+          }),
+        ),
+      ),
+    );
     this.memoryTable = element("virtual-list", {
       className: "memory-table",
     });
     // Add the table to the panel to initialize its properties.
     this.panel.appendChild(this.memoryTable);
 
-    this.memoryTable.itemGenerator = (i, node) => {
-      if (!node) {
-        return element("tr", { className: "memory-row" });
-      } else {
-        return node;
-      }
-    };
-    this.memoryTable.itemCount = 0x1000;
+    this.memoryTable.itemGenerator = this.itemGenerator;
+    this.memoryTable.itemCount = 0x1000; // +1 to include the header row
     // this.memoryTable = element(
     //   "table",
     //   { className: "memory-table" },
@@ -234,6 +234,34 @@ class MemoryUI implements IModule {
     //   this.memoryTable.appendChild(row);
     // }
   }
+
+  itemGenerator = (i: number | null, node: HTMLElement | null): HTMLElement => {
+    if (node == null || i == null) {
+      return element(
+        "tr",
+        {
+          className: "virtual-row",
+        },
+        element("th"),
+        ...Array.from({ length: 17 }).map((_, i) => element("td")),
+      );
+    } else {
+      const row = node as HTMLTableRowElement;
+      const startAddress = i * 0x10;
+      const endAddress = Math.min(0x10000, startAddress + 0x10);
+      const rowName = `0x${startAddress.toString(16).padStart(4, "0")}`;
+      row.querySelector("th")!.textContent = rowName;
+      const cells = row.querySelectorAll("td");
+      for (let j = 0; j < 0x10; j++) {
+        const cell = cells[j];
+        const address = startAddress + j;
+        if (address < endAddress) cell.textContent = this.formatMemoryData(this.memory[address]);
+        else cell.textContent = "";
+      }
+
+      return node;
+    }
+  };
 
   refreshUI = async (queue: UpdateQueueElement[]) => {
     // We only need the last update of the read/write/pc types.
