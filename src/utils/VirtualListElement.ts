@@ -26,7 +26,7 @@ export class VirtualListElement extends HTMLElement {
   // visible items when the height changes).
   #prevHeight = 0;
 
-  private list!: HTMLTableElement;
+  private list!: HTMLDivElement;
   private placeholder!: HTMLDivElement;
   private resizeObserver!: ResizeObserver;
 
@@ -40,7 +40,7 @@ export class VirtualListElement extends HTMLElement {
     this.style.display = "block";
     this.style.overflowY = "auto";
 
-    this.list = document.createElement("table");
+    this.list = document.createElement("div");
     this.appendChild(this.list);
 
     // Create a placeholder element with the total height of the data
