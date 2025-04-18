@@ -1,0 +1,53 @@
+.memory-ui {
+
+
+  .memory-table {
+    font-family: 'Courier New', Courier, monospace;
+    text-align: center;
+    width: 100%;
+
+    --cr: var(--gui-color-blue-background);
+    --cw: var(--gui-color-red-background);
+    --cp: var(--gui-color-yellow-background);
+    --crw: color-mix(in srgb, var(--cr), var(--cw));
+    --crp: color-mix(in srgb, var(--cr), var(--cp));
+    --cpw: color-mix(in srgb, var(--cp), var(--cw));
+    --crwp: color-mix(in srgb, var(--crw), var(--cp));
+
+    .read-highlight {
+      --current-bg: var(--cr);
+    }
+    .pc-highlight {
+      --current-bg: var(--cp);
+    }
+    .write-highlight {
+      --current-bg: var(--cw);
+    }
+    .read-highlight.pc-highlight {
+      --current-bg: var(--crp);
+    }
+    .read-highlight.write-highlight {
+      --current-bg: var(--crw);
+    }
+    .pc-highlight.write-highlight {
+      --current-bg: var(--cpw);
+    }
+    .read-highlight.pc-highlight.write-highlight {
+      --current-bg: var(--crwp);
+    }
+    
+    input {
+      width: 2ch;
+      height: 1lh;
+      text-align: center;
+    }
+  }
+  .memory-grid {
+    /* display: table */
+    /* display: grid; */
+    /* The first column is the base address number column */
+    /* grid-template-columns: repeat(17, 1fr); */
+    /* grid-gap: 1px; */
+    /* padding: 1px; */
+  }
+}

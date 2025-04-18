@@ -4,6 +4,7 @@ import { element } from "../../../utils/html.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
+import { VirtualTableElement } from "../../../utils/VirtualTableElement.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
@@ -84,6 +85,8 @@ class Gui implements IModule {
     this.root_element = root_element;
 
     this.createDeploymentInfoElement();
+
+    VirtualTableElement.define();
 
     console.log(`[${this.id}] Module initialized with language ${this.language}.`);
   }

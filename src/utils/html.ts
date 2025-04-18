@@ -1,7 +1,18 @@
+import { VirtualTableElement } from "./VirtualTableElement";
+
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
 
+// function setProperties<T>(target: T, properties: DeepPartial<T>) {
+//   for (const key in properties) {
+//     if (typeof properties[key] === "object" && properties[key] !== null) {
+//       setProperties(target[key], properties[key] as DeepPartial<T[typeof key]>);
+//     } else {
+//       target[key] = properties[key] as T[typeof key];
+//     }
+//   }
+// }
 function setProperties<T>(target: T, properties: T) {
   for (const key in properties) {
     if (typeof properties[key] === "object") {
@@ -12,17 +23,28 @@ function setProperties<T>(target: T, properties: T) {
   }
 }
 
-type ExtraFields<K extends keyof HTMLElementTagNameMap> = {
+type CustomElementTags = {
+  "virtual-table": VirtualTableElement<unknown>;
+};
+type ElementTags = keyof HTMLElementTagNameMap | keyof CustomElementTags;
+type TagNameMap = {
+  [K in ElementTags]: K extends keyof CustomElementTags
+    ? CustomElementTags[K]
+    : K extends keyof HTMLElementTagNameMap
+      ? HTMLElementTagNameMap[K]
+      : never;
+};
+type ExtraFields<K extends keyof TagNameMap> = {
   customAttributes?: Record<string, string>;
-  onClick?: (element: HTMLElementTagNameMap[K], ev: MouseEvent) => void;
+  onClick?: (element: TagNameMap[K], ev: MouseEvent) => void;
 };
 
-export function element<K extends keyof HTMLElementTagNameMap>(
+export function element<K extends keyof TagNameMap>(
   tag: K,
-  properties: DeepPartial<HTMLElementTagNameMap[K]> & ExtraFields<K> = {},
+  properties: DeepPartial<TagNameMap[K]> & ExtraFields<K> = {},
   ...children: HTMLElement[]
-): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag);
+): TagNameMap[K] {
+  const el = document.createElement(tag) as TagNameMap[K];
 
   // Allow for children to be passed as the second argument (no properties).
   if (properties instanceof HTMLElement) {
@@ -33,7 +55,7 @@ export function element<K extends keyof HTMLElementTagNameMap>(
     properties.customAttributes = undefined;
     properties.onClick = undefined;
 
-    setProperties(el, properties as DeepPartial<HTMLElementTagNameMap[K]>);
+    setProperties(el, properties as DeepPartial<TagNameMap[K]>);
 
     if (customAttributes) {
       for (const key in customAttributes) {
