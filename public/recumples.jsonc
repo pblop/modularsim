@@ -21,8 +21,8 @@
         "url": "./modules/m6809/infinite_memory_ui/memory_ui.js",
         "css": ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
         "config": {
-          "start": 256,
-          "size": 256
+          "start": "0x100",
+          "size": "0x10000"
         }
       },
       {

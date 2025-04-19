@@ -9,6 +9,7 @@ import { VirtualListElement } from "../../../utils/VirtualListElement.js";
 
 type MemoryUIConfig = {
   start: number;
+  size: number;
 };
 
 const MemoryUIStrings = createLanguageStrings({
@@ -42,7 +43,7 @@ class MemoryUI implements IModule {
   panel?: HTMLElement;
   memoryTable?: VirtualListElement;
 
-  memory: Uint8Array = new Uint8Array(0x10000);
+  memory: Uint8Array;
 
   lastMemoryRead?: number;
   lastMemoryWrite?: number;
@@ -87,12 +88,14 @@ class MemoryUI implements IModule {
       config,
       {
         start: { type: "number", required: false, default: 0 },
+        size: { type: "number", required: true, default: 0x10000 },
       },
       `[${this.id}] configuration error: `,
     );
 
     // Set the default language.
     this.setLanguage("en");
+    this.memory = new Uint8Array(this.config.size);
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
 
@@ -183,7 +186,7 @@ class MemoryUI implements IModule {
     this.panel.appendChild(this.memoryTable);
 
     this.memoryTable.itemGenerator = this.itemGenerator;
-    this.memoryTable.itemCount = 0x1000;
+    this.memoryTable.itemCount = Math.ceil(this.config.size / 0x10);
     this.memoryTable.itemHeight = 1.5;
     this.memoryTable.itemHeightUnits = "rem";
     this.memoryTable.start = Math.floor(this.config.start / 0x10);
@@ -202,7 +205,7 @@ class MemoryUI implements IModule {
     } else {
       const row = node as HTMLTableRowElement;
       const startAddress = i * 0x10;
-      const endAddress = Math.min(0x10000, startAddress + 0x10);
+      const endAddress = Math.min(this.config.size, startAddress + 0x10);
       const rowName = `0x${startAddress.toString(16).padStart(4, "0")}`;
       row.querySelector("th")!.textContent = rowName;
       const cells = row.querySelectorAll("td");
