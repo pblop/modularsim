@@ -61,6 +61,7 @@ class InstructionUI implements IModule {
 
   updateQueue: UpdateQueue<Registers>;
   cache: InstructionCache;
+  lockPC: boolean;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -106,6 +107,7 @@ class InstructionUI implements IModule {
     this.cache = new InstructionCache((addr) =>
       decompileInstruction(this.read, this.registers!, addr),
     );
+    this.lockPC = false;
 
     console.log(`[${this.id}] Memory Initializing module.`);
   }
@@ -160,6 +162,7 @@ class InstructionUI implements IModule {
     const lockbutton = iconButton("unlock-icon", this.localeStrings.lockAlt, (icon) => {
       icon.classList.toggle("unlock-icon");
       icon.classList.toggle("lock-icon");
+      this.lockPC = !this.lockPC;
     });
 
     this.panel.appendChild(element("div", { className: "buttons" }, clearbutton, lockbutton));
@@ -416,6 +419,9 @@ class InstructionUI implements IModule {
           this.history.isOverwritten(entry),
         );
         this.instructionsElement.appendChild(rowElement);
+
+        if (this.lockPC && entry.address === this.registers.pc)
+          rowElement.scrollIntoView({ block: "nearest", inline: "nearest" });
         if (firstElement === undefined) firstElement = rowElement;
         lastElement = rowElement;
       }
