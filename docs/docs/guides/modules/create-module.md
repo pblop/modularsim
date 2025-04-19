@@ -146,7 +146,7 @@ Tenemos que añadir un objeto al array de módulos, que contenga las propiedades
 - `config`: la configuración del módulo. En este caso, será el objeto que
   definimos antes, con la propiedad `frequency`.
 
-```json title="config.jsonc" {5-15}
+```json title="config.jsonc" {5-16}
 {
   "simulator": {
     "url": "/ruta/del/simulator.js",
