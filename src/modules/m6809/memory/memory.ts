@@ -122,6 +122,9 @@ class Memory implements IModule {
     this.emitTimed("memory:read:result", address, data);
   };
   onMemoryWrite = (address: number, data: number) => {
+    if (this.config.type === "rom")
+      throw new Error(`[${this.id}] Attempted to write to ROM memory.`);
+
     this.memory[address] = data;
 
     this.emitTimed("memory:write:result", address, data);
