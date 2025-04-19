@@ -83,6 +83,13 @@
       }
     }
 
+    &.first-in-group {
+      border-top: 1px solid var(--gui-color-border);
+    }
+    &.last-in-group {
+      border-bottom: 1px solid var(--gui-color-border);
+    }
+
     .address {
       /* I've decided that the addresses are going to be formatted as equal
        * length strings, so I don't need to specify a fixed size with flex-basis.

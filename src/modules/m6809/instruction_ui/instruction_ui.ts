@@ -247,8 +247,8 @@ class InstructionUI implements IModule {
     return disass.bytes.length;
   };
 
-  #disassemblePast = async (start: number, num: number): Promise<void> => {
-    if (!this.instructionsElement || !this.registers) return;
+  #disassemblePast = async (start: number, num: number): Promise<HTMLElement[]> => {
+    if (!this.instructionsElement || !this.registers) return [];
     // To disassemble in the past, we will start from the given address
     // and go backwards. We will be greedy, meaning
     // that we will prefer a larger instruction over a smaller one.
@@ -291,14 +291,17 @@ class InstructionUI implements IModule {
     for (let i = elements.length - 1; i >= 0; i--) {
       this.instructionsElement.appendChild(elements[i]);
     }
+
+    return elements;
   };
 
   #disassembleFuture = async (
     start: number,
     stop: { address: number } | { number: number },
-  ): Promise<void> => {
-    if (!this.instructionsElement || !this.registers) return;
+  ): Promise<HTMLElement[]> => {
+    if (!this.instructionsElement || !this.registers) return [];
 
+    const elements: HTMLElement[] = [];
     let addr = start;
     for (let i = 0; "number" in stop ? i < stop.number : addr < stop.address; i++) {
       const disass = await this.cache.getOrGenerate(addr);
@@ -313,9 +316,12 @@ class InstructionUI implements IModule {
       const rowElement = this.#createBasicRowElement();
       await this.populateRow(rowElement, disass, disass.startAddress === this.registers.pc);
       this.instructionsElement.appendChild(rowElement);
+      elements.push(rowElement);
 
       addr += disass.bytes.length;
     }
+
+    return elements;
   };
 
   #createBasicRowElement = (): HTMLDivElement => {
@@ -382,12 +388,21 @@ class InstructionUI implements IModule {
     // disassembles until the last successful disassembly.
     const groups = this.history.getAllConsecutiveEntryGroups(true);
     for (let i = 0; i < groups.length; i++) {
+      let firstElement: HTMLElement | undefined;
+      let lastElement: HTMLElement | undefined;
       // TODO: Disassemble instructions backwards from the current group on
       // _all_ groups, not just the first one, and stop when we reach
       // this.config.lines / 2 or an instruction we've already disassembled.
       // We disassemble instructions from the current group start backwards (
       // overwriting if already disassembled), and then we populate the panel.
-      if (i === 0) await this.#disassemblePast(groups[i].entries[0].address, this.config.lines / 2);
+      if (i === 0) {
+        const elements = await this.#disassemblePast(
+          groups[i].entries[0].address,
+          this.config.lines / 2,
+        );
+        firstElement = elements[0];
+        lastElement = elements[elements.length - 1];
+      }
 
       const group = groups[i];
       const { entries, end } = group;
@@ -401,12 +416,20 @@ class InstructionUI implements IModule {
           this.history.isOverwritten(entry),
         );
         this.instructionsElement.appendChild(rowElement);
+        if (firstElement === undefined) firstElement = rowElement;
+        lastElement = rowElement;
       }
 
       // We disassemble instructions from the current group start forwards (
       // overwriting if already disassembled), at a maximum of this.config.lines
       // instructions.
-      await this.#disassembleFuture(end, { number: this.config.lines });
+      const futures = await this.#disassembleFuture(end, { number: this.config.lines });
+      if (futures.length > 0) {
+        lastElement = futures[futures.length - 1];
+      }
+
+      if (firstElement) firstElement.classList.add("first-in-group");
+      if (lastElement) lastElement.classList.add("last-in-group");
     }
   }
 
