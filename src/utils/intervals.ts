@@ -37,9 +37,20 @@ function calculateAnimationFrameTime(callback: (time: number) => void, amount = 
 
 const BATCH_TIME = 16; // 10ms
 
+type TimerOptions = {
+  immediate: boolean;
+  frequencyReportInterval: number; // in ms
+  frequencyReportCallback?: (frequency: number) => void;
+};
+const DEFAULT_OPTIONS: TimerOptions = {
+  immediate: true,
+  frequencyReportInterval: 0,
+};
+
 function setTimer<A extends unknown[]>(
   func: (...args: A) => unknown,
-  time = MIN_TIME,
+  time: number,
+  options: Partial<TimerOptions> = {},
   ...args: A
 ): number {
   // If the time is greater than 10ms, we don't need to do any magic.
@@ -48,12 +59,17 @@ function setTimer<A extends unknown[]>(
   // To avoid zero or negative timings
   if (time <= 0) time = MIN_TIME;
 
+  const fullOptions = {
+    ...DEFAULT_OPTIONS,
+    ...options,
+  };
+
   // if (globalThis?.scheduler?.yield) {
   //   console.log("Using yielding timer");
   //   return yieldingTimer(func, time, {}, ...args);
   // } else {
   //   console.log("Using interval timer");
-  return intervalTimer(func, time, { immediate: true }, ...args);
+  return intervalTimer(func, time, fullOptions, ...args);
   // }
 }
 
@@ -115,8 +131,8 @@ function yieldingTimer<A extends unknown[]>(
 // van a desincronizar, porque se ejecutan una vez por cada varios ciclos.
 function intervalTimer<A extends unknown[]>(
   func: (...args: A) => unknown,
-  time = MIN_TIME,
-  options: { immediate?: boolean } = { immediate: true },
+  time: number,
+  options: TimerOptions,
   ...args: A
 ): number {
   // Number of calls per 10ms (we ignore the decimal part. setInterval doesn't
@@ -127,8 +143,12 @@ function intervalTimer<A extends unknown[]>(
   // of a Promise, we use this variable.
   let hasLastIntervalFinished = true;
   // Info about the last interval, to provide some feedback on the console.
-  let lastIntervalEndTime = 0;
+  let lastIntervalEndTime = performance.now();
   let isTooSlow = false;
+
+  // For measuring the real frequency of the interval.
+  let executionCount = 0;
+  let lastReportTime = lastIntervalEndTime;
 
   const intervalFn = async () => {
     if (!hasLastIntervalFinished) {
@@ -143,7 +163,7 @@ function intervalTimer<A extends unknown[]>(
     // interval.
     const intervalStartTime = performance.now();
     // if there was a previous interval
-    if (lastIntervalEndTime > 0 && isTooSlow) {
+    if (isTooSlow) {
       // we want the time between the last interval and the current one to be
       // as close to zero as possible.
       const timeBetweenCalls = intervalStartTime - lastIntervalEndTime;
@@ -165,6 +185,11 @@ function intervalTimer<A extends unknown[]>(
         break;
       }
 
+      const ret = func(...args);
+      executionCount++;
+      // If the function returns a Promise, we wait for it to resolve
+      if (ret instanceof Promise) await ret;
+
       const now = performance.now();
       // If we have already taken more than 16ms (1/60Hz), we stop the loop, and
       // allow the browser to do other stuff (like rendering).
@@ -176,10 +201,21 @@ function intervalTimer<A extends unknown[]>(
         isTooSlow = true;
         break;
       }
+      if (
+        options.frequencyReportInterval > 0 &&
+        now - lastReportTime > options.frequencyReportInterval
+      ) {
+        const elapsedSeconds = (now - lastReportTime) / 1000;
+        const frequency = executionCount / elapsedSeconds;
+        if (options.frequencyReportCallback) {
+          options.frequencyReportCallback(frequency);
+        } else {
+          console.log(`Interval frequency: ${frequency.toFixed(2)}Hz`);
+        }
 
-      const ret = func(...args);
-      // If the function returns a Promise, we wait for it to resolve
-      if (ret instanceof Promise) await ret;
+        lastReportTime = now;
+        executionCount = 0;
+      }
     }
 
     const intervalEndTime = performance.now();
