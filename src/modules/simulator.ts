@@ -30,6 +30,7 @@ import type {
 import type { ISimulator } from "../types/simulator.js";
 
 type ClockQueueElement = {
+  id: ModuleID;
   callback: CycleCallback;
   priority: FinalListenerPriority;
 };
@@ -48,8 +49,8 @@ class ClockQueue {
     this.queue = new PriorityQueue(this.cmp);
   }
 
-  enqueue(callback: CycleCallback, priority: FinalListenerPriority) {
-    this.queue.enqueue({ callback, priority });
+  enqueue(id: ModuleID, callback: CycleCallback, priority: FinalListenerPriority) {
+    this.queue.enqueue({ id, callback, priority });
   }
   size() {
     return this.queue.size();
@@ -64,12 +65,12 @@ class ClockQueue {
     // If >, we have finished
     return this.queue.peek()!.priority.cycle > this.cycle;
   }
-  dequeue(): CycleCallback | undefined {
+  dequeue(): ClockQueueElement | undefined {
     const elem = this.queue.dequeue();
     if (!elem) return undefined;
 
     this.subcycle = elem.priority.subcycle;
-    return elem.callback;
+    return elem;
   }
   debugView() {
     const sorted = this.queue.heap.slice().sort(this.cmp);
@@ -197,7 +198,7 @@ class Simulator implements ISimulator {
         if (declaration.events.optional) this.addEDListeners(module, declaration.events.optional);
       }
       if (declaration.cycles) {
-        if (declaration.cycles.permanent) this.addCDListeners(declaration.cycles.permanent);
+        if (declaration.cycles.permanent) this.addCDListeners(module, declaration.cycles.permanent);
       }
     }
 
@@ -218,7 +219,7 @@ class Simulator implements ISimulator {
       if (!callback) {
         throw new Error(`[${this.constructor.name}] callback for cycle is undefined`);
       }
-      callback(this.queue.cycle, this.queue.subcycle);
+      callback.callback.call(this.modules[callback.id], this.queue.cycle, this.queue.subcycle);
       if (this.promises.length > 0) {
         await Promise.all(this.promises);
         this.promises = [];
@@ -228,14 +229,14 @@ class Simulator implements ISimulator {
     // Wait for the microtask queue to be empty before continuing.
     // await new Promise((r) => setTimeout(r, 0));
   }
-  onCycle(callback: CycleCallback, priority: SubcyclePriority = {}) {
+  onCycle(caller: ModuleID, callback: CycleCallback, priority: SubcyclePriority = {}) {
     const wrappedCallback = (...args: Parameters<CycleCallback>) => {
-      callback(...args);
-      this.onceCycle(wrappedCallback, priority);
+      callback.apply(this.modules[caller], args);
+      this.onceCycle(caller, wrappedCallback, priority);
     };
-    this.onceCycle(wrappedCallback, priority);
+    this.onceCycle(caller, wrappedCallback, priority);
   }
-  onceCycle(callback: CycleCallback, priority: ListenerPriority = {}) {
+  onceCycle(caller: ModuleID, callback: CycleCallback, priority: ListenerPriority = {}) {
     // Set defaults for subcycle and cycle, and calculate the latter in case an
     // offset is given.
     const subcycle = priority?.subcycle ?? 0;
@@ -251,11 +252,11 @@ class Simulator implements ISimulator {
       );
     }
 
-    this.queue.enqueue(callback, { cycle, subcycle });
+    this.queue.enqueue(caller, callback, { cycle, subcycle });
   }
-  awaitCycle(priority: ListenerPriority = {}): Promise<number> {
+  awaitCycle(caller: ModuleID, priority: ListenerPriority = {}): Promise<number> {
     return new Promise((resolve) => {
-      this.onceCycle(resolve, priority);
+      this.onceCycle(caller, resolve, priority);
     });
   }
 
@@ -283,13 +284,13 @@ class Simulator implements ISimulator {
    * queue. No checks are performed.
    * @returns listeners The cycle listeners to add.
    */
-  addCDListeners(listeners: CycleDeclarationListener[]) {
+  addCDListeners(module: ModuleID, listeners: CycleDeclarationListener[]) {
     for (const listener of listeners) {
       if (typeof listener === "function") {
-        this.onCycle(listener);
+        this.onCycle(module, listener);
       } else {
         const [callback, priority] = listener;
-        this.onCycle(callback, priority);
+        this.onCycle(module, callback, priority);
       }
     }
   }
@@ -364,7 +365,7 @@ class Simulator implements ISimulator {
       // But after looking around, and making some tests, it seems like the JavaScript event
       // loop being single-threaded prevents this specific kind of race condition! Go JS!
       this.subscribers[event] = this.subscribers[event].filter((x) => x !== wrappedCallback);
-      return callback(...args);
+      return callback.apply(this.modules[caller], args);
     };
     this.subscribers[event].unshift(wrappedCallback);
   }
@@ -441,8 +442,13 @@ class Simulator implements ISimulator {
   }
 
   asCycleManager({ module, secure }: { module?: ModuleID; secure?: boolean }): CycleManager {
-    return {
-      performCycle: () => {
+    const ret: Partial<CycleManager> = {
+      onCycle: this.onCycle.bind(this, module ?? "*"),
+      onceCycle: this.onceCycle.bind(this, module ?? "*"),
+      awaitCycle: this.awaitCycle.bind(this, module ?? "*"),
+    };
+    if (secure) {
+      ret.performCycle = () => {
         if (secure) {
           if (module == null) throw new Error("Module must be specified to perform a cycle");
           const declaration = this.declarations[module];
@@ -460,11 +466,12 @@ class Simulator implements ISimulator {
             );
         }
         return this.performCycle();
-      },
-      onCycle: this.onCycle.bind(this),
-      onceCycle: this.onceCycle.bind(this),
-      awaitCycle: this.awaitCycle.bind(this),
-    };
+      };
+    } else {
+      ret.performCycle = this.performCycle.bind(this);
+    }
+
+    return ret as CycleManager;
   }
 
   /**
