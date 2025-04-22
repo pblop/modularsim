@@ -109,7 +109,11 @@ class ScreenUI implements IModule {
   };
 
   refreshUI(charCodes: number[]): void {
-    if (!this.textElement) return;
+    if (!this.textElement || !this.panel) return;
+
+    // Auto scroll to bottom if already on bottom. I haven't been able to achieve
+    // this with CSS, so I'm doing it here.
+    const atBottom = this.panel.scrollHeight - this.panel.clientHeight <= this.panel.scrollTop + 1;
 
     let text = this.textElement.textContent ?? "";
     for (const charCode of charCodes) {
@@ -120,6 +124,8 @@ class ScreenUI implements IModule {
       }
     }
     this.textElement.textContent = text;
+
+    if (atBottom) this.panel.scrollTop = this.panel.scrollHeight - this.panel.clientHeight;
   }
 }
 
