@@ -18,6 +18,22 @@ a_mes           .equ 0x85
 .area _CODE (ABS)
 .org 0x100
 .globl programa
+.globl resta_ajustada
+.globl corregir_dia
+.globl corregir_mes
+.globl inc8
+.globl incano
+.globl suma_i
+.globl listadiasmes
+.globl mbuclei
+.globl sumaano
+.globl imprimeMes
+.globl imprimeASCII
+.globl imprime_fecha
+.globl imprimeDe
+.globl imprime_cifras
+.globl imprime_cifra2
+.globl lista_nombres
 
 ; INTERFAZ DE ENTRADA.
 aNo:         .word 0x2000          ; Año de nacimiento (BCD)
