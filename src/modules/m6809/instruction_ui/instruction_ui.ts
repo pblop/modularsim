@@ -238,7 +238,7 @@ class InstructionUI implements IModule {
     if (useSymbols && this.symbols.length > 0) {
       const [symbol, offset] = getSymbolicAddress(this.symbols, data);
       if (symbol) {
-        return `${symbol}${offset ? `+${offset.toString(16).padStart(2, "0")}` : ""}`;
+        return `${symbol}+${offset.toString(16).padStart(2, "0")}`;
       }
     }
     return data.toString(16).padStart(4, "0");
