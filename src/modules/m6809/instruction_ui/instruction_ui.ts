@@ -225,19 +225,20 @@ class InstructionUI implements IModule {
   populateRow = async (
     row: HTMLDivElement,
     disass: DecompiledInstruction | FailedDecompilation,
-    isPC: boolean,
-    isOverlapped = false,
-    isOverwritten = false,
+    extras: {
+      isPC?: boolean;
+      isOverlapped?: boolean;
+      isOverwritten?: boolean;
+    } = {},
   ): Promise<number> => {
     const children = Array.from(row.children) as HTMLSpanElement[];
 
     const address = disass.startAddress;
-
-    row.classList.toggle("pc", isPC);
-    row.classList.toggle("overlap", isOverlapped);
-    row.classList.toggle("overwritten", isOverwritten);
-    if (isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
-    else if (isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
+    row.classList.toggle("pc", !!extras.isPC);
+    row.classList.toggle("overlap", !!extras.isOverlapped);
+    row.classList.toggle("overwritten", !!extras.isOverwritten);
+    if (extras.isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
+    else if (extras.isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
 
     const rowData = generateRowData(disass, this.formatAddress);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
@@ -283,11 +284,9 @@ class InstructionUI implements IModule {
 
       // If we have succeeded, we add the instruction to the panel.
       const rowElement = this.#createBasicRowElement();
-      await this.populateRow(
-        rowElement,
-        largestSuccess,
-        largestSuccess.startAddress === this.registers.pc,
-      );
+      await this.populateRow(rowElement, largestSuccess, {
+        isPC: largestSuccess.startAddress === this.registers.pc,
+      });
       elements.push(rowElement);
 
       addr -= largestSuccess.bytes.length;
@@ -323,7 +322,9 @@ class InstructionUI implements IModule {
       if (disass.failed) break;
 
       const rowElement = this.#createBasicRowElement();
-      await this.populateRow(rowElement, disass, disass.startAddress === this.registers.pc);
+      await this.populateRow(rowElement, disass, {
+        isPC: disass.startAddress === this.registers.pc,
+      });
       this.instructionsElement.appendChild(rowElement);
       elements.push(rowElement);
 
@@ -419,13 +420,11 @@ class InstructionUI implements IModule {
       const { entries, end } = group;
       for (const entry of entries) {
         const rowElement = this.#createBasicRowElement();
-        await this.populateRow(
-          rowElement,
-          entry.disass,
-          entry.address === this.registers.pc,
-          this.history.isOverlapped(entry),
-          this.history.isOverwritten(entry),
-        );
+        await this.populateRow(rowElement, entry.disass, {
+          isPC: entry.address === this.registers.pc,
+          isOverlapped: this.history.isOverlapped(entry),
+          isOverwritten: this.history.isOverwritten(entry),
+        });
         this.instructionsElement.appendChild(rowElement);
 
         if (this.lockPC && entry.address === this.registers.pc)
