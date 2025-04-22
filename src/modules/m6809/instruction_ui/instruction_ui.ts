@@ -250,7 +250,7 @@ class InstructionUI implements IModule {
     return disass.bytes.length;
   };
 
-  #disassemblePast = async (start: number, num: number): Promise<HTMLElement[]> => {
+  #disassemblePast = async (start: number, num: number, stop = 0): Promise<HTMLElement[]> => {
     if (!this.instructionsElement || !this.registers) return [];
     // To disassemble in the past, we will start from the given address
     // and go backwards. We will be greedy, meaning
@@ -278,6 +278,9 @@ class InstructionUI implements IModule {
       // If we have not succeeded, we stop.
       if (largestSuccess == null) break;
 
+      // If the instruction goes past the stop address, we stop.
+      if (largestSuccess.startAddress < stop) break;
+
       // If we have succeeded, we add the instruction to the panel.
       const rowElement = this.#createBasicRowElement();
       await this.populateRow(
@@ -300,31 +303,36 @@ class InstructionUI implements IModule {
 
   #disassembleFuture = async (
     start: number,
-    stop: { address: number } | { number: number },
-  ): Promise<HTMLElement[]> => {
-    if (!this.instructionsElement || !this.registers) return [];
+    stop: { address?: number; number?: number },
+  ): Promise<[HTMLElement[], number]> => {
+    if (!this.instructionsElement || !this.registers) return [[], -1];
 
     const elements: HTMLElement[] = [];
+    let lastAddress = -1;
     let addr = start;
-    for (let i = 0; "number" in stop ? i < stop.number : addr < stop.address; i++) {
+    for (
+      let i = 0;
+      (!stop.number || i < stop.number) && (!stop.address || addr < stop.address);
+      i++
+    ) {
       const disass = await this.cache.getOrGenerate(addr);
 
-      // TODO: Maybe add an optional parameter to the decompileInstruction function
-      // that allows us to stop at a certain address (and that fails if it's too
-      // short).
-
       // If the instruction takes more bytes than we have left, we stop.
-      if ("address" in stop && addr + disass.bytes.length > stop.address) break;
+      if (stop.address && addr + disass.bytes.length > stop.address) break;
+
+      if (disass.failed) break;
 
       const rowElement = this.#createBasicRowElement();
       await this.populateRow(rowElement, disass, disass.startAddress === this.registers.pc);
       this.instructionsElement.appendChild(rowElement);
       elements.push(rowElement);
 
+      lastAddress = disass.startAddress + disass.bytes.length;
+
       addr += disass.bytes.length;
     }
 
-    return elements;
+    return [elements, lastAddress];
   };
 
   #createBasicRowElement = (): HTMLDivElement => {
@@ -384,12 +392,11 @@ class InstructionUI implements IModule {
     // The panel starts at the cache start address, and ends at the cache end
     // address.
 
-    // TODO: Make sure that, when speculatively disassembling, we don't disassemble
-    // the same memory address twice!
     // TODO: Make it so disassembling in the future stops on the first failed
-    // disassembly, and then, disassemblePast in the next group correctly
+    // disassembly(done), and then, disassemblePast in the next group correctly
     // disassembles until the last successful disassembly.
     const groups = this.history.getAllConsecutiveEntryGroups(true);
+    let lastAddress = -1;
     for (let i = 0; i < groups.length; i++) {
       let firstElement: HTMLElement | undefined;
       let lastElement: HTMLElement | undefined;
@@ -402,6 +409,7 @@ class InstructionUI implements IModule {
         const elements = await this.#disassemblePast(
           groups[i].entries[0].address,
           this.config.lines / 2,
+          lastAddress,
         );
         firstElement = elements[0];
         lastElement = elements[elements.length - 1];
@@ -424,14 +432,21 @@ class InstructionUI implements IModule {
           rowElement.scrollIntoView({ block: "nearest", inline: "nearest" });
         if (firstElement === undefined) firstElement = rowElement;
         lastElement = rowElement;
+        lastAddress = entry.disass.startAddress + entry.disass.bytes.length;
       }
 
       // We disassemble instructions from the current group start forwards (
       // overwriting if already disassembled), at a maximum of this.config.lines
-      // instructions.
-      const futures = await this.#disassembleFuture(end, { number: this.config.lines });
+      // instructions or until we reach the start address of the next group (if
+      // there's a next group).
+      const nextGroupStart = groups[i + 1]?.entries[0].address;
+      const [futures, lastFutureAddr] = await this.#disassembleFuture(end, {
+        number: this.config.lines,
+        address: nextGroupStart,
+      });
       if (futures.length > 0) {
         lastElement = futures[futures.length - 1];
+        lastAddress = lastFutureAddr;
       }
 
       if (firstElement) firstElement.classList.add("first-in-group");
