@@ -18,6 +18,7 @@ import {
   eqDecompilation,
   generateInstructionElement,
   generateRowData,
+  getSymbolicAddress,
 } from "../cpu/decompile.js";
 import { InstructionCache } from "./instruction_ui/inst_cache.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
@@ -62,6 +63,7 @@ class InstructionUI implements IModule {
   updateQueue: UpdateQueue<Registers>;
   cache: InstructionCache;
   lockPC: boolean;
+  symbols: [string, number][] = [];
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -78,6 +80,8 @@ class InstructionUI implements IModule {
           "ui:breakpoint:remove": this.onBreakpointRemove,
           "memory:write": this.onMemoryWrite,
           "ui:memory:write": this.onMemoryWrite,
+          "dbg:symbol:add": this.onAddSymbol,
+          "dbg:symbol:clear": this.onClearSymbols,
         },
       },
     };
@@ -214,9 +218,31 @@ class InstructionUI implements IModule {
     this.modificationNumber = 0;
   };
 
-  formatAddress(data: number): string {
+  onAddSymbol = (symbol: string, address: number): void => {
+    if (!this.instructionsElement) return;
+
+    console.log(`[${this.id}] Adding symbol ${symbol} at ${address.toString(16)}`);
+    this.symbols.push([symbol, address]);
+    this.updateQueue.queueUpdate();
+  };
+  onClearSymbols = (): void => {
+    if (!this.instructionsElement) return;
+
+    this.symbols = [];
+    this.updateQueue.queueUpdate();
+  };
+
+  formatAddress = (data: number, useSymbols = false): string => {
+    // If we have symbols, we will use them to display the address.
+    // Otherwise, we will use the address.
+    if (useSymbols && this.symbols.length > 0) {
+      const [symbol, offset] = getSymbolicAddress(this.symbols, data);
+      if (symbol) {
+        return `${symbol}${offset ? `+${offset.toString(16).padStart(2, "0")}` : ""}`;
+      }
+    }
     return data.toString(16).padStart(4, "0");
-  }
+  };
 
   history: InstructionHistory = new InstructionHistory();
   breakpoints: number[] = [];

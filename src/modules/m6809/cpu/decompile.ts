@@ -20,6 +20,8 @@ import { parseStackPostbyte } from "../cpu/instructions/stack.js";
 // we assume this _read_ function reads big-endian, and reads 1 byte by default.
 export type ReadFunction = (address: number, bytes?: number) => Promise<number>;
 
+export type Symbol = [string, number];
+
 type DisassIdxAddressingResult = {
   bytes: number[];
   // The number of bytes read from the PC
@@ -328,11 +330,36 @@ export function generateInstructionElement(
   extraElement.innerText = row.ok ? row.extra : "???";
 }
 
+/**
+ * Given a sorted list of symbols, return the symbol+offset for the given
+ * address.  Doesn't give negative offsets.
+ * @param address The address to get the symbol for.
+ * @param symbols The list of symbols to search.
+ * @returns
+ */
+export function getSymbolicAddress(
+  symbols: Symbol[],
+  address: number,
+): [string, number] | [undefined, undefined] {
+  // We find the symbol that is closest to the address, but not greater than it.
+
+  for (let i = symbols.length - 1; i >= 0; i--) {
+    const [symbol, symbolAddress] = symbols[i];
+    if (symbolAddress <= address) {
+      const offset = address - symbolAddress;
+      return [symbol, offset];
+    }
+  }
+
+  // If we didn't find a symbol, return undefined, undefined.
+  return [undefined, undefined];
+}
+
 export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
-  formatAddress: (data: number) => string,
+  formatAddress: (data: number, useSymbols?: boolean) => string,
 ): AllInstructionRowData {
-  const address = formatAddress(decompiled.startAddress);
+  const address = formatAddress(decompiled.startAddress, true);
   const raw = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
 
   if (decompiled.failed) {
@@ -372,7 +399,7 @@ export function generateRowData(
       }
       case "direct":
         data += ` 0x${addressing.low}`;
-        extra += ` <${formatAddress(addressing.address)}>`;
+        extra += ` <${formatAddress(addressing.address, false)}>`;
         break;
       case "indexed": {
         let idxStr = " ";
@@ -390,7 +417,7 @@ export function generateRowData(
           case IndexedAction.OffsetPC16: {
             const offset = intNToNumber(result.offset, 16);
             idxStr += `${offset >= 0 ? "+" : ""}${offset}`;
-            extra += ` <${formatAddress(result.effectiveAddress)}>`;
+            extra += ` <${formatAddress(result.effectiveAddress, false)}>`;
             break;
           }
           case IndexedAction.OffsetA:
@@ -421,13 +448,13 @@ export function generateRowData(
         break;
       }
       case "extended":
-        data += ` <${formatAddress(addressing.address)}>`;
+        data += ` <${formatAddress(addressing.address, false)}>`;
         break;
       case "relative": {
         // NOTE: Convert the relative address to a signed number for display.
         const offset = intNToNumber(addressing.offset, 8);
         data += ` pc${offset >= 0 ? "+" : ""}${offset}`;
-        extra += ` <${formatAddress(addressing.address)}>`;
+        extra += ` <${formatAddress(addressing.address, false)}>`;
         break;
       }
     }
