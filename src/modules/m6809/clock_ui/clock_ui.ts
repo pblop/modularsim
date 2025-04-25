@@ -50,11 +50,14 @@ class ClockUI implements IModule {
   config: ClockUIConfig;
 
   panel?: HTMLElement;
+
+  updateFn?: (changes: Partial<ClockUIState>) => void;
+  // State variables
   state: ClockUIState;
 
   language!: string;
   localeStrings!: typeof ClockUIStrings.en;
-  updateQueue: UpdateQueue<Partial<ClockUIState>>;
+  updateQueue?: UpdateQueue;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -91,14 +94,12 @@ class ClockUI implements IModule {
     this.event_transceiver = eventTransceiver;
 
     this.config = verifyClockUIConfig(config);
-
     this.state = {
       machineState: "stopped",
       lastCycleTime: 0,
       cycles: 0,
     };
 
-    this.updateQueue = new UpdateQueue(this.refreshUI);
     console.log(`[${this.id}] Module initialized.`);
   }
 
@@ -109,7 +110,7 @@ class ClockUI implements IModule {
 
   onCycleStart = (): void => {
     // console.log(`[${this.id}] Clock cycle started`);
-    this.setState({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
+    this.updateFn?.({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
   };
 
   onClockPaused = (ctx: EventContext): void => {
@@ -117,87 +118,8 @@ class ClockUI implements IModule {
     // sync with the rest of the system).
     if (ctx.emitter === this.id) return;
 
-    this.setState({ machineState: "paused" });
+    this.updateFn?.({ machineState: "paused" });
   };
-
-  setState(stateChange: Partial<ClockUIState>): void {
-    Object.assign(this.state, stateChange);
-    this.updateQueue.queueUpdate(stateChange);
-  }
-
-  refreshUI = (changes: Partial<ClockUIState>[]): void => {
-    this.draw(Object.assign({}, ...changes));
-  };
-
-  draw(changes?: Partial<ClockUIState>): void {
-    if (this.panel == null) return;
-
-    if (!changes || "machineState" in changes) {
-      const main = this.panel.querySelector(".clock-main");
-      if (main == null) return; // This should never happen.
-      main.innerHTML = "";
-
-      if (this.state.machineState === "running" || this.state.machineState === "instruction_run") {
-        main.appendChild(
-          iconButton("pause", this.localeStrings.pause, () => {
-            this.event_transceiver.emit("ui:clock:pause");
-            this.setState({ machineState: "paused" });
-          }),
-        );
-      }
-
-      if (this.state.machineState === "paused") {
-        main.appendChild(
-          iconButton("continue", this.localeStrings.continue, () => {
-            this.event_transceiver.emit("ui:clock:start");
-            this.setState({ machineState: "running" });
-          }),
-        );
-        main.appendChild(
-          iconButton("step-cycle", this.localeStrings.stepCycle, () => {
-            this.event_transceiver.emit("ui:clock:step_cycle");
-          }),
-        );
-        main.appendChild(
-          iconButton("step-instruction", this.localeStrings.stepInstruction, () => {
-            this.event_transceiver.emit("ui:clock:step_instruction");
-            this.setState({ machineState: "instruction_run" });
-          }),
-        );
-      }
-
-      if (this.state.machineState === "paused" || this.state.machineState === "stopped") {
-        main.appendChild(
-          iconButton("reset", this.localeStrings.reset, () => {
-            this.event_transceiver.emit("signal:reset");
-            this.setState({ machineState: "paused", cycles: 0 });
-          }),
-        );
-        main.appendChild(
-          iconButton("fast-reset", this.localeStrings.fastReset, () => {
-            this.event_transceiver.emit("signal:reset");
-            this.setState({ machineState: "fast_reset", cycles: 0 });
-            this.event_transceiver.emit("ui:clock:fast_reset");
-          }),
-        );
-      }
-    }
-
-    if (changes && "lastCycleTime" in changes) {
-      const marker = this.panel.querySelector(".clock-marker") as HTMLElement;
-      if (marker == null) return; // This should never happen.
-      if (!marker.classList.contains(".clock-animation")) marker.classList.add("clock-animation");
-
-      marker.style.animation = "none";
-      marker.offsetHeight; // Trigger reflow
-      marker.style.animation = "";
-    }
-    if (changes && "cycles" in changes) {
-      const cycles = this.panel.querySelector(".clock-cycle-counter") as HTMLElement;
-      if (cycles == null) return; // This should never happen.
-      cycles.textContent = `${this.state.cycles}`;
-    }
-  }
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
     if (panel_id !== this.id) return;
@@ -208,33 +130,200 @@ class ClockUI implements IModule {
 
     this.setLanguage(language);
 
-    this.panel.appendChild(element("div", { className: "clock-main" }));
-    this.panel.appendChild(
-      element(
-        "div",
-        {
-          className: "clock-extra",
-        },
-        element("div", { className: "clock-marker gui-icon heartbeat" }),
-        element(
-          "div",
-          { className: "clock-cycle-counter-container" },
-          element("div", { className: "gui-icon cycle-counter" }),
-          element("div", { className: "clock-cycle-counter", textContent: "0" }),
-        ),
-      ),
+    this.initUI();
+  };
+
+  createFrag(): HTMLTemplateElement {
+    const frag = document.createElement("template");
+    frag.innerHTML = `
+      <div class="clock-main">
+
+      </div>
+      <div class="clock-extra">
+        <div class="clock-marker gui-icon heartbeat"></div>
+        <div class="clock-cycle-counter-container">
+          <div class="gui-icon cycle-counter"></div>
+          <div class="clock-cycle-counter">0</div>
+        </div>
+      </div>
+    `;
+    const main = frag.content.querySelector(".clock-main")!;
+    main.appendChild(
+      iconButton("pause", this.localeStrings.pause, () => {
+        this.event_transceiver.emit("ui:clock:pause");
+        this.updateFn!({ machineState: "paused" });
+      }),
+    );
+    main.appendChild(
+      iconButton("continue", this.localeStrings.continue, () => {
+        this.event_transceiver.emit("ui:clock:start");
+        this.updateFn!({ machineState: "running" });
+      }),
+    );
+    main.appendChild(
+      iconButton("step-cycle", this.localeStrings.stepCycle, () => {
+        this.event_transceiver.emit("ui:clock:step_cycle");
+      }),
+    );
+    main.appendChild(
+      iconButton("step-instruction", this.localeStrings.stepInstruction, () => {
+        this.event_transceiver.emit("ui:clock:step_instruction");
+        this.updateFn!({ machineState: "instruction_run" });
+      }),
+    );
+    main.appendChild(
+      iconButton("reset", this.localeStrings.reset, () => {
+        this.event_transceiver.emit("signal:reset");
+        this.updateFn!({ machineState: "paused", cycles: 0 });
+      }),
+    );
+    main.appendChild(
+      iconButton("fast-reset", this.localeStrings.fastReset, () => {
+        this.event_transceiver.emit("signal:reset");
+        this.updateFn!({ machineState: "fast_reset", cycles: 0 });
+        this.event_transceiver.emit("ui:clock:fast_reset");
+      }),
     );
 
-    this.draw();
-  };
+    return frag;
+  }
+
+  initUI() {
+    const frag = this.createFrag();
+
+    const pauseButton = frag.content.querySelector("button:has(.pause)")! as HTMLElement;
+    const continueButton = frag.content.querySelector("button:has(.continue)")! as HTMLElement;
+    const stepCycleButton = frag.content.querySelector("button:has(.step-cycle)")! as HTMLElement;
+    const stepInstructionButton = frag.content.querySelector(
+      "button:has(.step-instruction)",
+    )! as HTMLElement;
+    const resetButton = frag.content.querySelector("button:has(.reset)")! as HTMLElement;
+    const fastResetButton = frag.content.querySelector("button:has(.fast-reset)")! as HTMLElement;
+
+    const cycleCounter = frag.content.querySelector(".clock-cycle-counter")! as HTMLElement;
+    const marker = frag.content.querySelector(".clock-marker")! as HTMLElement;
+
+    const visibleButtons = [true, true, true, true, true, true];
+    function setPauseVisible(visible: boolean) {
+      if (visibleButtons[0] === visible) return;
+      visibleButtons[0] = visible;
+      pauseButton.style.display = visible ? "" : "none";
+    }
+    function setContinueVisible(visible: boolean) {
+      if (visibleButtons[1] === visible) return;
+      visibleButtons[1] = visible;
+      continueButton.style.display = visible ? "" : "none";
+    }
+    function setStepCycleVisible(visible: boolean) {
+      if (visibleButtons[2] === visible) return;
+      visibleButtons[2] = visible;
+      stepCycleButton.style.display = visible ? "" : "none";
+    }
+    function setStepInstructionVisible(visible: boolean) {
+      if (visibleButtons[3] === visible) return;
+      visibleButtons[3] = visible;
+      stepInstructionButton.style.display = visible ? "" : "none";
+    }
+    function setResetVisible(visible: boolean) {
+      if (visibleButtons[4] === visible) return;
+      visibleButtons[4] = visible;
+      resetButton.style.display = visible ? "" : "none";
+    }
+    function setFastResetVisible(visible: boolean) {
+      if (visibleButtons[5] === visible) return;
+      visibleButtons[5] = visible;
+      fastResetButton.style.display = visible ? "" : "none";
+    }
+
+    let currentState = "";
+    const setStoppedState = () => {
+      if (currentState === "stopped") return;
+      setPauseVisible(false);
+      setContinueVisible(false);
+      setStepCycleVisible(false);
+      setStepInstructionVisible(false);
+      setResetVisible(true);
+      setFastResetVisible(true);
+      currentState = "stopped";
+    };
+    const setRunningState = () => {
+      if (currentState === "running") return;
+      setPauseVisible(true);
+      setContinueVisible(false);
+      setStepCycleVisible(false);
+      setStepInstructionVisible(false);
+      setResetVisible(false);
+      setFastResetVisible(false);
+      currentState = "running";
+    };
+    const setPausedState = () => {
+      if (currentState === "paused") return;
+      setPauseVisible(false);
+      setContinueVisible(true);
+      setStepCycleVisible(true);
+      setStepInstructionVisible(true);
+      setResetVisible(true);
+      setFastResetVisible(true);
+      currentState = "paused";
+    };
+
+    let cycleCountValue = 0;
+    const setCycleCount = (value: number) => {
+      if (cycleCountValue !== value) {
+        cycleCountValue = value;
+        cycleCounter.textContent = `${cycleCountValue}`;
+      }
+    };
+
+    let markerHasAnimation = false;
+    let lastCycleTime = 0;
+    const tickAnimation = () => {
+      if (this.state.lastCycleTime !== lastCycleTime) {
+        if (!markerHasAnimation) {
+          marker.classList.add("clock-animation");
+          markerHasAnimation = true;
+        }
+
+        marker.style.animation = "none";
+        marker.offsetHeight; // Trigger reflow
+        marker.style.animation = "";
+        lastCycleTime = this.state.lastCycleTime;
+      }
+    };
+
+    const internalUpdateFn = () => {
+      if (this.state.machineState === "running" || this.state.machineState === "instruction_run")
+        setRunningState();
+      else if (this.state.machineState === "paused") setPausedState();
+      else if (this.state.machineState === "stopped") setStoppedState();
+
+      setCycleCount(this.state.cycles);
+      tickAnimation();
+    };
+    this.updateQueue = new UpdateQueue(internalUpdateFn);
+    this.updateFn = (data: Partial<ClockUIState>) => {
+      if (data.machineState) this.state.machineState = data.machineState;
+      if (data.cycles) this.state.cycles = data.cycles;
+      if (data.lastCycleTime) this.state.lastCycleTime = data.lastCycleTime;
+
+      this.updateQueue!.queueUpdate();
+    };
+
+    this.state.machineState = "stopped";
+    this.state.cycles = 0;
+    this.state.lastCycleTime = 0;
+    internalUpdateFn();
+
+    this.panel?.appendChild(frag.content);
+  }
 
   onInstructionFinish = (): void => {
     if (this.state.machineState !== "instruction_run") return;
-    this.setState({ machineState: "paused" });
+    this.updateFn?.({ machineState: "paused" });
   };
   onResetFinish = (): void => {
     if (this.state.machineState !== "fast_reset") return;
-    this.setState({ machineState: "paused" });
+    this.updateFn?.({ machineState: "paused" });
   };
 }
 
