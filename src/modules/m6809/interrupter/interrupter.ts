@@ -197,7 +197,7 @@ class Interrupter implements IModule {
       this.simulation,
       this.config.multiplexer,
       99,
-      "ui:memory:read:result",
+      "memory:read:result",
       address,
       this.getRegisterMap(address),
     );
@@ -208,8 +208,8 @@ class Interrupter implements IModule {
     emitTimedMultiplexedEvent(
       this.simulation,
       this.config.multiplexer,
-      0,
-      "ui:memory:write:result",
+      99,
+      "memory:write:result",
       address,
       data,
     );
