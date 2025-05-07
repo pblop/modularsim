@@ -44,6 +44,12 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "cpu:function": [pc: number, registers: Registers];
   "cpu:function:result": [pc: number, newRegisters: Registers];
 
+  // PIA6820 events.
+  "pia6820:ca": [num: number];
+  "pia6820:cb": [num: number];
+  "pia6820:data_a": [data: number];
+  "pia6820:data_b": [data: number];
+
   // UI events.
   "ui:clock:pause": [];
   "ui:clock:start": [];
@@ -175,7 +181,7 @@ export interface TypedEventTransceiver {
  */
 export type EventDeclarationListeners = Partial<{
   [B in EventBaseName]: {
-    [K in EventName<B>]?: EventCallback<B> | null;
+    [K in EventName]?: EventCallback<B> | null;
   }[EventName<B>];
 }>;
 export type EventDeclaration = {

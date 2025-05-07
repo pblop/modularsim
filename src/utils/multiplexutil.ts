@@ -40,8 +40,8 @@ export function toMultiplexedProvideds(
  * @param requiredMemoryEvents The object of required memory events
  * (e.g. \\{ "memory:read": callback }) the module is interested in providing a
  * multiplexed version of.
- * @param multiplexer The name of the multiplexer to use. If not provided,
- * the provided events will be returned as-is.
+ * @param multiplexer The name of the multiplexer to use (or whether to use
+ * one). If not provided or fasly, the provided events will be returned as-is.
  * @param id The id of the module.
  * @returns The object of required/optional memory events where the event names
  * are multiplexed with the provided multiplexer name.
@@ -49,7 +49,7 @@ export function toMultiplexedProvideds(
 export function toMultiplexedListeners(
   requiredMemoryEvents: EventDeclarationListeners,
   id: string,
-  multiplexer: string | undefined,
+  multiplexer: unknown,
 ) {
   return Object.fromEntries(
     Object.entries(requiredMemoryEvents).map(([event, callback]) => [
@@ -101,6 +101,18 @@ export function emitTimedMultiplexedEvent<E extends EventBaseName>(
   ...args: EventParams<E>
 ) {
   simulation.onceCycle(() => emitMultiplexedEvent(simulation, multiplexer, baseEvent, ...args), {
+    offset: 0,
+    subcycle: subcycle,
+  });
+}
+
+export function emitTimed(
+  simulation: SimulationModuleInteraction,
+  subcycle: number,
+  event: EventName,
+  ...args: EventParams<EventBaseName>
+) {
+  simulation.onceCycle(() => simulation.emit(event, ...args), {
     offset: 0,
     subcycle: subcycle,
   });
