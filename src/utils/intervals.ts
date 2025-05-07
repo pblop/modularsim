@@ -169,8 +169,7 @@ function intervalTimer<A extends unknown[]>(
       const timeBetweenCalls = intervalStartTime - lastIntervalEndTime;
 
       if (timeBetweenCalls > 0) {
-        console.warn(`Interval called too late: ${timeBetweenCalls}ms, when it should be 0ms`);
-
+        // console.warn(`Interval called too late: ${timeBetweenCalls}ms, when it should be 0ms`);
         // If we've been called too late, we want to add more calls per batch
         // to make up for the time lost.
       }
@@ -195,9 +194,9 @@ function intervalTimer<A extends unknown[]>(
       // allow the browser to do other stuff (like rendering).
       const timeInBatch = now - intervalStartTime;
       if (timeInBatch > BATCH_TIME) {
-        console.warn(
-          `Interval took too long: ${timeInBatch}ms > ${BATCH_TIME}ms, ${(i / callsPerBatch) * 100}% done`,
-        );
+        // console.warn(
+        //   `Interval took too long: ${timeInBatch}ms > ${BATCH_TIME}ms, ${(i / callsPerBatch) * 100}% done`,
+        // );
         isTooSlow = true;
         break;
       }
