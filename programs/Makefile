@@ -6,9 +6,14 @@ ASFLAGS =
 LINK = aslink
 LINKFLAGS =
 
-# test files exclude interrupt and loop (not meant to be tested in the
+# test files exclude interrupt, loop and hlife (not meant to be tested in the
 # simulator)
-TEST_FILES := $(foreach S,$(wildcard *.asm),$(if $(findstring interrupt,$(S)),,$(if $(findstring loop,$(S)),,$(S))))
+TEST_FILES := $(foreach S,$(wildcard *.asm),\
+								$(if $(findstring interrupt,$(S)),,\
+								$(if $(findstring loop,$(S)),,\
+								$(if $(findstring hlife,$(S)),,\
+								$(S))))\
+							)
 
 all: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.s19,$(wildcard *.asm)) $(patsubst %.asm,%.noi,$(wildcard *.asm))
 test: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.json,$(TEST_FILES))
@@ -32,6 +37,8 @@ test: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.json,$(TEST_F
 # Debug symbols
 %.noi: %.rel
 	$(LINK) $(LINKFLAGS) -j $<
+%.map: %.rel
+	$(LINK) $(LINKFLAGS) -w -m $<
 %.cdb: %.rel # this one isn't implemented
 	$(LINK) $(LINKFLAGS) -y $<
 
