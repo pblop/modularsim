@@ -63,6 +63,15 @@ class InstructionUI implements IModule {
   config: InstructionUIConfig;
 
   registers?: Registers;
+  // The initial registers store the first set of registers that the CPU gives
+  // us after the first reset. This way, we can show the initial state of the
+  // CPU after the second reset.
+  initialRegisters?: Registers;
+  // The initial address is:
+  // - if autoPosition is set, at first, the address that the CPU will start
+  //   executing instructions from.
+  // - after the first reset, the value of the PC register.
+  initialAddress?: number;
 
   panel?: HTMLElement;
   instructionsElement?: HTMLElement;
@@ -158,7 +167,8 @@ class InstructionUI implements IModule {
     this.lockPC = false;
 
     if (this.config.initialPosition !== undefined) {
-      this.setInitialPosition(this.config.initialPosition);
+      this.initialAddress = this.config.initialPosition;
+      this.setInitialPosition();
     }
 
     console.log(`[${this.id}] Memory Initializing module.`);
@@ -237,17 +247,32 @@ class InstructionUI implements IModule {
         const iFFFF = 0xffff - dataStart;
         const resetVector = (data[iFFFE] << 8) | data[iFFFF];
 
-        this.setInitialPosition(resetVector);
+        this.initialAddress = resetVector;
+        this.setInitialPosition();
       }
     }
   };
 
-  setInitialPosition = (pc: number): void => {
-    // NOTE: This is a bit hacky, but I am assuming that all the registers'
-    // initial values are 0 (for the purpose of providing extra disassembly
-    // context).
-    this.registers = new Registers(0, 0, 0, 0, 0, 0, 0, pc);
-    this.updateQueue.queueUpdate(this.registers);
+  setInitialPosition = (): void => {
+    if (!this.initialRegisters) {
+      if (this.initialAddress !== undefined) {
+        // NOTE: This is a bit hacky, but I am assuming that all the registers'
+        // initial values are 0 (for the purpose of providing extra disassembly
+        // context).
+        this.registers = new Registers(0, 0, 0, 0, 0, 0, 0, this.initialAddress);
+        this.updateQueue.queueUpdate(this.registers);
+      }
+      // If the initial address is not set, we don't have any way to know the
+      // initial position of the CPU, so we don't do anything.
+    } else {
+      // NOTE: This is also a bit hacky, because we assume that the initial
+      // registers after the first reset are the same as the initial
+      // registers after the second reset. This might not be true. In the case
+      // of the M6809, if the reset vector is modified during execution. This
+      // will not hold.
+      this.registers = this.initialRegisters.copy();
+      this.updateQueue.queueUpdate(this.registers);
+    }
   };
 
   addNewPcToPanel = async (registers: Registers, pc: number): Promise<void> => {
@@ -275,6 +300,14 @@ class InstructionUI implements IModule {
     const oldRegs = this.registers;
     this.registers = registers.copy();
 
+    // When the registers are updated for the first time, we set the initial
+    // registers and address, so that, when the user resets the CPU, we can
+    // show the initial state that it will reset to.
+    if (oldRegs === undefined) {
+      this.initialRegisters = registers;
+      this.initialAddress = registers.pc;
+    }
+
     // If the PC hasn't changed, we don't need to update the panel.
     if (oldRegs !== undefined && oldRegs.pc === this.registers.pc) return;
 
@@ -292,6 +325,8 @@ class InstructionUI implements IModule {
     this.history.clear();
     this.cache.clear();
     this.modificationNumber = 0;
+
+    this.setInitialPosition();
   };
 
   onAddSymbol = (symbol: string, address: number): void => {
