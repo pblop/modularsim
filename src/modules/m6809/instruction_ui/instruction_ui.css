@@ -96,6 +96,8 @@
        * A padding works well enough */
       /* flex-basis: 10%; */ 
       padding-right: 1em;
+      min-width: var(--instruction-ui-address-size, auto);
+      text-align: right;
     }
     .address.breakpoint {
       --current-bg: var(--gui-color-red-background);

@@ -25,6 +25,8 @@ import { InstructionHistory } from "./instruction_ui/inst_history.js";
 
 type InstructionUIConfig = {
   lines: number;
+  symbols: boolean;
+  maxSymbolLength: number;
 };
 
 const InstructionUIStrings = createLanguageStrings({
@@ -102,6 +104,14 @@ class InstructionUI implements IModule {
         type: "number",
         default: 15,
       },
+      symbols: {
+        type: "boolean",
+        default: true,
+      },
+      maxSymbolLength: {
+        type: "number",
+        default: 10,
+      },
     });
 
     this.modificationNumber = 0;
@@ -154,6 +164,11 @@ class InstructionUI implements IModule {
 
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
+
+    const addressSize = this.config.symbols
+      ? this.config.maxSymbolLength + 5 // symbol + "+" + hex addresses
+      : 4; // 4 hex digits
+    this.panel.style.setProperty("--instruction-ui-address-size", `${addressSize}ch`);
 
     this.setLanguage(language);
 
@@ -235,10 +250,11 @@ class InstructionUI implements IModule {
   formatAddress = (data: number, useSymbols = false): string => {
     // If we have symbols, we will use them to display the address.
     // Otherwise, we will use the address.
-    if (useSymbols && this.symbols.length > 0) {
+    if (this.config.symbols && useSymbols && this.symbols.length > 0) {
       const [symbol, offset] = getSymbolicAddress(this.symbols, data);
       if (symbol) {
-        return `${symbol}+${offset.toString(16).padStart(2, "0")}`;
+        const truncatedSymbol = symbol.slice(0, this.config.maxSymbolLength);
+        return `${truncatedSymbol}+${offset.toString(16).padStart(2, "0")}`;
       }
     }
     return data.toString(16).padStart(4, "0");
