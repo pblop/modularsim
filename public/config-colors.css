@@ -1,4 +1,4 @@
-.gui-root {
+.gui-root, [data-color-scheme="dark"] .gui-root, .gui-root[data-color-scheme="dark"] {
   --gui-color-background: #1e1e1e;
   --gui-color-foreground-dark: #555555;
   --gui-color-highlight: #4e4e4e;
@@ -10,6 +10,16 @@
   --gui-color-green-background: hsl(120, 74%, 27%);
   --gui-color-blue-background: hsl(195, 53%, 49%);
   --gui-color-yellow-background: hsl(60, 100%, 64%);
+}
+[data-color-scheme="light"] .gui-root, .gui-root[data-color-scheme="light"] {
+  --gui-color-background: #ffffff;
+  --gui-color-foreground-dark: #555555;
+  --gui-color-highlight: #f0f0f0;
+  --gui-color-border: #d4d4d4;
+  --gui-color-text: #111111;
+  --gui-color-text-blue: #0000ff;
+
+  --gui-color-yellow-background: hsl(60, 68%, 53%);
 }
 @media (prefers-color-scheme: light) {
   .gui-root {
