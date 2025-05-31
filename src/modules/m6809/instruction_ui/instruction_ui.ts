@@ -387,6 +387,7 @@ class InstructionUI implements IModule {
       let largestSuccess: DecompiledInstruction | null = null;
       for (let size = 1; size <= 5; size++) {
         const newAddr = addr - size;
+        if (newAddr < stop) break;
         const decompiled = await this.cache.getOrGenerate(newAddr);
         if (decompiled.failed || decompiled.bytes.length !== size) continue;
 
@@ -514,7 +515,7 @@ class InstructionUI implements IModule {
     // disassembly(done), and then, disassemblePast in the next group correctly
     // disassembles until the last successful disassembly.
     const groups = this.history.getAllConsecutiveEntryGroups(true);
-    let lastAddress = -1;
+    let lastAddress = 0;
     for (let i = 0; i < groups.length; i++) {
       let firstElement: HTMLElement | undefined;
       let lastElement: HTMLElement | undefined;
