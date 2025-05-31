@@ -26,15 +26,15 @@ export class Registers {
   S: number;
   pc: number;
 
-  constructor() {
-    this.dp = -1;
-    this.cc = -1;
-    this.D = -1;
-    this.X = -1;
-    this.Y = -1;
-    this.U = -1;
-    this.S = -1;
-    this.pc = -1;
+  constructor(dp = -1, cc = -1, D = -1, X = -1, Y = -1, U = -1, S = -1, pc = -1) {
+    this.dp = dp;
+    this.cc = cc;
+    this.D = D;
+    this.X = X;
+    this.Y = Y;
+    this.U = U;
+    this.S = S;
+    this.pc = pc;
   }
 
   get A() {

@@ -157,6 +157,10 @@ class InstructionUI implements IModule {
     );
     this.lockPC = false;
 
+    if (this.config.initialPosition !== undefined) {
+      this.setInitialPosition(this.config.initialPosition);
+    }
+
     console.log(`[${this.id}] Memory Initializing module.`);
   }
 
@@ -224,7 +228,7 @@ class InstructionUI implements IModule {
   };
 
   onMemoryBulkWriteResult = (dataStart: number, data: Uint8Array): void => {
-    if (this.config.autoPosition === "m6809") {
+    if (this.config.autoPosition === "m6809" && this.registers === undefined) {
       // If the data contains the reset vector, we move the instruction UI
       // to that address.
 
@@ -233,10 +237,17 @@ class InstructionUI implements IModule {
         const iFFFF = 0xffff - dataStart;
         const resetVector = (data[iFFFE] << 8) | data[iFFFF];
 
-        this.registers = new Registers(0, 0, 0, 0, 0, 0, 0, resetVector);
-        this.updateQueue.queueUpdate(this.registers);
+        this.setInitialPosition(resetVector);
       }
     }
+  };
+
+  setInitialPosition = (pc: number): void => {
+    // NOTE: This is a bit hacky, but I am assuming that all the registers'
+    // initial values are 0 (for the purpose of providing extra disassembly
+    // context).
+    this.registers = new Registers(0, 0, 0, 0, 0, 0, 0, pc);
+    this.updateQueue.queueUpdate(this.registers);
   };
 
   addNewPcToPanel = async (registers: Registers, pc: number): Promise<void> => {
