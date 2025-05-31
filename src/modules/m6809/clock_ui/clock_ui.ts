@@ -34,7 +34,7 @@ const ClockUIStrings = createLanguageStrings({
     stepInstruction: "Step (1 instruction)",
     fastReset: "Fast reset",
     loadedProgram: "Loaded program: ",
-    none: "None",
+    none: "none",
   },
   es: {
     reset: "Reset",
@@ -44,7 +44,7 @@ const ClockUIStrings = createLanguageStrings({
     stepInstruction: "Paso (1 instrucción)",
     fastReset: "Reset rápido",
     loadedProgram: "Programa cargado: ",
-    none: "Ninguno",
+    none: "ninguno",
   },
 });
 
