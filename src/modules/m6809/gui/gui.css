@@ -19,6 +19,11 @@ button:hover {
   width: 100vw;
   padding: 1rem;
 
+  /* Make the position relative so that child elements can use absolute 
+   * positioning
+   */
+  position: relative;
+
   background-color: var(--gui-color-background);
   color: var(--gui-color-text);
 
