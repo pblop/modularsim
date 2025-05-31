@@ -1,0 +1,342 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/Profiles/xhtml1-strict.dtd">
+  <head>
+    <title>Computadores II - Primera sesi&oacute;n</title>
+  </head>
+  <body>
+    <center>
+      <h1>PR&Aacute;CTICAS DE COMPUTADORES II</h1>
+      <h2>PRIMERA SESI&Oacute;N</h2>
+    </center>
+    <hr />
+    <ol>
+      <li>
+        <h3>6809</h3>
+        <center><img src="6809.jpg" alt="CPU 6809" /></center>
+        El MC6809 es un procesador creado por Motorola en 1977 como
+        sustituci&oacute;n y mejora del 6800. Es un procesador de 8 bits, con
+        algunas caracter&iacute;sticas de 16 bits. Presenta como ventajas para
+        aprender ensamblador que:
+        <ul>
+          <li>
+            Es m&aacute;s sencillo que procesadores posteriores, lo que permite
+            centrarse en los conceptos b&aacute;sicos
+          </li>
+          <li>
+            Presenta un juego de instrucciones t&iacute;pico de los procesadores
+            CISC y altamente ortogonal
+          </li>
+          <li>
+            Tiene un conjunto muy extenso de modos de direccionamiento superando
+            incluso a procesadores posteriores
+          </li>
+          <li>
+            Las instrucciones de salto incluyen aritm&eacute;tica con y sin
+            signo de un modo directo
+          </li>
+          <li>
+            Permite la programaci&oacute;n de c&oacute;digo completamente
+            reubicable sin necesidad de modificaci&oacute;n alguna
+          </li>
+          <li>
+            Su lenguaje ensamblador es sencillo y m&aacute;s f&aacute;cil de
+            recordar que el de otros procesadores de su tiempo
+          </li>
+          <li>
+            Presenta algunas instrucciones de m&aacute;s alto nivel que lo usual
+            para un procesador de su categor&iacute;a como puede ser una
+            multiplicaci&oacute;n sin signo de dos operandos de 8 bits
+          </li>
+          <li>
+            Tiene dos registros &iacute;ndices y dos registros de pila, con
+            papeles altamente intercambiables
+          </li>
+        </ul>
+      </li>
+      <li>
+        <h3>Simulador 1</h3>
+        <div
+          style="
+            width: auto;
+            height: 50em;
+            border: 1px solid black;
+            margin: 0 auto;
+          "
+          id="simulador1"
+          data-color-scheme="light"></div>
+      </li>
+      <li>
+        <h3>Simulador 2</h3>
+        <div
+          style="
+            width: auto;
+            height: 50em;
+            border: 1px solid black;
+            margin: 0 auto;
+          "
+          data-color-scheme="light"
+          id="simulador2"></div>
+      </li>
+    </ol>
+    <hr />
+    &copy; 2025 Guillermo Gonzalez Talaván, pblop
+    <hr />
+    <script type="module">
+      import Controller from "/controller.js";
+
+      const basicConfig = {
+        simulator: {
+          // "url" es la ruta del archivo que contiene el simulador
+          url: "./modules/simulator.js",
+          modules: [
+            {
+              // "id" es un identificador único para cada módulo
+              id: "main_memory",
+              type: "memory",
+              // "url" es la ruta del archivo que contiene el módulo
+              url: "./modules/m6809/memory/memory.js",
+              config: {
+                multiplexer: "multiplexer",
+                size: 65536,
+                type: "ram",
+              },
+            },
+            {
+              id: "main_memory_ui",
+              type: "ui",
+              url: "./modules/m6809/infinite_memory_ui/memory_ui.js",
+              css: ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
+              config: {
+                size: "0x10000",
+                autoPosition: "m6809",
+              },
+            },
+            {
+              id: "gui",
+              type: "gui",
+              url: "./modules/m6809/gui/gui.js",
+              css: [
+                "./modules/m6809/gui/reset.css",
+                "./modules/m6809/gui/gui.css",
+                "./config-colors.css",
+              ],
+              config: {
+                language: "es",
+                panels: [
+                  {
+                    id: "register_ui",
+                    column: "1 / span 3",
+                    row: "1 / span 2",
+                  },
+                  {
+                    id: "instruction_ui",
+                    column: "1 / span 5",
+                    row: "3 / span 6",
+                  },
+                  {
+                    id: "main_memory_ui",
+                    column: "5 / span 3",
+                    row: "9 / span 6",
+                  },
+                  {
+                    id: "screen_ui",
+                    column: "1 / span 3",
+                    row: "9 / span 2",
+                  },
+                  {
+                    id: "breakpoint_ui",
+                    column: "4 / span 1",
+                    row: "9 / span 6",
+                  },
+                  {
+                    id: "clock_ui",
+                    column: "-3 / -1",
+                    row: "1 / span 2",
+                  },
+                ],
+              },
+            },
+            {
+              id: "clock",
+              type: "clock",
+              url: "./modules/m6809/clock/clock.js",
+              config: {
+                frequency: 10000000, // Hz
+              },
+            },
+            {
+              id: "clock_ui",
+              type: "ui",
+              url: "./modules/m6809/clock_ui/clock_ui.js",
+              css: ["./modules/m6809/clock_ui/clock_ui.css"],
+              config: {
+                frequency: 10000000,
+              },
+            },
+            {
+              id: "cpu",
+              type: "cpu",
+              url: "./modules/m6809/cpu/cpu.js",
+              config: {
+                // "functions": {
+                //   "0x8000": "myfunctionmodule"
+                // }
+              },
+            },
+            {
+              id: "loader",
+              type: "extra",
+              url: "./modules/m6809/loader/loader.js",
+              css: ["./modules/m6809/loader/loader.css"],
+              config: {
+                file: "./programs/recumples.s19",
+                symbolsFile: "./programs/recumples.noi",
+                // "file": "http://localhost:6809/programs/loop.bin"
+              },
+            },
+            {
+              id: "instruction_ui",
+              type: "ui",
+              url: "./modules/m6809/instruction_ui/instruction_ui.js",
+              css: ["./modules/m6809/instruction_ui/instruction_ui.css"],
+              config: {
+                symbols: true,
+                autoPosition: "m6809",
+              },
+            },
+            {
+              id: "breakpoint_ui",
+              type: "ui",
+              url: "./modules/m6809/breakpoint_ui/breakpoint_ui.js",
+              css: ["./modules/m6809/breakpoint_ui/breakpoint_ui.css"],
+              config: {},
+            },
+            {
+              id: "history_ui",
+              type: "ui",
+              url: "./modules/m6809/history_ui/history_ui.js",
+              css: ["./modules/m6809/history_ui/history_ui.css"],
+              config: {},
+            },
+            {
+              id: "screen_ui",
+              type: "ui",
+              url: "./modules/m6809/screen_ui/screen_ui.js",
+              css: ["./modules/m6809/screen_ui/screen_ui.css"],
+              config: {
+                multiplexer: "multiplexer",
+              },
+            },
+            {
+              id: "stopper",
+              type: "extra",
+              url: "./modules/m6809/stop/stop.js",
+              config: {
+                multiplexer: "multiplexer",
+              },
+            },
+            {
+              id: "register_ui",
+              type: "ui",
+              url: "./modules/m6809/register_ui/register_ui.js",
+              css: ["./modules/m6809/register_ui/register_ui.css"],
+              config: {
+                registers: {
+                  A: {
+                    bits: 8,
+                    mirror: {
+                      register: "D",
+                      mask: "0xFF00",
+                    },
+                  },
+                  B: {
+                    bits: 8,
+                    mirror: {
+                      register: "D",
+                      mask: "0x00FF",
+                    },
+                  },
+                  D: {
+                    bits: 16,
+                  },
+                  X: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  Y: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  U: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  S: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  pc: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  cc: {
+                    bits: 8,
+                    flags: ["E", "F", "H", "I", "N", "Z", "V", "C"],
+                  },
+                  dp: {
+                    bits: 8,
+                  },
+                },
+              },
+            },
+            {
+              id: "multiplexer",
+              type: "hw",
+              url: "./modules/m6809/multiplexer/multiplexer.js",
+              config: {
+                entries: [
+                  {
+                    start: "0xFF00",
+                    size: 1,
+                    module: "screen_ui",
+                    priority: 0,
+                  },
+                  {
+                    start: "0xFF01",
+                    size: 1,
+                    module: "stopper",
+                    priority: 0,
+                  },
+                  {
+                    start: "0x0",
+                    module: "main_memory",
+                    size: 65536,
+                    priority: 1,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      };
+
+      // Crea una instancia del controlador
+      const controller1 = new Controller();
+      const controller2 = new Controller();
+
+      const config1 = structuredClone(basicConfig);
+      config1.simulator.modules.find(
+        (m) => m.id === "gui"
+      ).config.root_selector = "#simulador1";
+      const config2 = structuredClone(basicConfig);
+      config2.simulator.modules.find(
+        (m) => m.id === "gui"
+      ).config.root_selector = "#simulador2";
+
+      controller1.init(config1);
+      window.controller1 = controller1;
+      controller2.init(config2);
+      window.controller2 = controller2;
+    </script>
+  </body>
+</html>
