@@ -46,7 +46,13 @@ class Loader implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["ui:memory:write", "ui:memory:bulk:write", "dbg:symbol:add", "dbg:symbol:clear"],
+        provided: [
+          "ui:memory:write",
+          "ui:memory:bulk:write",
+          "dbg:symbol:add",
+          "dbg:symbol:clear",
+          "dbg:program:loaded",
+        ],
         required: {
           "gui:panel_created": this.onPanelCreated,
           "system:load_finish": this.onLoadFinish,
@@ -207,7 +213,12 @@ class Loader implements IModule {
           this.evt.emit("ui:memory:bulk:write", address, data);
         }
       }
+    } else {
+      throw new Error(`[${this.id}] Invalid file type: ${fileType}. Must be 's19' or 'bin'.`);
     }
+
+    const filename = file.split(/(\\|\/)/g).pop()!;
+    this.evt.emit("dbg:program:loaded", filename);
   };
 
   loadSymbols = async (file: string, fileType: "noice"): Promise<void> => {
