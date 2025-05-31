@@ -14,6 +14,7 @@ type GuiPanelConfig = {
 type GuiConfig = {
   panels: GuiPanelConfig[];
   language?: string;
+  root_selector: string;
 };
 
 class Gui implements IModule {
@@ -64,6 +65,11 @@ class Gui implements IModule {
           },
         },
         language: { type: "string", required: false },
+        root_selector: {
+          type: "string",
+          required: false,
+          default: "#root",
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -79,7 +85,7 @@ class Gui implements IModule {
     }
 
     // Get the root element where the GUI will be rendered.
-    const root_element = document.getElementById("root");
+    const root_element = document.querySelector(this.config.root_selector) as HTMLElement;
     if (root_element == null) throw new Error(`[${this.id}] Root element found`);
     root_element.classList.add("gui-root");
     this.root_element = root_element;
