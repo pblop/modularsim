@@ -306,6 +306,7 @@ export async function decompileInstruction(
 
 export type InstructionRowData = {
   address: string;
+  title?: string;
   raw: string;
   data: string;
   extra: string;
@@ -328,6 +329,7 @@ export function generateInstructionElement(
   rawElement.innerText = row.raw;
   dataElement.innerText = row.ok ? row.data : "???";
   extraElement.innerText = row.ok ? row.extra : "???";
+  if (row.ok && row.title) addressElement.title = row.title;
 }
 
 /**
@@ -358,6 +360,7 @@ export function getSymbolicAddress(
 export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
   formatAddress: (data: number, useSymbols?: boolean) => string,
+  generateTitle: (address: number) => string | undefined = () => undefined,
 ): AllInstructionRowData {
   const address = formatAddress(decompiled.startAddress, true);
   const raw = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
@@ -464,6 +467,7 @@ export function generateRowData(
       raw,
       data,
       extra,
+      title: generateTitle(decompiled.startAddress),
       ok: true,
     };
   }

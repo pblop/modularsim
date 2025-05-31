@@ -260,6 +260,20 @@ class InstructionUI implements IModule {
     return data.toString(16).padStart(4, "0");
   };
 
+  generateTitle = (data: number): string | undefined => {
+    // If we have symbols, the title will be the normal address.
+    // Otherwise, no title will be shown.
+
+    if (this.config.symbols && this.symbols.length > 0) {
+      const [symbol, offset] = getSymbolicAddress(this.symbols, data);
+      if (symbol) {
+        return `${data.toString(16).padStart(4, "0")}`;
+      }
+    }
+
+    return undefined;
+  };
+
   history: InstructionHistory = new InstructionHistory();
   breakpoints: number[] = [];
 
@@ -282,7 +296,7 @@ class InstructionUI implements IModule {
     if (extras.isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
     else if (extras.isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
 
-    const rowData = generateRowData(disass, this.formatAddress);
+    const rowData = generateRowData(disass, this.formatAddress, this.generateTitle);
     generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
     row.setAttribute("data-address", address.toString());
     if (this.breakpoints.includes(address)) {
