@@ -5,10 +5,11 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../../types/eve
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import { verify } from "../../../utils/config.js";
-import { VirtualListElement } from "../../../utils/VirtualListElement.js";
+import type { VirtualListElement } from "../../../utils/VirtualListElement.js";
 
 type MemoryUIConfig = {
-  start: number;
+  initialPosition: number;
+  autoPosition: "m6809" | undefined;
   size: number;
 };
 
@@ -87,7 +88,13 @@ class MemoryUI implements IModule {
     this.config = verify<MemoryUIConfig>(
       config,
       {
-        start: { type: "number", required: false, default: 0 },
+        initialPosition: { type: "number", required: false, default: 0 },
+        autoPosition: {
+          type: "string",
+          required: false,
+          default: undefined,
+          enum: ["m6809"],
+        },
         size: { type: "number", required: true, default: 0x10000 },
       },
       `[${this.id}] configuration error: `,
@@ -145,6 +152,18 @@ class MemoryUI implements IModule {
   onMemoryBulkWriteResult = (dataStart: number, data: Uint8Array): void => {
     if (!this.panel || !this.memoryTable) return;
 
+    if (this.config.autoPosition === "m6809") {
+      // If the data contains the reset vector, we move the memory table to that
+      // address.
+
+      if (dataStart <= 0xfffe && dataStart + data.length >= 0xffff) {
+        const iFFFE = 0xfffe - dataStart;
+        const iFFFF = 0xffff - dataStart;
+        const resetVector = (data[iFFFE] << 8) | data[iFFFF];
+        this.moveToAddress(resetVector);
+      }
+    }
+
     this.memory.set(data, dataStart);
     this.updateQueue.queueUpdate();
   };
@@ -189,8 +208,14 @@ class MemoryUI implements IModule {
     this.memoryTable.itemCount = Math.ceil(this.config.size / 0x10);
     this.memoryTable.itemHeight = 1.5;
     this.memoryTable.itemHeightUnits = "rem";
-    this.memoryTable.start = Math.floor(this.config.start / 0x10);
+    this.moveToAddress(this.config.initialPosition);
   }
+
+  moveToAddress = (address: number): void => {
+    if (!this.panel || !this.memoryTable) return;
+
+    this.memoryTable.start = Math.floor(address / 0x10);
+  };
 
   itemGenerator = (i: number | null, node: HTMLElement | null): HTMLElement => {
     if (node == null || i == null) {

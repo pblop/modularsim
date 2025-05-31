@@ -5,10 +5,11 @@ import { UpdateQueue } from "../../../utils/updatequeue.js";
 import type {
   EventContext,
   EventDeclaration,
+  EventDeclarationListeners,
   TypedEventTransceiver,
 } from "../../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
-import type { Registers } from "../cpu/cpu_parts.js";
+import { Registers } from "../cpu/cpu_parts.js";
 import {
   type AllInstructionRowData,
   type DecompiledInstruction,
@@ -24,6 +25,17 @@ import { InstructionCache } from "./instruction_ui/inst_cache.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
 
 type InstructionUIConfig = {
+  /*
+   * The address to start disassembling from, if any.
+   * Will be ignored if autoPosition is set.
+   */
+  initialPosition?: number;
+  /*
+   * The CPU type to use for auto-positioning.
+   * If set, the UI will find the starting address of the CPU and use that as
+   * the starting address for disassembling instructions.
+   */
+  autoPosition: "m6809" | undefined;
   lines: number;
   symbols: boolean;
   maxSymbolLength: number;
@@ -68,6 +80,24 @@ class InstructionUI implements IModule {
   symbols: [string, number][] = [];
 
   getModuleDeclaration(): ModuleDeclaration {
+    let optionalEvents: EventDeclarationListeners = {
+      "ui:breakpoint:add": this.onBreakpointAdd,
+      "ui:breakpoint:remove": this.onBreakpointRemove,
+      "memory:write": this.onMemoryWrite,
+      "ui:memory:write": this.onMemoryWrite,
+      "dbg:symbol:add": this.onAddSymbol,
+      "dbg:symbol:clear": this.onClearSymbols,
+    };
+
+    // If the autoPosition is set to m6809, we will also listen for the
+    // ui:memory:bulk:write:result event to see the vector table being written.
+    if (this.config.autoPosition === "m6809") {
+      optionalEvents = {
+        ...optionalEvents,
+        "ui:memory:bulk:write:result": this.onMemoryBulkWriteResult,
+      };
+    }
+
     return {
       events: {
         provided: ["ui:memory:read", "ui:breakpoint:add", "ui:breakpoint:remove"],
@@ -77,14 +107,7 @@ class InstructionUI implements IModule {
           "cpu:registers_update": this.onRegistersUpdate,
           "signal:reset": this.onReset,
         },
-        optional: {
-          "ui:breakpoint:add": this.onBreakpointAdd,
-          "ui:breakpoint:remove": this.onBreakpointRemove,
-          "memory:write": this.onMemoryWrite,
-          "ui:memory:write": this.onMemoryWrite,
-          "dbg:symbol:add": this.onAddSymbol,
-          "dbg:symbol:clear": this.onClearSymbols,
-        },
+        optional: optionalEvents,
       },
     };
   }
@@ -111,6 +134,17 @@ class InstructionUI implements IModule {
       maxSymbolLength: {
         type: "number",
         default: 10,
+      },
+      initialPosition: {
+        type: "number",
+        required: false,
+        default: undefined,
+      },
+      autoPosition: {
+        type: "string",
+        required: false,
+        default: undefined,
+        enum: ["m6809"],
       },
     });
 
@@ -187,6 +221,22 @@ class InstructionUI implements IModule {
     this.panel.appendChild(element("div", { className: "buttons" }, clearbutton, lockbutton));
     this.instructionsElement = element("div", { className: "instruction-container" });
     this.panel.appendChild(this.instructionsElement);
+  };
+
+  onMemoryBulkWriteResult = (dataStart: number, data: Uint8Array): void => {
+    if (this.config.autoPosition === "m6809") {
+      // If the data contains the reset vector, we move the instruction UI
+      // to that address.
+
+      if (dataStart <= 0xfffe && dataStart + data.length >= 0xffff) {
+        const iFFFE = 0xfffe - dataStart;
+        const iFFFF = 0xffff - dataStart;
+        const resetVector = (data[iFFFE] << 8) | data[iFFFF];
+
+        this.registers = new Registers(0, 0, 0, 0, 0, 0, 0, resetVector);
+        this.updateQueue.queueUpdate(this.registers);
+      }
+    }
   };
 
   addNewPcToPanel = async (registers: Registers, pc: number): Promise<void> => {
