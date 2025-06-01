@@ -1,6 +1,7 @@
 .register-ui {
   .register-table {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: var(--gui-font-monospace);
+  font-weight: var(--gui-font-monospace-weight, auto);
 
     width: 100%;
     text-align: center;

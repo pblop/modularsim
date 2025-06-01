@@ -33,3 +33,19 @@
     --gui-color-yellow-background: hsl(60, 68%, 53%);
   }
 }
+
+/* FONTS */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/assets/Montserrat-VariableFont_wght.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/JetBrainsMono[wght].woff2") format("woff2-variations");
+}
+.gui-root {
+  --gui-font-monospace: "JetBrains Mono", "Courier New", Courier, monospace;
+  --gui-font-monospace-weight: 100;
+  --gui-font-title: "Montserrat", sans-serif;
+  --gui-font-title-weight: 700;
+}

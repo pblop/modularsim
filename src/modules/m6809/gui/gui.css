@@ -3,6 +3,7 @@ html, body {
   width: 100vw;
 }
 
+
 input,button,textarea,select {
   background-color: var(--gui-color-background);
   border: 1px solid var(--gui-color-border);
@@ -90,12 +91,14 @@ button:hover {
   overflow: hidden;
 }
 .gui-panel-header {
-  font-family: 'Courier New', Courier, monospace;
   border-bottom: 1px solid var(--gui-color-border);
 }
 .gui-panel-title {
+  font-family: var(--gui-font-title);
+  font-weight: var(--gui-font-title-weight, 900);
   padding-left: 0.5rem;
   box-decoration-break: clone;
+  text-transform: uppercase;
 }
 .gui-panel-content {
   overflow: auto;

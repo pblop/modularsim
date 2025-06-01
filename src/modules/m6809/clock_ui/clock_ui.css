@@ -1,5 +1,6 @@
 .clock-ui {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--gui-font-monospace);
+  font-weight: var(--gui-font-monospace-weight, auto);
 
   button {
     margin: 0.25em;

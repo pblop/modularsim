@@ -2,7 +2,8 @@
 
 
   .memory-table {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: var(--gui-font-monospace);
+  font-weight: var(--gui-font-monospace-weight, auto);
     text-align: center;
     width: 100%;
 
