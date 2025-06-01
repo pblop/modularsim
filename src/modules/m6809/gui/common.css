@@ -1,0 +1,99 @@
+html, body {
+  height: 100vh;
+  width: 100vw;
+}
+
+input,button,textarea,select {
+  background-color: var(--gui-color-background);
+  border: 1px solid var(--gui-color-border);
+  color: var(--gui-color-text)
+}
+
+button:hover {
+  background-color: var(--gui-color-highlight);
+}
+
+.gui-root {
+  height: 100vh;
+  width: 100vw;
+  padding: 1rem;
+
+  /* Make the position relative so that child elements can use absolute 
+   * positioning
+   */
+  position: relative;
+
+  background-color: var(--gui-color-background);
+  color: var(--gui-color-text);
+
+  .deployment-info {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+
+    color: gray;
+    font-weight: 500;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  }
+
+  .contrast-color {
+    background-color: var(--current-bg, var(--gui-color-background));
+
+    /* Contrast Color, https://lea.verou.me/blog/2024/contrast-color/ */
+    /* Fallback for browsers that don't support RCS */
+    color: white;
+    text-shadow: 0 0 .05em black, 0 0 .05em black, 0 0 .05em black, 0 0 .05em black;
+
+    @supports (color: oklch(from red l c h)) {
+      --l: clamp(0, (l / 0.623 - 1) * -infinity, 1);
+      color: oklch(from var(--current-bg) var(--l) 0 h);
+      text-shadow: none;
+    }
+
+    /* contrast-color is a future CSS function, this is a fall-forward */
+    /* biome-ignore lint/correctness/noUnknownFunction: <above> */
+    @supports (color: contrast-color(red)) {
+      /* biome-ignore lint/correctness/noUnknownFunction: <above> */
+      color: contrast-color(var(--current-bg));
+      text-shadow: none;
+    }
+  }
+
+  .gui-icon {
+    height: 1lh;
+    width: 1lh;
+    background: var(--icon-color, var(--gui-color-text)) center / contain no-repeat;
+    -webkit-mask-image: var(--icon);
+    mask-image: var(--icon);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    display: block;
+  }
+  button.gui-icon-button {
+    margin: 0.25em;
+    border: 0px;
+    border-radius: 4px;
+    
+    cursor: pointer;
+  }
+}
+
+.gui-panel {
+  border: 1px solid var(--gui-color-border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.gui-panel-header {
+  border-bottom: 1px solid var(--gui-color-border);
+}
+.gui-panel-title {
+  font-family: var(--gui-font-title);
+  font-weight: var(--gui-font-title-weight, 900);
+  padding-left: 0.5rem;
+  box-decoration-break: clone;
+  text-transform: uppercase;
+}
+.gui-panel-content {
+  overflow: auto;
+  max-height: 100%;
+}
