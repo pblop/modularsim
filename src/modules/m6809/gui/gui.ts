@@ -150,6 +150,7 @@ class Gui implements IModule {
               className: "gui-panel-header",
             },
             element("span", {
+              className: "gui-panel-title",
               innerText: lang_name,
             }),
           ),

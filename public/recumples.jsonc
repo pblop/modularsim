@@ -21,8 +21,8 @@
         "url": "./modules/m6809/infinite_memory_ui/memory_ui.js",
         "css": ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
         "config": {
-          "start": "0x100",
-          "size": "0x10000"
+          "size": "0x10000",
+          "autoPosition": "m6809"
         }
       },
       {
@@ -38,41 +38,55 @@
           "language": "es",
           "panels": [
             {
+              "langName": {
+                "en": "Registers",
+                "es": "Registros"
+              },
               "id": "register_ui",
               "column": "1 / span 3",
               "row": "1 / span 2"
             },
             {
+              "langName": {
+                "en": "Instructions",
+                "es": "Instrucciones"
+              },
               "id": "instruction_ui",
-              "column": "1 / span 3",
+              "column": "1 / span 5",
               "row": "3 / span 6"
             },
             {
+              "langName": {
+                "en": "Memory",
+                "es": "Memoria"
+              },
               "id": "main_memory_ui",
               "column": "5 / span 3",
-              "row": "3 / span 6"
+              "row": "9 / span 6"
             },
             {
+              "langName": {
+                "en": "Screen",
+                "es": "Pantalla"
+              },
               "id": "screen_ui",
               "column": "1 / span 3",
               "row": "9 / span 2"
             },
-            // {
-            //   "id": "history_ui",
-            //   "column": "4 / span 3",
-            //   "row": "9 / span 2"
-            // },
             {
+              "langName": {
+                "en": "Breakpoints",
+                "es": "Puntos de ruptura"
+              },
               "id": "breakpoint_ui",
               "column": "4 / span 1",
-              "row": "3 / span 6"
+              "row": "9 / span 6"
             },
-            // {
-            //   "id": "ui2",
-            //   "column": 1,
-            //   "row": 2
-            // },
             {
+              "langName": {
+                "en": "Status",
+                "es": "Estado"
+              },
               "id": "clock_ui",
               "column": "-3 / -1",
               "row": "1 / span 2"
@@ -123,7 +137,10 @@
         "type": "ui",
         "url": "./modules/m6809/instruction_ui/instruction_ui.js",
         "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
-        "config": {}
+        "config": {
+          "symbols": true,
+          "autoPosition": "m6809"
+        }
       },
       {
         "id": "breakpoint_ui",

@@ -93,6 +93,10 @@ button:hover {
   font-family: 'Courier New', Courier, monospace;
   border-bottom: 1px solid var(--gui-color-border);
 }
+.gui-panel-title {
+  padding-left: 0.5rem;
+  box-decoration-break: clone;
+}
 .gui-panel-content {
   overflow: auto;
   max-height: 100%;
