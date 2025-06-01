@@ -85,9 +85,17 @@ button:hover {
 }
 
 .gui-panel {
-  overflow: auto;
   border: 1px solid var(--gui-color-border);
   border-radius: 5px;
+  overflow: hidden;
+}
+.gui-panel-header {
+  font-family: 'Courier New', Courier, monospace;
+  border-bottom: 1px solid var(--gui-color-border);
+}
+.gui-panel-content {
+  overflow: auto;
+  max-height: 100%;
 }
 
 /* TODO: check the max-width is correct. Maybe there's another better unit */

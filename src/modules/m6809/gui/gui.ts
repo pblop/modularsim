@@ -10,11 +10,15 @@ type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
   column: string | number;
   row: string | number;
+  name?: string; // Name of the panel, used for the title.
+  // Language-specific name of the panel, has higher priority than `name`.
+  langName: Record<string, string>;
 };
 type GuiConfig = {
   panels: GuiPanelConfig[];
   language?: string;
   root_selector: string;
+  show_titles: boolean;
 };
 
 class Gui implements IModule {
@@ -58,6 +62,14 @@ class Gui implements IModule {
           schema: {
             type: "object",
             properties: {
+              name: { type: "string", required: false },
+              langName: {
+                type: "object",
+                required: false,
+                keyPattern: /^[\w\-]+$/,
+                schema: { type: "string" },
+                default: {},
+              },
               id: { type: "string", required: true },
               column: { type: "string" },
               row: { type: "string" },
@@ -69,6 +81,11 @@ class Gui implements IModule {
           type: "string",
           required: false,
           default: "#root",
+        },
+        show_titles: {
+          type: "boolean",
+          required: false,
+          default: true,
         },
       },
       `[${this.id}] configuration error: `,
@@ -119,18 +136,50 @@ class Gui implements IModule {
     for (const panel of this.config.panels) {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
 
-      const panel_element = element("div", {
-        id: `panel_${panel.id}`,
-        className: "gui-panel",
-        style: {
-          gridColumn: `${panel.column}`,
-          gridRow: `${panel.row}`,
-        },
+      const children = [];
+
+      // If the config says to show titles, we create a header for the panel,
+      // and use the name from the config or the id of the panel, if no name is
+      // provided.
+      if (this.config.show_titles) {
+        const lang_name = panel.langName[this.language] || panel.name || panel.id;
+        children.push(
+          element(
+            "div",
+            {
+              className: "gui-panel-header",
+            },
+            element("span", {
+              innerText: lang_name,
+            }),
+          ),
+        );
+      }
+
+      // This panel content div is the main area where the module will render
+      // its content. This is passed to the module.
+      const panel_content = element("div", {
+        className: "gui-panel-content",
+        id: `panel_content_${panel.id}`,
       });
+      children.push(panel_content);
+
+      const panel_element = element(
+        "div",
+        {
+          id: `panel_${panel.id}`,
+          className: "gui-panel",
+          style: {
+            gridColumn: `${panel.column}`,
+            gridRow: `${panel.row}`,
+          },
+        },
+        ...children,
+      );
       this.root_element.appendChild(panel_element);
 
       // Notify other modules that the panel has been created
-      this.event_transceiver.emit("gui:panel_created", panel.id, panel_element, this.language);
+      this.event_transceiver.emit("gui:panel_created", panel.id, panel_content, this.language);
     }
   };
 }
