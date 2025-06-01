@@ -15,12 +15,8 @@ type ScreenConfig = {
 };
 
 const ScreenUIStrings = createLanguageStrings({
-  en: {
-    title: "Screen",
-  },
-  es: {
-    title: "Pantalla",
-  },
+  en: {},
+  es: {},
 });
 
 class ScreenUI implements IModule {
@@ -100,8 +96,6 @@ class ScreenUI implements IModule {
 
     this.panel.classList.add("screen-ui");
     this.setLanguage(language);
-
-    this.panel.appendChild(element("h2", { textContent: this.localeStrings.title }));
 
     this.textElement = element("pre", { textContent: "" });
 
