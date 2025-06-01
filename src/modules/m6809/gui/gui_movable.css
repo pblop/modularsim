@@ -1,1 +1,11 @@
 @import url("common.css");
+@import url("https://cdn.jsdelivr.net/npm/gridstack@12.2.1/dist/gridstack.min.css");
+
+.gui-root {
+  height: 100vh !important
+}
+
+/* .grid-stack-item-content {
+  margin: 0;
+  padding: 0;
+} */

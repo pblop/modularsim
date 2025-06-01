@@ -5,29 +5,46 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../../types/eve
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import { VirtualListElement } from "../../../utils/VirtualListElement.js";
+import { GridStack } from "https://cdn.jsdelivr.net/npm/gridstack@12.2.1/+esm";
 
-type GuiPanelConfig = {
+type GuiMovablePanelConfig = {
   id: string; // Id of the module being loaded.
-  column: string | number;
-  row: string | number;
+  column: string;
+  row: string;
   name?: string; // Name of the panel, used for the title.
   // Language-specific name of the panel, has higher priority than `name`.
   langName: Record<string, string>;
 };
-type GuiConfig = {
-  panels: GuiPanelConfig[];
+type GuiMovableConfig = {
+  panels: GuiMovablePanelConfig[];
   language?: string;
   root_selector: string;
   show_titles: boolean;
 };
 
-class Gui implements IModule {
+function parseRowSpan(rowSpan: string): [number, number] {
+  const match = rowSpan.match(/(\d+)(?:\s*\/\s*span\s*(\d+))?/);
+  if (!match) {
+    throw new Error(`Invalid row/column format: ${rowSpan}`);
+  } else {
+    const row = Number.parseInt(match[1], 10);
+    let col = 1; // Default span is 1 if not specified
+    if (match[2]) {
+      col = Number.parseInt(match[2], 10);
+    }
+
+    return [row, col];
+  }
+}
+
+class GuiMovable implements IModule {
   et: TypedEventTransceiver;
-  config: GuiConfig;
+  config: GuiMovableConfig;
   language: string;
   id: string;
 
   rootElement: HTMLElement;
+  grid: GridStack;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -108,6 +125,37 @@ class Gui implements IModule {
 
     this.createDeploymentInfoElement();
 
+    GridStack.renderCB = (el, w) => {
+      el.innerHTML = w.content!;
+    };
+
+    this.grid = GridStack.init(
+      {
+        animate: false,
+        cellHeight: 70,
+        margin: 0,
+        layout: "none",
+      },
+      this.rootElement,
+    );
+
+    this.grid.on("added", (event, items) => {
+      // When a panel is added, we notify its corresponding module that the
+      // panel has been created.
+      for (const item of items) {
+        item.el!.classList.add("gui-panel");
+        const guiPanel = item.el!.querySelector("[data-panel]")!;
+        const panelId = guiPanel.getAttribute("data-panel")!;
+        // Notify other modules that the panel has been created
+        this.et.emit(
+          "gui:panel_created",
+          panelId,
+          guiPanel.querySelector(".gui-panel-content")!,
+          this.language,
+        );
+      }
+    });
+
     VirtualListElement.define();
 
     console.log(`[${this.id}] Module initialized with language ${this.language}.`);
@@ -135,53 +183,50 @@ class Gui implements IModule {
     for (const panel of this.config.panels) {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
 
-      const children = [];
+      let header = "";
 
       // If the config says to show titles, we create a header for the panel,
       // and use the name from the config or the id of the panel, if no name is
       // provided.
       if (this.config.show_titles) {
         const lang_name = panel.langName[this.language] || panel.name || panel.id;
-        children.push(
-          element(
-            "div",
-            {
-              className: "gui-panel-header",
-            },
-            element("span", {
-              className: "gui-panel-title",
-              innerText: lang_name,
-            }),
-          ),
-        );
+        header = `
+          <div class="gui-panel-header">
+            <span class="gui-panel-title">${lang_name}</span>
+          </div>
+        `;
       }
-
       // This panel content div is the main area where the module will render
       // its content. This is passed to the module.
-      const panel_content = element("div", {
-        className: "gui-panel-content",
-        id: `panel_content_${panel.id}`,
-      });
-      children.push(panel_content);
+      const panelContent = `
+          <div class="gui-panel-content" id="panel_content_${panel.id}"></div>
+          `;
 
-      const panel_element = element(
-        "div",
-        {
-          id: `panel_${panel.id}`,
-          className: "gui-panel",
-          style: {
-            gridColumn: `${panel.column}`,
-            gridRow: `${panel.row}`,
-          },
-        },
-        ...children,
+      const template = `
+        <div id="panel_${panel.id}" data-panel="${panel.id}">
+          ${header}
+          ${panelContent}
+        </div>
+      `;
+
+      const rowSpan = parseRowSpan(panel.row);
+      const colSpan = parseRowSpan(panel.column);
+      console.log(
+        `Parsed panel ${panel.id} rowSpan: ${rowSpan}, colSpan: ${colSpan} from row: ${panel.row}, column: ${panel.column}`,
       );
-      this.rootElement.appendChild(panel_element);
 
-      // Notify other modules that the panel has been created
-      this.et.emit("gui:panel_created", panel.id, panel_content, this.language);
+      this.grid.addWidget({
+        content: template,
+        w: colSpan[1],
+        h: rowSpan[1],
+        x: colSpan[0] - 1, // GridStack uses 0-based indexing, CSS uses 1-based indexing.
+        y: rowSpan[0] - 1,
+      });
+      console.log(`[${this.id}] Panel ${panel.id} created `);
+      // this.rootElement.appendChild(panel_element);
+      // break;
     }
   };
 }
 
-export default Gui;
+export default GuiMovable;

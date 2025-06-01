@@ -1,3 +1,5 @@
+import { UpdateQueue } from "./updatequeue.js";
+
 type ItemGeneratorFunction = {
   // Update the content of the node
   (i: number, node: HTMLElement): HTMLElement;
@@ -11,6 +13,9 @@ export class VirtualListElement extends HTMLElement {
   // Height of each item in the specified units
   #itemHeight = 40;
   #itemHeightUnits = "px";
+  // The multiplier for converting item height to pixels.
+  // itemHeightPixels = #itemHeight * #itemHeightMultiplier;
+  #itemHeightMultiplier = 1;
   // The elements whose content will be swapped
   #nodes: HTMLElement[] = [];
   // The indices of the items that are currently visible
@@ -87,6 +92,7 @@ export class VirtualListElement extends HTMLElement {
   }
   set itemHeightUnits(units: string) {
     this.#itemHeightUnits = units;
+    this.#itemHeightMultiplier = convertToPixels(this.#itemHeight, this.#itemHeightUnits);
     this.updateContents();
   }
   get itemHeightUnits() {
@@ -108,7 +114,11 @@ export class VirtualListElement extends HTMLElement {
    * After the items are changed, this function is called to update the
    * visible items and the placeholder.
    */
+  updateContentsQueue = new UpdateQueue(this._updateContents.bind(this));
   updateContents() {
+    this.updateContentsQueue.queueUpdate();
+  }
+  _updateContents() {
     this.updateVisibleItems();
     this.updateRenderBounds();
     this.updatePlaceholder();
@@ -152,7 +162,12 @@ export class VirtualListElement extends HTMLElement {
     this.updateRenderBounds();
     this.render();
   }
+  onResizeQueue = new UpdateQueue<ResizeObserverEntry[]>(this._onResize.bind(this));
   onResize(entries: ResizeObserverEntry[]) {
+    this.onResizeQueue.queueUpdate(entries);
+  }
+  _onResize(entriesArray: ResizeObserverEntry[][]) {
+    const entries = entriesArray[entriesArray.length - 1];
     const entry = entries[0];
     const height = entry.contentRect.height;
     if (height !== this.#prevHeight) {
@@ -164,7 +179,8 @@ export class VirtualListElement extends HTMLElement {
   }
 
   get #itemHeightPx() {
-    return convertToPixels(this.#itemHeight, this.#itemHeightUnits);
+    return this.#itemHeightMultiplier * this.#itemHeight;
+    //return convertToPixels(this.#itemHeight, this.#itemHeightUnits);
   }
 
   updateRenderBounds() {
