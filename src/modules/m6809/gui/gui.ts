@@ -22,12 +22,12 @@ type GuiConfig = {
 };
 
 class Gui implements IModule {
-  event_transceiver: TypedEventTransceiver;
+  et: TypedEventTransceiver;
   config: GuiConfig;
   language: string;
   id: string;
 
-  root_element: HTMLElement;
+  rootElement: HTMLElement;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -39,14 +39,13 @@ class Gui implements IModule {
     };
   }
 
-  // TODO: Change the cases of the variables to camelCase.
   constructor(
     id: string,
     config: Record<string, unknown> | undefined,
     eventTransceiver: TypedEventTransceiver,
   ) {
     // We use the simulator to emit/receive events.
-    this.event_transceiver = eventTransceiver;
+    this.et = eventTransceiver;
     this.id = id;
 
     console.log(`[${this.id}] Initializing module.`);
@@ -105,7 +104,7 @@ class Gui implements IModule {
     const root_element = document.querySelector(this.config.root_selector) as HTMLElement;
     if (root_element == null) throw new Error(`[${this.id}] Root element found`);
     root_element.classList.add("gui-root");
-    this.root_element = root_element;
+    this.rootElement = root_element;
 
     this.createDeploymentInfoElement();
 
@@ -124,7 +123,7 @@ class Gui implements IModule {
           innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
           title: `${info.message}\n\n${info.body ?? ""}`.trimEnd(),
         });
-        this.root_element.appendChild(deployment_info_element);
+        this.rootElement.appendChild(deployment_info_element);
       })
       .catch(() => {});
   }
@@ -177,10 +176,10 @@ class Gui implements IModule {
         },
         ...children,
       );
-      this.root_element.appendChild(panel_element);
+      this.rootElement.appendChild(panel_element);
 
       // Notify other modules that the panel has been created
-      this.event_transceiver.emit("gui:panel_created", panel.id, panel_content, this.language);
+      this.et.emit("gui:panel_created", panel.id, panel_content, this.language);
     }
   };
 }
