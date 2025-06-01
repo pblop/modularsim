@@ -79,7 +79,7 @@
       </li>
     </ol>
     <hr />
-    &copy; 2025 Guillermo Gonzalez Talaván, pblop
+    &copy; 2025 Guillermo González Talaván, pblop
     <hr />
     <script type="module">
       import Controller from "/controller.js";
@@ -124,31 +124,55 @@
                 language: "es",
                 panels: [
                   {
+                    langName: {
+                      en: "Registers",
+                      es: "Registros",
+                    },
                     id: "register_ui",
                     column: "1 / span 3",
                     row: "1 / span 2",
                   },
                   {
+                    langName: {
+                      en: "Instructions",
+                      es: "Instrucciones",
+                    },
                     id: "instruction_ui",
                     column: "1 / span 5",
                     row: "3 / span 6",
                   },
                   {
+                    langName: {
+                      en: "Memory",
+                      es: "Memoria",
+                    },
                     id: "main_memory_ui",
                     column: "5 / span 3",
                     row: "9 / span 6",
                   },
                   {
+                    langName: {
+                      en: "Screen",
+                      es: "Pantalla",
+                    },
                     id: "screen_ui",
                     column: "1 / span 3",
                     row: "9 / span 2",
                   },
                   {
+                    langName: {
+                      en: "Breakpoints",
+                      es: "Puntos de ruptura",
+                    },
                     id: "breakpoint_ui",
                     column: "4 / span 1",
                     row: "9 / span 6",
                   },
                   {
+                    langName: {
+                      en: "Status",
+                      es: "Estado",
+                    },
                     id: "clock_ui",
                     column: "-3 / -1",
                     row: "1 / span 2",
@@ -177,11 +201,7 @@
               id: "cpu",
               type: "cpu",
               url: "./modules/m6809/cpu/cpu.js",
-              config: {
-                // "functions": {
-                //   "0x8000": "myfunctionmodule"
-                // }
-              },
+              config: {},
             },
             {
               id: "loader",
@@ -191,7 +211,6 @@
               config: {
                 file: "./programs/recumples.s19",
                 symbolsFile: "./programs/recumples.noi",
-                // "file": "http://localhost:6809/programs/loop.bin"
               },
             },
             {
@@ -200,7 +219,7 @@
               url: "./modules/m6809/instruction_ui/instruction_ui.js",
               css: ["./modules/m6809/instruction_ui/instruction_ui.css"],
               config: {
-                symbols: true,
+                symbols: "single",
                 autoPosition: "m6809",
               },
             },
@@ -319,7 +338,6 @@
           ],
         },
       };
-
       // Crea una instancia del controlador
       const controller1 = new Controller();
       const controller2 = new Controller();
