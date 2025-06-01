@@ -403,6 +403,7 @@ class InstructionUI implements IModule {
     const children = Array.from(row.children) as HTMLSpanElement[];
 
     const address = disass.startAddress;
+    row.setAttribute("data-address", address.toString());
     row.classList.toggle("pc", !!extras.isPC);
     row.classList.toggle("overlap", !!extras.isOverlapped);
     row.classList.toggle("overwritten", !!extras.isOverwritten);
