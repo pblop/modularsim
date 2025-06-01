@@ -359,10 +359,10 @@ export function getSymbolicAddress(
 
 export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
-  formatAddress: (data: number, useSymbols?: boolean) => string,
+  formatAddress: (data: number, addressLocation: "address" | "extra") => string,
   generateTitle: (address: number) => string | undefined = () => undefined,
 ): AllInstructionRowData {
-  const address = formatAddress(decompiled.startAddress, true);
+  const address = formatAddress(decompiled.startAddress, "address");
   const raw = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
 
   if (decompiled.failed) {
@@ -402,7 +402,7 @@ export function generateRowData(
       }
       case "direct":
         data += ` 0x${addressing.low}`;
-        extra += ` <${formatAddress(addressing.address, false)}>`;
+        extra += ` <${formatAddress(addressing.address, "extra")}>`;
         break;
       case "indexed": {
         let idxStr = " ";
@@ -420,7 +420,7 @@ export function generateRowData(
           case IndexedAction.OffsetPC16: {
             const offset = intNToNumber(result.offset, 16);
             idxStr += `${offset >= 0 ? "+" : ""}${offset}`;
-            extra += ` <${formatAddress(result.effectiveAddress, false)}>`;
+            extra += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
             break;
           }
           case IndexedAction.OffsetA:
@@ -451,13 +451,13 @@ export function generateRowData(
         break;
       }
       case "extended":
-        data += ` <${formatAddress(addressing.address, false)}>`;
+        data += ` <${formatAddress(addressing.address, "extra")}>`;
         break;
       case "relative": {
         // NOTE: Convert the relative address to a signed number for display.
         const offset = intNToNumber(addressing.offset, 8);
         data += ` pc${offset >= 0 ? "+" : ""}${offset}`;
-        extra += ` <${formatAddress(addressing.address, false)}>`;
+        extra += ` <${formatAddress(addressing.address, "extra")}>`;
         break;
       }
     }

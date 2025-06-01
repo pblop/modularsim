@@ -102,6 +102,9 @@
     .address.breakpoint {
       --current-bg: var(--gui-color-red-background);
     }
+    .symbol {
+      min-width: calc(var(--instruction-ui-symbol-size, auto) + 1em);
+    }
 
     .raw {
       width: 10em;

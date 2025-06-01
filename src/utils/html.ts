@@ -42,7 +42,7 @@ type ExtraFields<K extends keyof TagNameMap> = {
 export function element<K extends keyof TagNameMap>(
   tag: K,
   properties: DeepPartial<TagNameMap[K]> & ExtraFields<K> = {},
-  ...children: HTMLElement[]
+  ...children: (HTMLElement | undefined)[]
 ): TagNameMap[K] {
   const el = document.createElement(tag) as TagNameMap[K];
 
@@ -71,7 +71,7 @@ export function element<K extends keyof TagNameMap>(
   }
 
   for (const child of children) {
-    el.appendChild(child);
+    if (child !== undefined) el.appendChild(child);
   }
   return el;
 }

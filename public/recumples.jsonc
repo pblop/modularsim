@@ -138,7 +138,7 @@
         "url": "./modules/m6809/instruction_ui/instruction_ui.js",
         "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
         "config": {
-          "symbols": true,
+          "symbols": "single",
           "autoPosition": "m6809"
         }
       },

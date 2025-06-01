@@ -37,7 +37,14 @@ type InstructionUIConfig = {
    */
   autoPosition: "m6809" | undefined;
   lines: number;
-  symbols: boolean;
+  /**
+   * How to show the addresses in the instruction UI.
+   * If set to "offset", the addresses will be shown as "symbol+offset".
+   * If set to "single", there will be a new row for the symbols.
+   * If set to "none" or not set, the addresses will be printed as hex
+   * addresses.
+   */
+  symbols: "offset" | "single" | "none";
   maxSymbolLength: number;
 };
 
@@ -87,6 +94,7 @@ class InstructionUI implements IModule {
   cache: InstructionCache;
   lockPC: boolean;
   symbols: [string, number][] = [];
+  symbolsMap: Map<number, string> = new Map();
 
   getModuleDeclaration(): ModuleDeclaration {
     let optionalEvents: EventDeclarationListeners = {
@@ -137,8 +145,10 @@ class InstructionUI implements IModule {
         default: 15,
       },
       symbols: {
-        type: "boolean",
-        default: true,
+        type: "string",
+        required: false,
+        default: "none",
+        enum: ["offset", "single", "none"],
       },
       maxSymbolLength: {
         type: "number",
@@ -213,10 +223,15 @@ class InstructionUI implements IModule {
     this.panel = panel;
     this.panel.classList.add("instruction-ui");
 
-    const addressSize = this.config.symbols
-      ? this.config.maxSymbolLength + 5 // symbol + "+" + hex addresses
-      : 4; // 4 hex digits
+    const addressSize =
+      this.config.symbols === "offset"
+        ? this.config.maxSymbolLength + 5 // symbol + "+" + hex addresses
+        : 4; // 4 hex digits
     this.panel.style.setProperty("--instruction-ui-address-size", `${addressSize}ch`);
+    this.panel.style.setProperty(
+      "--instruction-ui-symbol-size",
+      `${this.config.maxSymbolLength}ch`,
+    );
 
     this.setLanguage(language);
 
@@ -334,21 +349,23 @@ class InstructionUI implements IModule {
 
     console.log(`[${this.id}] Adding symbol ${symbol} at ${address.toString(16)}`);
     this.symbols.push([symbol, address]);
+    this.symbolsMap.set(address, symbol);
     this.updateQueue.queueUpdate();
   };
   onClearSymbols = (): void => {
     if (!this.instructionsElement) return;
 
     this.symbols = [];
+    this.symbolsMap.clear();
     this.updateQueue.queueUpdate();
   };
 
-  formatAddress = (data: number, useSymbols = false): string => {
+  formatAddress = (data: number, addressLocation: "address" | "extra"): string => {
     // If we have symbols, we will use them to display the address.
     // Otherwise, we will use the address.
-    if (this.config.symbols && useSymbols && this.symbols.length > 0) {
+    if (this.config.symbols && this.symbols.length > 0) {
       const [symbol, offset] = getSymbolicAddress(this.symbols, data);
-      if (symbol) {
+      if (symbol && (this.config.symbols === "offset" || addressLocation === "extra")) {
         const truncatedSymbol = symbol.slice(0, this.config.maxSymbolLength);
         return `${truncatedSymbol}+${offset.toString(16).padStart(2, "0")}`;
       }
@@ -360,7 +377,7 @@ class InstructionUI implements IModule {
     // If we have symbols, the title will be the normal address.
     // Otherwise, no title will be shown.
 
-    if (this.config.symbols && this.symbols.length > 0) {
+    if (this.config.symbols === "offset" && this.symbols.length > 0) {
       const [symbol, offset] = getSymbolicAddress(this.symbols, data);
       if (symbol) {
         return `${data.toString(16).padStart(4, "0")}`;
@@ -393,8 +410,29 @@ class InstructionUI implements IModule {
     else if (extras.isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
 
     const rowData = generateRowData(disass, this.formatAddress, this.generateTitle);
-    generateInstructionElement(rowData, children[0], children[1], children[2], children[3]);
-    row.setAttribute("data-address", address.toString());
+
+    // Get the parts of the row.
+    const addressElement = children.find((el) => el.classList.contains("address"))!;
+    const rawElement = children.find((el) => el.classList.contains("raw"))!;
+    const symbolElement = children.find((el) => el.classList.contains("symbol"));
+    const dataElement = children.find((el) => el.classList.contains("data"))!;
+    const extraElement = children.find((el) => el.classList.contains("extra"))!;
+
+    // Fill the parts with data.
+    addressElement.innerText = rowData.address;
+    rawElement.innerText = rowData.raw;
+    dataElement.innerText = rowData.ok ? rowData.data : "???";
+    extraElement.innerText = rowData.ok ? rowData.extra : "???";
+    if (rowData.ok && row.title) addressElement.title = row.title;
+    if (this.config.symbols === "single" && this.symbolsMap.has(address)) {
+      // If the symbol is too long, we truncate it.
+      const symbol = this.symbolsMap.get(address);
+      if (symbol) {
+        symbolElement!.innerText = symbol.slice(0, this.config.maxSymbolLength);
+      }
+    }
+
+    // Mark the address as a breakpoint if it is in the breakpoints list.
     if (this.breakpoints.includes(address)) {
       children[0].classList.add("breakpoint");
       children[0].classList.add("contrast-color");
@@ -513,6 +551,12 @@ class InstructionUI implements IModule {
           el.classList.toggle("contrast-color");
         },
       }),
+      this.config.symbols === "single"
+        ? element("span", {
+            className: "symbol",
+            innerText: "",
+          })
+        : undefined,
       element("span", { className: "raw", innerText: "..." }),
       element("span", { className: "data", innerText: "..." }),
       element("span", { className: "extra", innerText: "" }),
