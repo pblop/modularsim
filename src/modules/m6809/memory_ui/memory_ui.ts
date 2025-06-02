@@ -202,14 +202,22 @@ class MemoryUI implements IModule {
               textContent: this.formatMemoryData(0),
               title: `0x${j.toString(16).padStart(4, "0")}`,
             },
-            this.localeStrings,
-            (newValue) => {
-              // We will receive the result of the write operation in the
-              // `ui:memory:write:result` event, and will update the memory
-              // cell accordingly, then.
-              this.event_transceiver.emit("ui:memory:write", j, newValue);
+            {
+              onChange: (newValue) => {
+                // Convert the hex value to a number.
+                const parsedValue = Number.parseInt(newValue, 16);
+                if (Number.isNaN(parsedValue) || parsedValue < 0 || parsedValue > 255) {
+                  return this.localeStrings.onlyHex;
+                }
+                // We will receive the result of the write operation in the
+                // `ui:memory:write:result` event, and will update the memory
+                // cell accordingly, then.
+                this.event_transceiver.emit("ui:memory:write", j, parsedValue);
+              },
+              bytes: 1,
+              pattern: "^(0x)?[0-9a-fA-F]{2}$",
+              validationFailedMsg: this.localeStrings.onlyHex,
             },
-            1,
           ),
         );
       }

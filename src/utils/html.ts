@@ -36,6 +36,7 @@ type TagNameMap = {
 };
 type ExtraFields<K extends keyof TagNameMap> = {
   customAttributes?: Record<string, string>;
+  cssProperties?: Record<string, string>;
   onClick?: (element: TagNameMap[K], ev: MouseEvent) => void;
 };
 
@@ -51,15 +52,21 @@ export function element<K extends keyof TagNameMap>(
     children.unshift(properties);
   } else {
     // Remove extra fields from properties and set them separately.
-    const { customAttributes, onClick } = properties;
+    const { customAttributes, onClick, cssProperties } = properties;
     properties.customAttributes = undefined;
     properties.onClick = undefined;
+    properties.cssProperties = undefined;
 
     setProperties(el, properties as DeepPartial<TagNameMap[K]>);
 
     if (customAttributes) {
       for (const key in customAttributes) {
         el.setAttribute(key, customAttributes[key]);
+      }
+    }
+    if (cssProperties) {
+      for (const key in cssProperties) {
+        el.style.setProperty(key, cssProperties[key]);
       }
     }
 
@@ -114,13 +121,15 @@ export function rewrittableTableElement(
     title?: string;
     onmouseenter?: (this: GlobalEventHandlers, ev: MouseEvent) => void;
   },
-  messages: {
-    onlyHex: string;
+  customOptions: {
+    onChange: (newValue: string) => string | void;
+    bytes: number;
+    pattern: string;
+    validationFailedMsg: string;
+    editWidth?: number; // Optional width for the input element
   },
-  onChange: (newValue: number) => void,
-  bytes: number,
 ): HTMLTableCellElement {
-  const maxValue = 2 ** (bytes * 8) - 1;
+  const { onChange, bytes, pattern, validationFailedMsg, editWidth } = customOptions;
 
   if (options.title === undefined) {
     // If options.title is undefined, the string "undefined" will be used as the
@@ -131,6 +140,9 @@ export function rewrittableTableElement(
 
   return element("td", {
     ...options,
+    cssProperties: {
+      "--register-edit-width": `${editWidth}ch`,
+    },
     onClick: (el) => {
       // If the cell already has a child element, we will ignore the click.
       if (el.childElementCount > 0) return;
@@ -144,7 +156,7 @@ export function rewrittableTableElement(
         type: "text",
         // The pattern matches a hex value, with or without the 0x prefix, with
         // the correct number of hex digits (2 per byte).
-        pattern: `(0x)?[0-9a-fA-F]{0,${bytes * 2}}`,
+        pattern: pattern,
         onblur: () => {
           // When the input loses focus, we will remove the input element
           // and restore the text content of the cell.
@@ -156,7 +168,7 @@ export function rewrittableTableElement(
         oninput: () => {
           input.setCustomValidity("");
           if (!input.checkValidity()) {
-            input.setCustomValidity(messages.onlyHex);
+            input.setCustomValidity(validationFailedMsg);
           }
           input.reportValidity();
         },
@@ -168,19 +180,22 @@ export function rewrittableTableElement(
               return;
             }
 
-            // When the user presses Enter, we will parse the input value,
-            // and emit a memory write event.
-            const data = Number.parseInt(input.value, 16);
-            if (Number.isNaN(data) || data < 0 || data > maxValue) {
-              input.setCustomValidity(messages.onlyHex);
-              input.reportValidity();
-              return;
-            }
+            // When the user presses Enter, we call the parent module, who
+            // parses and validates the input value.
+            // If the value is invalid, we will set the custom validity
+            // message to be that returned by the onChange function.
+            // If the value is valid, we won't do anything more.
 
             // The parent module should use the callback to write the value
             // to the actual memory, and update the cell accordingly, then.
             // This makes sure that the cell is always in sync with the memory.
-            onChange(data);
+            const message = onChange(input.value.toLowerCase());
+            if (message !== undefined) {
+              input.setCustomValidity(message);
+              input.reportValidity();
+              return;
+            }
+
             input.blur();
           } else if (key === "Escape") {
             input.blur();

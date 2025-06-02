@@ -7,15 +7,9 @@
     text-align: center;
 
     input {
-      width: var(--register-byte-width, 2ch);
+      width: var(--register-edit-width, 2ch);
       height: 1lh;
       text-align: center;
-    }
-    .register-bytes-1 {
-      --register-byte-width: 2ch;
-    }
-    .register-bytes-2 {
-      --register-byte-width: 4ch;
     }
     .uneditable {
       border: orangered 1px dashed;

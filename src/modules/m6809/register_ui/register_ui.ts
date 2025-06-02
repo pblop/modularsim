@@ -90,6 +90,10 @@ const RegisterUIStrings = createLanguageStrings({
     uneditableMirror: "This register is a mirror of another register, and cannot be edited.",
     uneditable: "Registers are uneditable while the CPU is executing an instruction.",
     initialUneditable: "The register cannot be edited until the CPU has been initialized.",
+    flags: "Flags: {flags}",
+    invalidFlag: "Invalid flag: {flag}",
+    moreFlagsThanExpected: "Used more flags than expected",
+    invalidOrWrongNumberOfFlags: "Invalid flag or wrong number of flags",
   },
   es: {
     pointerRegister: "Registro apuntador",
@@ -99,6 +103,10 @@ const RegisterUIStrings = createLanguageStrings({
     uneditable:
       "Los registros no se pueden editar mientras la CPU esté ejecutando una instrucción.",
     initialUneditable: "No se puede editar el registro hasta que la CPU se haya inicializado.",
+    flags: "Banderas: {flags}",
+    invalidFlag: "Bandera inválida: {flag}",
+    moreFlagsThanExpected: "Usadas más banderas de las esperadas",
+    invalidOrWrongNumberOfFlags: "Bandera inválida o número incorrecto de banderas",
   },
 });
 
@@ -234,8 +242,8 @@ class RegisterUI implements IModule {
     const flags = this.config.registers[register].flags;
     if (flags) {
       const flagValues = flags
-        .filter((_, i) => (value & (1 << (flags.length - i - 1))) !== 0)
-        .join(", ");
+        .map((flag, i) => ((value & (1 << (flags.length - i - 1))) !== 0 ? flag : "_"))
+        .join("");
       cell.textContent = flagValues || "none";
     } else {
       cell.textContent = this.formatRegister(register, value);
@@ -354,37 +362,92 @@ class RegisterUI implements IModule {
       // Header row
       element(
         "tr",
-        ...Object.entries(this.config.registers).map(([name, { pointer }]) =>
+        ...Object.entries(this.config.registers).map(([name, { pointer, flags }]) =>
           element("th", {
             textContent: name,
             className: `${pointer ? "pointer-register" : ""}`,
-            title: pointer ? this.localeStrings.pointerRegister : undefined,
+            title: pointer
+              ? this.localeStrings.pointerRegister
+              : flags
+                ? this.localeStrings.flags.replace("{flags}", flags.join(", "))
+                : "",
           }),
         ),
       ),
       // Register values row
       element(
         "tr",
-        ...Object.keys(this.config.registers).map((name) =>
-          rewrittableTableElement(
+        ...Object.keys(this.config.registers).map((name) => {
+          const config = this.config.registers[name];
+          const bytes = config.bits / 8;
+          const maxValue = 2 ** (bytes * 8) - 1;
+
+          let onChange: (value: string) => string | void;
+          let pattern: string;
+          if (config.flags) {
+            // If the register has flags,
+            onChange = (value: string) => {
+              value = value.toUpperCase();
+              const flags = value.split("").filter((c) => c !== "_" && c !== " ");
+              // We expect a string with the flags, e.g. "ZC" for zero and carry
+              // flags.
+              if (flags.length > config.flags!.length) {
+                return this.localeStrings.moreFlagsThanExpected;
+              }
+
+              // Convert the flags to a number, where each flag is a bit in the
+              // number.
+              let num = 0;
+              for (let i = 0; i < flags.length; i++) {
+                const flag = flags[i];
+                const flagIndex = config.flags!.indexOf(flag);
+                if (flagIndex === -1) {
+                  return this.localeStrings.invalidFlag.replace("{flag}", flag);
+                }
+                num |= 1 << (config.flags!.length - flagIndex - 1);
+              }
+
+              // We will receive the result of the write operation in the
+              // `ui:memory:write:result` event, and will update the memory
+              // cell accordingly, then.
+              this.et.emit("dbg:register_update", name, num);
+            };
+            const flagsString = config.flags.join("");
+            pattern = `(?!.*([${flagsString}]).*\\1)[${flagsString}_ ]+`;
+          } else {
+            // If the register does not have flags, we expect a hex number.
+            onChange = (value: string) => {
+              const num = Number.parseInt(value, 16);
+              if (Number.isNaN(num) || num < 0 || num > maxValue) {
+                return this.localeStrings.onlyHex;
+              }
+
+              // We will receive the result of the write operation in the
+              // `ui:memory:write:result` event, and will update the memory
+              // cell accordingly, then.
+              this.et.emit("dbg:register_update", name, num);
+            };
+            // The pattern matches a hex value, with or without the 0x prefix, with
+            // the correct number of hex digits (2 per byte).
+            pattern = `(0x)?[0-9a-fA-F]{0,${bytes * 2}}`;
+          }
+          return rewrittableTableElement(
             {
               className: `register-${name} register-bytes-${this.config.registers[name].bits / 8} ${this.config.registers[name].pointer ? "pointer-register" : ""} uneditable`,
               textContent: this.localeStrings.unknown,
               onmouseenter: this.generateTooltipFunction(name),
-              title: this.config.registers[name].mirror
-                ? this.localeStrings.uneditableMirror
-                : undefined,
             },
-            this.localeStrings,
-            (newValue) => {
-              // We will receive the result of the write operation in the
-              // `ui:memory:write:result` event, and will update the memory
-              // cell accordingly, then.
-              this.et.emit("dbg:register_update", name, newValue);
+            {
+              bytes,
+              onChange,
+              pattern,
+              editWidth: config.flags ? config.flags.length : bytes * 2,
+              validationFailedMsg: config.flags
+                ? this.localeStrings.invalidOrWrongNumberOfFlags
+                : this.localeStrings.onlyHex,
             },
-            this.config.registers[name].bits / 8,
-          ),
-        ),
+          );
+        }),
       ),
     );
 
