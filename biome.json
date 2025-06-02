@@ -11,6 +11,9 @@
         "noNonNullAssertion": "off",
         "noParameterAssign": "off"
       },
+      "suspicious": {
+        "noConfusingVoidType": "info"
+      },
       "complexity": {
         "useSimpleNumberKeys": "off"
       },
