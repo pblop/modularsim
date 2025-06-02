@@ -6,6 +6,9 @@
     width: 100%;
     text-align: center;
 
+    th {
+      text-transform: uppercase;
+    }
     input {
       width: var(--register-edit-width, 2ch);
       height: 1lh;
