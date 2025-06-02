@@ -85,7 +85,6 @@ function indexOfLsb(mask: number): number {
 const RegisterUIStrings = createLanguageStrings({
   en: {
     pointerRegister: "Pointer register",
-    unknown: "??",
     onlyHex: "Only hex values of the same length as the register are allowed.",
     uneditableMirror: "This register is a mirror of another register, and cannot be edited.",
     uneditable: "Registers are uneditable while the CPU is executing an instruction.",
@@ -97,7 +96,6 @@ const RegisterUIStrings = createLanguageStrings({
   },
   es: {
     pointerRegister: "Registro apuntador",
-    unknown: "??",
     onlyHex: "Sólo se permiten valores hexadecimales de la longitud del registro.",
     uneditableMirror: "Este registro es un espejismo de otro registro, y no se puede editar.",
     uneditable:
@@ -317,7 +315,7 @@ class RegisterUI implements IModule {
 
       const address = this.registerValues[register];
       if (address === undefined) {
-        cell.title = `${this.localeStrings.unknown}\n${uneditableString}`.trimEnd();
+        cell.title = `??\n${uneditableString}`.trimEnd();
         return;
       }
 
@@ -381,6 +379,7 @@ class RegisterUI implements IModule {
           const config = this.config.registers[name];
           const bytes = config.bits / 8;
           const maxValue = 2 ** (bytes * 8) - 1;
+          const size = config.flags ? config.flags.length : bytes * 2;
 
           let onChange: (value: string) => string | void;
           let pattern: string;
@@ -434,14 +433,14 @@ class RegisterUI implements IModule {
           return rewrittableTableElement(
             {
               className: `register-${name} register-bytes-${this.config.registers[name].bits / 8} ${this.config.registers[name].pointer ? "pointer-register" : ""} uneditable`,
-              textContent: this.localeStrings.unknown,
+              textContent: "?".repeat(size),
               onmouseenter: this.generateTooltipFunction(name),
             },
             {
               bytes,
               onChange,
               pattern,
-              editWidth: config.flags ? config.flags.length : bytes * 2,
+              editWidth: size,
               validationFailedMsg: config.flags
                 ? this.localeStrings.invalidOrWrongNumberOfFlags
                 : this.localeStrings.onlyHex,
