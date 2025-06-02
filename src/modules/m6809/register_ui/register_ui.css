@@ -16,7 +16,7 @@
     }
     .uneditable {
       border: orangered 1px dashed;
-      cursor: not-allowed;
+      cursor: not-allowed !important;
     }
     .editable {
       cursor: text !important;
