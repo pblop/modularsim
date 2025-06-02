@@ -213,8 +213,10 @@ class RegisterUI implements IModule {
 
       if (!editable) {
         cell.classList.add("uneditable");
+        cell.classList.remove("editable");
       } else if (this.config.registers[register].mirror === undefined) {
         cell.classList.remove("uneditable");
+        cell.classList.add("editable");
       }
     }
   }

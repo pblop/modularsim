@@ -1,7 +1,7 @@
 .register-ui {
   .register-table {
     font-family: var(--gui-font-monospace);
-  font-weight: var(--gui-font-monospace-weight, auto);
+    font-weight: var(--gui-font-monospace-weight, auto);
 
     width: 100%;
     text-align: center;
@@ -19,6 +19,10 @@
     }
     .uneditable {
       border: orangered 1px dashed;
+      cursor: not-allowed;
+    }
+    .editable {
+      cursor: text !important;
     }
 
     .pointer-register {
