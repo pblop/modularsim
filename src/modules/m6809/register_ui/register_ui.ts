@@ -86,7 +86,6 @@ const RegisterUIStrings = createLanguageStrings({
   en: {
     pointerRegister: "Pointer register",
     onlyHex: "Only hex values of the same length as the register are allowed.",
-    uneditableMirror: "This register is a mirror of another register, and cannot be edited.",
     uneditable: "Registers are uneditable while the CPU is executing an instruction.",
     initialUneditable: "The register cannot be edited until the CPU has been initialized.",
     flags: "Flags: {flags}",
@@ -97,7 +96,6 @@ const RegisterUIStrings = createLanguageStrings({
   es: {
     pointerRegister: "Registro apuntador",
     onlyHex: "Sólo se permiten valores hexadecimales de la longitud del registro.",
-    uneditableMirror: "Este registro es un espejismo de otro registro, y no se puede editar.",
     uneditable:
       "Los registros no se pueden editar mientras la CPU esté ejecutando una instrucción.",
     initialUneditable: "No se puede editar el registro hasta que la CPU se haya inicializado.",
@@ -220,7 +218,7 @@ class RegisterUI implements IModule {
       if (!editable) {
         cell.classList.add("uneditable");
         cell.classList.remove("editable");
-      } else if (this.config.registers[register].mirror === undefined) {
+      } else {
         cell.classList.remove("uneditable");
         cell.classList.add("editable");
       }
@@ -421,10 +419,24 @@ class RegisterUI implements IModule {
                 return this.localeStrings.onlyHex;
               }
 
-              // We will receive the result of the write operation in the
-              // `ui:memory:write:result` event, and will update the memory
-              // cell accordingly, then.
-              this.et.emit("dbg:register_update", name, num);
+              // We don't need to update the table cell directly here, because
+              // we will receive the result of the write operation in the
+              // `ui:memory:write:result` event, and will update the memory cell
+              // accordingly, then.
+              if (!config.mirror) {
+                // If the register is not a mirror, we can update it directly.
+                this.et.emit("dbg:register_update", name, num);
+              } else {
+                // If the register is a mirror, we need to update the original
+                // register value. So we shift the value to the correct position
+                // based on the mask, and then update the original register
+                // value.
+                const sourceRegValue = this.registerValues[config.mirror.register];
+                const shiftedValue = num << indexOfLsb(config.mirror.mask);
+
+                const newSourceRegValue = (sourceRegValue & ~config.mirror.mask) | shiftedValue;
+                this.et.emit("dbg:register_update", config.mirror.register, newSourceRegValue);
+              }
             };
             // The pattern matches a hex value, with or without the 0x prefix, with
             // the correct number of hex digits (2 per byte).
