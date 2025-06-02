@@ -174,7 +174,7 @@ class InstructionUI implements IModule {
     this.cache = new InstructionCache((addr) =>
       decompileInstruction(this.read, this.registers!, addr),
     );
-    this.lockPC = false;
+    this.lockPC = true;
 
     if (this.config.initialPosition !== undefined) {
       this.initialAddress = this.config.initialPosition;
@@ -241,7 +241,7 @@ class InstructionUI implements IModule {
       this.modificationNumber = 0;
       this.updateQueue.queueUpdate(this.registers);
     });
-    const lockbutton = iconButton("unlock-icon", this.localeStrings.lockAlt, (icon) => {
+    const lockbutton = iconButton("lock-icon", this.localeStrings.lockAlt, (icon) => {
       icon.classList.toggle("unlock-icon");
       icon.classList.toggle("lock-icon");
       this.lockPC = !this.lockPC;
