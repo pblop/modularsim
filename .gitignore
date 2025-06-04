@@ -16,3 +16,9 @@ node_modules
 *.cdb
 # ignore JSON test files (instruction-for-instruction register dumps)
 programs/*.json
+doc/main.glg
+doc/main.gls
+doc/main.glo.ilg
+doc/main.lof
+doc/.DS_Store
+.DS_Store

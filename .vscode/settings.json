@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "dist/": true
+  },
+  "latex-workshop.latex.external.build.command": "bash",
+  "latex-workshop.latex.external.build.args": ["-c", "cd %DIR% && make -j8"],
+  "latex-workshop.latex.clean.command": "bash",
+  "latex-workshop.latex.clean.args": ["-c", "cd %WORKSPACE_FOLDER%/doc && make clean"],
+  "latex-workshop.latex.outDir": "%DIR%/build"
+}
