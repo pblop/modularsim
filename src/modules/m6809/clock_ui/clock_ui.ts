@@ -13,11 +13,13 @@ import { verify } from "../../../utils/config.js";
 
 type ClockUIConfig = {
   frequency: number;
-  autoReset?: "reset" | "fast_reset" | "no";
+  autoReset: "reset" | "fast_reset" | "no";
+  reloadFileOnReset: boolean;
 };
 
 type ClockUIState = {
-  machineState: "running" | "instruction_run" | "paused" | "stopped" | "fast_reset";
+  machineState: "running" | "instruction_run" | "paused" | "stopped" | "waiting_event";
+  eventInfo: "finish_reset" | "file_loaded" | "file_loaded_finish_reset" | null;
   lastCycleTime: number;
   cycles: number;
   loadedProgram: string;
@@ -72,6 +74,7 @@ class ClockUI implements IModule {
           "ui:clock:start",
           "ui:clock:step_instruction",
           "ui:clock:fast_reset",
+          "dbg:program:reload",
         ],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
@@ -81,6 +84,7 @@ class ClockUI implements IModule {
         optional: {
           "cpu:reset_finish": this.onResetFinish,
           "dbg:program:loaded": this.onProgramLoaded,
+          "system:load_finish": this.onLoadFinish,
         },
       },
       cycles: {
@@ -101,7 +105,12 @@ class ClockUI implements IModule {
       config,
       {
         frequency: { type: "number", default: 100 },
-        autoReset: { type: "string", default: "no", enum: ["reset", "fast_reset", "no"] },
+        autoReset: { type: "string", default: "fast_reset", enum: ["reset", "fast_reset", "no"] },
+        reloadFileOnReset: {
+          type: "boolean",
+          default: true,
+          required: false,
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -109,6 +118,7 @@ class ClockUI implements IModule {
       machineState: "stopped",
       lastCycleTime: 0,
       cycles: 0,
+      eventInfo: null,
       loadedProgram: "",
     };
 
@@ -122,13 +132,31 @@ class ClockUI implements IModule {
 
   onProgramLoaded = (programName: string): void => {
     console.log(`[${this.id}] Program loaded: ${programName}`);
-    this.updateFn?.({ loadedProgram: programName });
-
-    if (this.config.autoReset === "reset") {
-      this.onClickReset();
-    } else if (this.config.autoReset === "fast_reset") {
-      this.onClickFastReset();
+    // debugger;
+    if (this.state.machineState === "waiting_event") {
+      if (this.state.eventInfo === "file_loaded") {
+        this.updateFn?.({
+          machineState: "paused",
+          eventInfo: null,
+          loadedProgram: programName,
+          cycles: 0,
+        });
+        // We were waiting for the file to be loaded before resetting the CPU,
+        // so we can now reset the CPU.
+        this.event_transceiver.emit("signal:reset");
+      } else if (this.state.eventInfo === "file_loaded_finish_reset") {
+        this.updateFn?.({
+          machineState: "waiting_event",
+          eventInfo: "finish_reset",
+          loadedProgram: programName,
+          cycles: 0,
+        });
+        // Tell the clock to perform a fast reset.
+        this.event_transceiver.emit("signal:reset");
+        this.event_transceiver.emit("ui:clock:fast_reset");
+      }
     }
+    this.updateFn?.({ loadedProgram: programName });
   };
 
   onCycleStart = (): void => {
@@ -142,6 +170,19 @@ class ClockUI implements IModule {
     if (ctx.emitter === this.id) return;
 
     this.updateFn?.({ machineState: "paused" });
+  };
+
+  /**
+   * Callback used to automatically reset the system if required by the config.
+   * - If config.autoReset is "reset", it performs a standard reset.
+   * - If config.autoReset is "fast_reset", it performs a fast reset.
+   */
+  onLoadFinish = (): void => {
+    if (this.config.autoReset === "reset") {
+      this.onClickReset();
+    } else if (this.config.autoReset === "fast_reset") {
+      this.onClickFastReset();
+    }
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
@@ -209,13 +250,31 @@ class ClockUI implements IModule {
     this.updateFn?.({ machineState: "running" });
   };
   onClickReset = (): void => {
-    this.event_transceiver.emit("signal:reset");
-    this.updateFn?.({ machineState: "paused", cycles: 0 });
+    if (this.config.reloadFileOnReset) {
+      // If we want to reload the file on reset, we want to wait for the
+      // "dbg:program:loaded" event to finish before resetting the CPU.
+      this.updateFn?.({ machineState: "waiting_event", eventInfo: "file_loaded", cycles: 0 });
+      this.event_transceiver.emit("dbg:program:reload");
+    } else {
+      this.updateFn?.({ machineState: "paused", cycles: 0 });
+      this.event_transceiver.emit("signal:reset");
+    }
   };
   onClickFastReset = (): void => {
-    this.event_transceiver.emit("signal:reset");
-    this.updateFn?.({ machineState: "fast_reset", cycles: 0 });
-    this.event_transceiver.emit("ui:clock:fast_reset");
+    // Ask the system to perform a reset.
+    if (this.config.reloadFileOnReset) {
+      // If we want to reload the file on reset, we want to wait for the
+      // "dbg:program:loaded" event to finish before resetting the CPU.
+      this.updateFn?.({
+        machineState: "waiting_event",
+        eventInfo: "file_loaded_finish_reset",
+        cycles: 0,
+      });
+      this.event_transceiver.emit("dbg:program:reload");
+    } else {
+      this.event_transceiver.emit("signal:reset");
+      this.updateFn?.({ machineState: "paused", cycles: 0 });
+    }
   };
 
   initUI() {
@@ -327,7 +386,6 @@ class ClockUI implements IModule {
 
     let currentProgramName = "";
     const updateLoadedProgram = (name: string) => {
-      console.log(`[${this.id}] updateLoadedProgram: ${name}`);
       if (currentProgramName === name) return;
       currentProgramName = name;
 
@@ -339,7 +397,11 @@ class ClockUI implements IModule {
     };
 
     const internalUpdateFn = () => {
-      if (this.state.machineState === "running" || this.state.machineState === "instruction_run")
+      if (
+        this.state.machineState === "running" ||
+        this.state.machineState === "instruction_run" ||
+        this.state.machineState === "waiting_event"
+      )
         setRunningState();
       else if (this.state.machineState === "paused") setPausedState();
       else if (this.state.machineState === "stopped") setStoppedState();
@@ -351,9 +413,10 @@ class ClockUI implements IModule {
     this.updateQueue = new UpdateQueue(internalUpdateFn);
     this.updateFn = (data: Partial<ClockUIState>) => {
       if (data.machineState) this.state.machineState = data.machineState;
-      if (data.cycles) this.state.cycles = data.cycles;
+      if (data.cycles || data.cycles === 0) this.state.cycles = data.cycles;
       if (data.lastCycleTime) this.state.lastCycleTime = data.lastCycleTime;
       if (data.loadedProgram) this.state.loadedProgram = data.loadedProgram;
+      if (data.eventInfo || data.eventInfo === null) this.state.eventInfo = data.eventInfo;
 
       this.updateQueue!.queueUpdate();
     };
@@ -372,8 +435,10 @@ class ClockUI implements IModule {
     this.updateFn?.({ machineState: "paused" });
   };
   onResetFinish = (): void => {
-    if (this.state.machineState !== "fast_reset") return;
-    this.updateFn?.({ machineState: "paused" });
+    // debugger;
+    if (this.state.machineState === "waiting_event" && this.state.eventInfo === "finish_reset") {
+      this.updateFn?.({ machineState: "paused", eventInfo: null });
+    }
   };
 }
 

@@ -7,12 +7,8 @@ import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 type LoaderConfig = {
   file: string;
   symbolsFile?: string;
+  reloadOnPowerOn?: boolean;
 };
-
-function validateLoaderConfig(config: Record<string, unknown>): LoaderConfig {
-  if (typeof config.file !== "string") throw new Error("[Loader] binUrl must be a string");
-  return config as LoaderConfig;
-}
 
 function hexStringToBytes(hexString = ""): Uint8Array {
   const numbytes = Math.floor(hexString.length / 2);
@@ -57,7 +53,9 @@ class Loader implements IModule {
           "gui:panel_created": this.onPanelCreated,
           "system:load_finish": this.onLoadFinish,
         },
-        optional: {},
+        optional: {
+          "dbg:program:reload": this.onProgramReload,
+        },
       },
     };
   }
@@ -83,6 +81,11 @@ class Loader implements IModule {
         symbolsFile: {
           type: "string",
           required: false,
+        },
+        reloadOnPowerOn: {
+          type: "boolean",
+          required: false,
+          default: false,
         },
       },
       `[${this.id}] configuration error: `,
@@ -257,12 +260,20 @@ class Loader implements IModule {
     }
   };
 
-  onLoadFinish = () => {
+  loadAll = () => {
+    console.log(`[${this.id}] Loading program and symbols...`);
     const promises = [this.loadFile(this.config.file, this.fileType)];
     if (this.config.symbolsFile !== undefined) {
       promises.push(this.loadSymbols(this.config.symbolsFile, this.symbolsType!));
     }
     return Promise.all(promises);
+  };
+  onProgramReload = () => {
+    return this.loadAll();
+  };
+  onLoadFinish = () => {
+    if (!this.config.reloadOnPowerOn) return;
+    return this.loadAll();
   };
 }
 
