@@ -92,7 +92,7 @@ export class VirtualListElement extends HTMLElement {
   }
   set itemHeightUnits(units: string) {
     this.#itemHeightUnits = units;
-    this.#itemHeightMultiplier = convertToPixels(this.#itemHeight, this.#itemHeightUnits);
+    this.#itemHeightMultiplier = convertToPixels(1, this.#itemHeightUnits);
     this.updateContents();
   }
   get itemHeightUnits() {
@@ -179,8 +179,13 @@ export class VirtualListElement extends HTMLElement {
   }
 
   get #itemHeightPx() {
+    // NOTE: This solution is faster than converToPixels, because
+    // convertToPixels creates a temporary element to measure the height.
+    // But, if the unit used is somewhat dynamic, this will break, because it
+    // assumes that the multiplier (the conversion factor from the unit to
+    // pixels) is constant.
     return this.#itemHeightMultiplier * this.#itemHeight;
-    //return convertToPixels(this.#itemHeight, this.#itemHeightUnits);
+    // return convertToPixels(this.#itemHeight, this.#itemHeightUnits);
   }
 
   updateRenderBounds() {
