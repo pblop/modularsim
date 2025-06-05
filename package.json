@@ -1,8 +1,21 @@
 {
   "name": "tfg",
   "version": "1.0.0",
-  "description": "",
+  "author": "",
   "main": "index.js",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/gridstack": "^0.5.2",
+    "copyfiles": "^2.4.1",
+    "gridstack": "^12.2.1",
+    "nodemon": "^3.1.7",
+    "serve": "^14.2.4",
+    "typedoc": "^0.28.5",
+    "typescript": "^4.3.5"
+  },
+  "description": "",
+  "keywords": [],
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "clean": "rm -rf ./dist/",
     "build-ts": "tsc && cp -r ./src/ ./dist/source/",
@@ -13,18 +26,5 @@
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'",
     "cov:instructions": "bun ./scripts/instruction-coverage.ts"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@types/gridstack": "^0.5.2",
-    "copyfiles": "^2.4.1",
-    "gridstack": "^12.2.1",
-    "nodemon": "^3.1.7",
-    "serve": "^14.2.4",
-    "typescript": "^4.3.5"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "GPL-3.0-or-later",
-  "dependencies": {}
+  }
 }

@@ -1,0 +1,15 @@
+{
+  "entryPoints": ["src/**/*.ts"],
+  "exclude": ["**/node_modules/**", "src/types/global.d.ts"],
+  "out": "typedocout",
+  "tsconfig": "tsconfig.json",
+  "plugin": ["typedoc-plugin-merge-modules"],
+  "mergeModulesRenameDefaults": true,
+  "mergeModulesMergeMode": "module",
+  "json": "typedocout/documentation.json",
+  "hideGenerator": true,
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "categorizeByGroup": false
+}
