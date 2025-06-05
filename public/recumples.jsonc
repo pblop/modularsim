@@ -108,7 +108,8 @@
         "url": "./modules/m6809/clock_ui/clock_ui.js",
         "css": ["./modules/m6809/clock_ui/clock_ui.css"],
         "config": {
-          "frequency": 10000000
+          "frequency": 10000000,
+          "autoReset": "fast_reset"
         }
       },
       {

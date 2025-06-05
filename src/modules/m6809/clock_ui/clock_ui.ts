@@ -4,19 +4,17 @@ import { UpdateQueue } from "../../../utils/updatequeue.js";
 import type {
   EventContext,
   EventDeclaration,
+  EventDeclarationListeners,
   TypedEventTransceiver,
 } from "../../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
+import { verify } from "../../../utils/config.js";
 
 type ClockUIConfig = {
   frequency: number;
+  autoReset?: "reset" | "fast_reset" | "no";
 };
-
-function verifyClockUIConfig(config: Record<string, unknown>): ClockUIConfig {
-  if (typeof config.frequency !== "number") throw new Error("[ClockUI] frequency must be a number");
-  return config as ClockUIConfig;
-}
 
 type ClockUIState = {
   machineState: "running" | "instruction_run" | "paused" | "stopped" | "fast_reset";
@@ -99,7 +97,14 @@ class ClockUI implements IModule {
     this.id = id;
     this.event_transceiver = eventTransceiver;
 
-    this.config = verifyClockUIConfig(config);
+    this.config = verify<ClockUIConfig>(
+      config,
+      {
+        frequency: { type: "number", default: 100 },
+        autoReset: { type: "string", default: "no", enum: ["reset", "fast_reset", "no"] },
+      },
+      `[${this.id}] configuration error: `,
+    );
     this.state = {
       machineState: "stopped",
       lastCycleTime: 0,
@@ -118,6 +123,12 @@ class ClockUI implements IModule {
   onProgramLoaded = (programName: string): void => {
     console.log(`[${this.id}] Program loaded: ${programName}`);
     this.updateFn?.({ loadedProgram: programName });
+
+    if (this.config.autoReset === "reset") {
+      this.onClickReset();
+    } else if (this.config.autoReset === "fast_reset") {
+      this.onClickFastReset();
+    }
   };
 
   onCycleStart = (): void => {
@@ -166,45 +177,46 @@ class ClockUI implements IModule {
       </div>
     `;
     const main = frag.content.querySelector(".clock-main")!;
+    main.appendChild(iconButton("pause", this.localeStrings.pause, this.onClickPause));
+    main.appendChild(iconButton("continue", this.localeStrings.continue, this.onClickContinue));
+    main.appendChild(iconButton("step-cycle", this.localeStrings.stepCycle, this.onClickStepCycle));
     main.appendChild(
-      iconButton("pause", this.localeStrings.pause, () => {
-        this.event_transceiver.emit("ui:clock:pause");
-        this.updateFn!({ machineState: "paused" });
-      }),
+      iconButton(
+        "step-instruction",
+        this.localeStrings.stepInstruction,
+        this.onClickStepInstruction,
+      ),
     );
-    main.appendChild(
-      iconButton("continue", this.localeStrings.continue, () => {
-        this.event_transceiver.emit("ui:clock:start");
-        this.updateFn!({ machineState: "running" });
-      }),
-    );
-    main.appendChild(
-      iconButton("step-cycle", this.localeStrings.stepCycle, () => {
-        this.event_transceiver.emit("ui:clock:step_cycle");
-      }),
-    );
-    main.appendChild(
-      iconButton("step-instruction", this.localeStrings.stepInstruction, () => {
-        this.event_transceiver.emit("ui:clock:step_instruction");
-        this.updateFn!({ machineState: "instruction_run" });
-      }),
-    );
-    main.appendChild(
-      iconButton("reset", this.localeStrings.reset, () => {
-        this.event_transceiver.emit("signal:reset");
-        this.updateFn!({ machineState: "paused", cycles: 0 });
-      }),
-    );
-    main.appendChild(
-      iconButton("fast-reset", this.localeStrings.fastReset, () => {
-        this.event_transceiver.emit("signal:reset");
-        this.updateFn!({ machineState: "fast_reset", cycles: 0 });
-        this.event_transceiver.emit("ui:clock:fast_reset");
-      }),
-    );
+    main.appendChild(iconButton("reset", this.localeStrings.reset, this.onClickReset));
+    main.appendChild(iconButton("fast-reset", this.localeStrings.fastReset, this.onClickFastReset));
 
     return frag;
   }
+
+  onClickStepCycle = (): void => {
+    this.event_transceiver.emit("ui:clock:step_cycle");
+  };
+  onClickStepInstruction = (): void => {
+    this.event_transceiver.emit("ui:clock:step_instruction");
+    this.updateFn?.({ machineState: "instruction_run" });
+  };
+  onClickPause = (): void => {
+    this.event_transceiver.emit("ui:clock:pause");
+    this.updateFn?.({ machineState: "paused" });
+  };
+  onClickContinue = (): void => {
+    this.event_transceiver.emit("ui:clock:start");
+    this.updateFn?.({ machineState: "running" });
+  };
+  onClickReset = (): void => {
+    this.event_transceiver.emit("signal:reset");
+    this.updateFn?.({ machineState: "paused", cycles: 0 });
+  };
+  onClickFastReset = (): void => {
+    this.event_transceiver.emit("signal:reset");
+    this.updateFn?.({ machineState: "fast_reset", cycles: 0 });
+    this.event_transceiver.emit("ui:clock:fast_reset");
+  };
 
   initUI() {
     const frag = this.createFrag();
