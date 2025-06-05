@@ -3,12 +3,17 @@
   "exclude": ["**/node_modules/**", "src/types/globals.d.ts"],
   "out": "doc/appendix5/generated",
   "tsconfig": "tsconfig.json",
-  "plugin": ["typedoc-plugin-merge-modules", "typedoc-plugin-markdown"],
+  "plugin": [
+    "typedoc-plugin-merge-modules",
+    "typedoc-plugin-markdown",
+    "./scripts/typedoc-module.mjs"
+  ],
   "mergeModulesRenameDefaults": true,
   "mergeModulesMergeMode": "module",
   "hideGenerator": true,
-  "excludeExternals": true,
-  "excludePrivate": true,
-  "excludeProtected": true,
-  "categorizeByGroup": false
+  "categorizeByGroup": false,
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "mergeReadme": true,
+  "flattenOutputFiles": true
 }
