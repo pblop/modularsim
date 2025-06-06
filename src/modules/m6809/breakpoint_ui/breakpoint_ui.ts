@@ -20,13 +20,18 @@ const BreakpointUIStrings = createLanguageStrings({
     removeAllBreakpoint: "Remove all breakpoints",
     addBreakpoint: "Add breakpoint",
     removeBreakpoint: "Remove breakpoint",
-    enterAddress: "Enter address to add the breakpoint to:",
+    enterAddress: "Enter an address, symbol or symbol offset to add a breakpoint at:",
+    invalidAddress:
+      "Invalid address format. Please enter a valid hex address, symbol or symbol offset.",
   },
   es: {
     removeAllBreakpoint: "Eliminar todos los puntos de ruptura",
     addBreakpoint: "Añadir punto de ruptura",
     removeBreakpoint: "Eliminar punto de ruptura",
-    enterAddress: "Introduce la dirección en la que añadir el punto de ruptura:",
+    enterAddress:
+      "Introduce la dirección, símbolo o símbolo con desplazamiento en el que añadir el punto de ruptura:",
+    invalidAddress:
+      "Formato de dirección inválido. Por favor, introduce una dirección hexadecimal, un símbolo o un símbolo con desplazamiento válidos.",
   },
 });
 
@@ -44,6 +49,7 @@ class BreakpointUI implements IModule {
   list?: HTMLElement;
 
   breakpoints: number[] = [];
+  symbolMap: Record<string, number>;
 
   registers?: Registers;
 
@@ -64,6 +70,8 @@ class BreakpointUI implements IModule {
         optional: {
           "ui:breakpoint:add": this.onBreakpointAdd,
           "ui:breakpoint:remove": this.onBreakpointRemove,
+          "dbg:symbol:add": this.onAddSymbol,
+          "dbg:symbol:clear": this.onClearSymbols,
         },
       },
       cycles: {
@@ -84,6 +92,8 @@ class BreakpointUI implements IModule {
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
 
+    this.symbolMap = {};
+
     console.log(`[${this.id}] Module initialized.`);
   }
 
@@ -91,6 +101,13 @@ class BreakpointUI implements IModule {
     this.language = language;
     this.localeStrings = BreakpointUIStrings[this.language] || BreakpointUIStrings.en;
   }
+
+  onAddSymbol = (symbol: string, address: number) => {
+    this.symbolMap[symbol] = address;
+  };
+  onClearSymbols = () => {
+    this.symbolMap = {};
+  };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string) => {
     if (panel_id !== this.id) return;
@@ -110,8 +127,11 @@ class BreakpointUI implements IModule {
           }
         }),
         iconButton("add", this.localeStrings.addBreakpoint, () => {
-          const address = prompt(this.localeStrings.enterAddress);
-          if (address) this.addBreakpoint(Number(address));
+          const userInput = prompt(this.localeStrings.enterAddress);
+          if (!userInput) return;
+          const address = parseAddress(userInput, this.symbolMap);
+          if (address == null) return alert(this.localeStrings.invalidAddress);
+          this.addBreakpoint(address);
         }),
       ),
     );
@@ -214,6 +234,46 @@ class BreakpointUI implements IModule {
       }
     }
   };
+}
+
+/**
+ * Parses the input string as a hex number (address) or a symbol and an offset.
+ * Example inputs:
+ * - "0x1234" -> 0x1234
+ * - "1234" -> 0x1234
+ * (taking label=0x1000)
+ * - "label+0x10" or "label+10" -> 0x1010
+ * - "label-0x10" or "label-10" -> 0x0ff0
+ * - "label" -> 0x1000
+ * @param input The user input string.
+ * @param symbols A object of symbols to addresses, where the key is the symbol
+ * name
+ * @returns The parsed address as a number, or null if the input is invalid.
+ * @example
+ * parseAddress("0x1234", {}); // returns 4660
+ * parseAddress("1234", {}); // returns 4660
+ * parseAddress("label+0x10", { label: 0x1000 }); // returns 4112
+ * parseAddress("label-0x10", { label: 0x1000 }); // returns 4096
+ * parseAddress("label", { label: 0x1000 }); // returns 4096
+ */
+function parseAddress(input: string, symbols: Record<string, number>): number | null {
+  // debugger;
+  const parsed = Number.parseInt(input, 16);
+  // If the input is a valid number, we just return it.
+  if (!Number.isNaN(parsed) && Number.isFinite(parsed)) return parsed;
+
+  // If the input is not a number, we try to parse it as a symbol with an
+  // offset.
+  const match = input.match(/^([^+-]*)(?:([+-])((?:0x)?[0-9a-fA-F]+))?$/);
+  if (!match) return null;
+
+  const symbol = match[1];
+  const operator = match[2] || "+";
+  const offset = Number.parseInt(match[3], 16) || 0;
+  if (!(symbol in symbols) || Number.isNaN(offset) || !Number.isFinite(offset)) return null;
+  const baseAddress = symbols[symbol];
+  if (operator === "+") return baseAddress + offset;
+  else return baseAddress - offset;
 }
 
 export default BreakpointUI;
