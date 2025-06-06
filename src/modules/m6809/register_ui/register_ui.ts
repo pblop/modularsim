@@ -139,6 +139,7 @@ class RegisterUI implements IModule {
           "cpu:instruction_begin": this.disableRegisterEditing,
           "cpu:instruction_finish": this.enableRegisterEditing,
           "cpu:reset_finish": this.enableRegisterEditing,
+          "signal:reset": this.disableRegisterEditing,
         },
       },
     };
