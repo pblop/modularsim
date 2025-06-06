@@ -20,6 +20,7 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "dbg:symbol:add": [symbol: string, address: number, type: "global"];
   "dbg:symbol:clear": [];
   "dbg:program:loaded": [name: string];
+  "dbg:program:reload": [];
 
   "dbg:register_update": [register: string, value: number];
 
