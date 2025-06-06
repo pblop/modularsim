@@ -11,9 +11,7 @@ import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import type { Registers } from "../cpu/cpu_parts.js";
 
-type BreakpointUIConfig = {
-  frequency: number;
-};
+type BreakpointUIConfig = Record<string, never>; // no config options for now
 
 const BreakpointUIStrings = createLanguageStrings({
   en: {
