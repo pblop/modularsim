@@ -7,7 +7,9 @@ import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 type LoaderConfig = {
   file: string;
   symbolsFile?: string;
-  reloadOnPowerOn?: boolean;
+  reloadOnPowerOn: boolean;
+  symbolIgnoreRegex?: string;
+  symbolIgnoreList: string[];
 };
 
 function hexStringToBytes(hexString = ""): Uint8Array {
@@ -38,6 +40,7 @@ class Loader implements IModule {
 
   fileType: "bin" | "s19";
   symbolsType: "noice" | undefined;
+  symbolIgnoreRegex: RegExp | undefined;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -87,6 +90,18 @@ class Loader implements IModule {
           required: false,
           default: false,
         },
+        symbolIgnoreRegex: {
+          type: "string",
+          required: false,
+        },
+        symbolIgnoreList: {
+          type: "array",
+          required: false,
+          schema: {
+            type: "string",
+          },
+          default: [],
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -105,6 +120,10 @@ class Loader implements IModule {
       } else {
         throw new Error(`[${this.id}] Invalid symbols file extension. Must be .noi`);
       }
+    }
+
+    if (this.config.symbolIgnoreRegex !== undefined) {
+      this.symbolIgnoreRegex = new RegExp(this.config.symbolIgnoreRegex);
     }
 
     console.log(`[${this.id}] Initialized with config:`, this.config);
@@ -252,7 +271,7 @@ class Loader implements IModule {
           case "DEF": {
             const symbol = words[1];
             const address = Number.parseInt(words[2], 16);
-            this.evt.emit("dbg:symbol:add", symbol, address, "global");
+            this.conditionalEmitAddSymbol(symbol, address, "global");
             break;
           }
         }
@@ -274,6 +293,18 @@ class Loader implements IModule {
   onLoadFinish = () => {
     if (!this.config.reloadOnPowerOn) return;
     return this.loadAll();
+  };
+
+  /**
+   * Emit an event to add a symbol, if it both:
+   * - is not in the ignore list
+   * - does not match the ignore regex
+   */
+  conditionalEmitAddSymbol = (symbol: string, address: number, type: "global") => {
+    if (this.config.symbolIgnoreList.includes(symbol)) return;
+    if (this.symbolIgnoreRegex?.test(symbol)) return;
+
+    this.evt.emit("dbg:symbol:add", symbol, address, type);
   };
 }
 

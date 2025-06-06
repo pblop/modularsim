@@ -129,7 +129,9 @@
         "css": ["./modules/m6809/loader/loader.css"],
         "config": {
           "file": "./programs/recumples.s19",
-          "symbolsFile": "./programs/recumples.noi"
+          "symbolsFile": "./programs/recumples.noi",
+          // Ignorar los símbolos extra que genera el ensamblador.
+          "symbolIgnoreRegex": "^(\\.__\\.|s_|l_).*$"
           // "file": "http://localhost:6809/programs/loop.bin"
         }
       },
