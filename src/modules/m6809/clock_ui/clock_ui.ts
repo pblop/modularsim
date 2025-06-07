@@ -22,7 +22,6 @@ type ClockUIState = {
   eventInfo: "finish_reset" | "file_loaded" | "file_loaded_finish_reset" | null;
   lastCycleTime: number;
   cycles: number;
-  loadedProgram: string;
 };
 
 const ClockUIStrings = createLanguageStrings({
@@ -33,8 +32,6 @@ const ClockUIStrings = createLanguageStrings({
     stepCycle: "Step (1 cycle)",
     stepInstruction: "Step (1 instruction)",
     fastReset: "Fast reset",
-    loadedProgram: "Loaded program: ",
-    none: "none",
   },
   es: {
     reset: "Reset",
@@ -43,8 +40,6 @@ const ClockUIStrings = createLanguageStrings({
     stepCycle: "Paso (1 ciclo)",
     stepInstruction: "Paso (1 instrucción)",
     fastReset: "Reset rápido",
-    loadedProgram: "Programa cargado: ",
-    none: "ninguno",
   },
 });
 
@@ -118,7 +113,6 @@ class ClockUI implements IModule {
       lastCycleTime: 0,
       cycles: 0,
       eventInfo: null,
-      loadedProgram: "",
     };
 
     console.log(`[${this.id}] Module initialized.`);
@@ -130,14 +124,11 @@ class ClockUI implements IModule {
   }
 
   onProgramLoaded = (programName: string): void => {
-    console.log(`[${this.id}] Program loaded: ${programName}`);
-    // debugger;
     if (this.state.machineState === "waiting_event") {
       if (this.state.eventInfo === "file_loaded") {
         this.updateFn?.({
           machineState: "paused",
           eventInfo: null,
-          loadedProgram: programName,
           cycles: 0,
         });
         // We were waiting for the file to be loaded before resetting the CPU,
@@ -147,7 +138,6 @@ class ClockUI implements IModule {
         this.updateFn?.({
           machineState: "waiting_event",
           eventInfo: "finish_reset",
-          loadedProgram: programName,
           cycles: 0,
         });
         // Tell the clock to perform a fast reset.
@@ -155,7 +145,6 @@ class ClockUI implements IModule {
         this.event_transceiver.emit("ui:clock:fast_reset");
       }
     }
-    this.updateFn?.({ loadedProgram: programName });
   };
 
   onCycleStart = (): void => {
@@ -204,12 +193,6 @@ class ClockUI implements IModule {
           <div class="gui-icon cycle-counter"></div>
           <div class="clock-cycle-counter">0</div>
         </div>
-      </div>
-      <div class="clock-loaded-program-container">
-        <span>
-          ${this.localeStrings.loadedProgram}
-        </span>
-        <span class="clock-loaded-program">${this.localeStrings.none}</span>
       </div>
     `;
     const main = frag.content.querySelector(".clock-main")!;
@@ -283,10 +266,6 @@ class ClockUI implements IModule {
     )! as HTMLElement;
     const resetButton = frag.content.querySelector("button:has(.reset)")! as HTMLElement;
     const fastResetButton = frag.content.querySelector("button:has(.fast-reset)")! as HTMLElement;
-
-    const loadedProgramSpan = frag.content.querySelector(
-      ".clock-loaded-program",
-    )! as HTMLSpanElement;
 
     const cycleCounter = frag.content.querySelector(".clock-cycle-counter")! as HTMLElement;
     const marker = frag.content.querySelector(".clock-marker")! as HTMLElement;
@@ -379,18 +358,6 @@ class ClockUI implements IModule {
       }
     };
 
-    let currentProgramName = "";
-    const updateLoadedProgram = (name: string) => {
-      if (currentProgramName === name) return;
-      currentProgramName = name;
-
-      if (name.length === 0) {
-        loadedProgramSpan.textContent = this.localeStrings.none;
-      } else {
-        loadedProgramSpan.textContent = name;
-      }
-    };
-
     const internalUpdateFn = () => {
       if (this.state.machineState === "running" || this.state.machineState === "waiting_event")
         setRunningState();
@@ -398,7 +365,6 @@ class ClockUI implements IModule {
       else if (this.state.machineState === "stopped") setStoppedState();
 
       setCycleCount(this.state.cycles);
-      updateLoadedProgram(this.state.loadedProgram);
       tickAnimation();
     };
     this.updateQueue = new UpdateQueue(internalUpdateFn);
@@ -406,7 +372,6 @@ class ClockUI implements IModule {
       if (data.machineState) this.state.machineState = data.machineState;
       if (data.cycles || data.cycles === 0) this.state.cycles = data.cycles;
       if (data.lastCycleTime) this.state.lastCycleTime = data.lastCycleTime;
-      if (data.loadedProgram) this.state.loadedProgram = data.loadedProgram;
       if (data.eventInfo || data.eventInfo === null) this.state.eventInfo = data.eventInfo;
 
       this.updateQueue!.queueUpdate();
@@ -415,7 +380,6 @@ class ClockUI implements IModule {
     this.state.machineState = "stopped";
     this.state.cycles = 0;
     this.state.lastCycleTime = 0;
-    this.state.loadedProgram = "";
     internalUpdateFn();
 
     this.panel?.appendChild(frag.content);
