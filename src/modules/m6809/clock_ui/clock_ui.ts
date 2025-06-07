@@ -18,7 +18,7 @@ type ClockUIConfig = {
 };
 
 type ClockUIState = {
-  machineState: "running" | "instruction_run" | "paused" | "stopped" | "waiting_event";
+  machineState: "running" | "paused" | "stopped" | "waiting_event";
   eventInfo: "finish_reset" | "file_loaded" | "file_loaded_finish_reset" | null;
   lastCycleTime: number;
   cycles: number;
@@ -78,8 +78,7 @@ class ClockUI implements IModule {
         ],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
-          "cpu:instruction_finish": this.onInstructionFinish,
-          "ui:clock:pause": this.onClockPaused,
+          "clock:paused": this.onClockPaused,
         },
         optional: {
           "cpu:reset_finish": this.onResetFinish,
@@ -164,12 +163,8 @@ class ClockUI implements IModule {
     this.updateFn?.({ lastCycleTime: performance.now(), cycles: this.state.cycles + 1 });
   };
 
-  onClockPaused = (ctx: EventContext): void => {
-    // We want to pause only if the emitter is not this module (to keep in
-    // sync with the rest of the system).
-    if (ctx.emitter === this.id) return;
-
-    this.updateFn?.({ machineState: "paused" });
+  onClockPaused = (): void => {
+    this.updateFn?.({ machineState: "paused", eventInfo: null });
   };
 
   /**
@@ -238,11 +233,11 @@ class ClockUI implements IModule {
     this.event_transceiver.emit("ui:clock:step_cycle");
   };
   onClickStepInstruction = (): void => {
-    this.updateFn?.({ machineState: "instruction_run" });
+    this.updateFn?.({ machineState: "running" });
     this.event_transceiver.emit("ui:clock:step_instruction");
   };
   onClickPause = (): void => {
-    this.updateFn?.({ machineState: "paused" });
+    this.updateFn?.({ machineState: "paused", eventInfo: null });
     this.event_transceiver.emit("ui:clock:pause");
   };
   onClickContinue = (): void => {
@@ -397,11 +392,7 @@ class ClockUI implements IModule {
     };
 
     const internalUpdateFn = () => {
-      if (
-        this.state.machineState === "running" ||
-        this.state.machineState === "instruction_run" ||
-        this.state.machineState === "waiting_event"
-      )
+      if (this.state.machineState === "running" || this.state.machineState === "waiting_event")
         setRunningState();
       else if (this.state.machineState === "paused") setPausedState();
       else if (this.state.machineState === "stopped") setStoppedState();
@@ -430,10 +421,6 @@ class ClockUI implements IModule {
     this.panel?.appendChild(frag.content);
   }
 
-  onInstructionFinish = (): void => {
-    if (this.state.machineState !== "instruction_run") return;
-    this.updateFn?.({ machineState: "paused" });
-  };
   onResetFinish = (): void => {
     // debugger;
     if (this.state.machineState === "waiting_event" && this.state.eventInfo === "finish_reset") {
