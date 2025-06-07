@@ -19,6 +19,7 @@ type GuiConfig = {
   language?: string;
   root_selector: string;
   show_titles: boolean;
+  show_status: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "no";
 };
 
 class Gui implements IModule {
@@ -28,13 +29,16 @@ class Gui implements IModule {
   id: string;
 
   rootElement: HTMLElement;
+  statusElement?: HTMLElement;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
         provided: ["gui:panel_created"],
         required: { "system:load_finish": this.onSystemLoadFinish },
-        optional: {},
+        optional: {
+          "ui:message:status": this.onStatusMessage,
+        },
       },
     };
   }
@@ -86,6 +90,12 @@ class Gui implements IModule {
           required: false,
           default: true,
         },
+        show_status: {
+          type: "string",
+          required: false,
+          default: "bottom-left",
+          enum: ["top-left", "top-right", "bottom-left", "bottom-right", "no"],
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -107,19 +117,20 @@ class Gui implements IModule {
     this.rootElement = root_element;
 
     this.createDeploymentInfoElement();
-
+    if (this.config.show_status !== "no") this.statusElement = this.createStatusElement();
     VirtualListElement.define();
 
     console.log(`[${this.id}] Module initialized with language ${this.language}.`);
   }
 
   createDeploymentInfoElement() {
+    const position = this.config.show_status === "bottom-left" ? "bottom-right" : "bottom-left";
     fetch("deployment-info.json")
       .then((r) => r.json())
       .then((info) => {
         const date = new Date(info.date);
         const deployment_info_element = element("div", {
-          className: "deployment-info",
+          className: `gui-floating ${position}`,
           innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
           title: `${info.message}\n\n${info.body ?? ""}`.trimEnd(),
         });
@@ -127,6 +138,26 @@ class Gui implements IModule {
       })
       .catch(() => {});
   }
+  createStatusElement() {
+    const status_element = element("div", {
+      className: `gui-floating ${this.config.show_status}`,
+    });
+    this.rootElement.appendChild(status_element);
+    return status_element;
+  }
+
+  onStatusMessage = (message: string): void => {
+    if (!this.statusElement) return;
+
+    // If the message is empty, remove the status element.
+    if (message === "") {
+      this.statusElement.innerText = "";
+      return;
+    }
+
+    // Otherwise, set the message.
+    this.statusElement.innerText = message;
+  };
 
   onSystemLoadFinish = (): void => {
     // Now that the system is loaded, we can start rendering the GUI, and (most importantly) tell

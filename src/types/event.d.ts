@@ -70,6 +70,9 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   // Add more events here.
 
   "clock:paused": [];
+
+  // UI messages.
+  "ui:message:status": [message: string];
 }
 
 // Extract the parameters from the event map, but also allow any array of parameters,

@@ -26,14 +26,29 @@ button:hover {
   background-color: var(--gui-color-background);
   color: var(--gui-color-text);
 
-  .deployment-info {
+  .gui-floating {
     position: absolute;
-    bottom: 1rem;
-    left: 1rem;
 
     color: gray;
     font-weight: 500;
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+
+    &.bottom-right {
+      bottom: 1rem;
+      right: 1rem;
+    }
+    &.bottom-left {
+      bottom: 1rem;
+      left: 1rem;
+    }
+    &.top-right {
+      top: 1rem;
+      right: 1rem;
+    }
+    &.top-left {
+      top: 1rem;
+      left: 1rem;
+    }
   }
 
   .contrast-color {
