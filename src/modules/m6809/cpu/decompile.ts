@@ -371,7 +371,9 @@ export function getSymbolicAddress(
 export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
   formatAddress: (address: number, addressLocation: "address" | "extra") => string,
-  formatOffset: (offset: number, address: number) => string = (offset) => hexSign(offset, 0),
+  formatOffset: (offset: number, address: number, type: "relative" | "indexed") => string = (
+    offset,
+  ) => hexSign(offset, 0),
   generateTitle: (address: number) => string | undefined = () => undefined,
 ): AllInstructionRowData {
   const startAddressField = formatAddress(decompiled.startAddress, "address");
@@ -431,7 +433,7 @@ export function generateRowData(
         case IndexedAction.OffsetPC16: {
           // if (decompiled.startAddress === 0x18d) debugger;
           const offset = intNToNumber(result.offset, 16);
-          const offsetStr = formatOffset(offset, result.effectiveAddress);
+          const offsetStr = formatOffset(offset, result.effectiveAddress, "indexed");
           idxStr += offsetStr;
           extraField += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
           break;
@@ -469,7 +471,8 @@ export function generateRowData(
     case "relative": {
       // NOTE: Convert the relative address to a signed number for display.
       const offset = intNToNumber(addressing.offset, 8);
-      dataField += ` pc${offset >= 0 ? "+" : ""}${offset}`;
+      dataField += ` ${formatOffset(offset, decompiled.startAddress, "relative")}`;
+      // dataField += ` pc${offset >= 0 ? "+" : ""}${offset}`;
       extraField += ` <${formatAddress(addressing.address, "extra")}>`;
       break;
     }

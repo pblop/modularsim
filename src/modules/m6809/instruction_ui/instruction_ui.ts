@@ -400,7 +400,7 @@ class InstructionUI implements IModule {
    * If the symbols are enabled and found for the given address,
    * it will return the symbol and offset.
    */
-  formatOffset = (offset: number, address: number): string => {
+  formatOffset = (offset: number, address: number, type: "relative" | "indexed"): string => {
     // If we have symbols, we will use them to display the offset.
     // Otherwise, we will use the offset as a hexadecimal string.
     if (this.config.symbols && this.symbols.length > 0) {
@@ -416,7 +416,10 @@ class InstructionUI implements IModule {
         else return `${truncatedSymbol}${hexSign(offset, 1)}`;
       }
     }
-    return hexSign(offset, 0);
+    if (type === "relative")
+      // Relative offsets are shown as PC+offset.
+      return `PC${hexSign(offset, 0)}`;
+    else return hexSign(offset, 0);
   };
 
   generateTitle = (data: number): string | undefined => {
