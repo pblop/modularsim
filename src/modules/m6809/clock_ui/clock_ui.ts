@@ -238,16 +238,16 @@ class ClockUI implements IModule {
     this.event_transceiver.emit("ui:clock:step_cycle");
   };
   onClickStepInstruction = (): void => {
-    this.event_transceiver.emit("ui:clock:step_instruction");
     this.updateFn?.({ machineState: "instruction_run" });
+    this.event_transceiver.emit("ui:clock:step_instruction");
   };
   onClickPause = (): void => {
-    this.event_transceiver.emit("ui:clock:pause");
     this.updateFn?.({ machineState: "paused" });
+    this.event_transceiver.emit("ui:clock:pause");
   };
   onClickContinue = (): void => {
-    this.event_transceiver.emit("ui:clock:start");
     this.updateFn?.({ machineState: "running" });
+    this.event_transceiver.emit("ui:clock:start");
   };
   onClickReset = (): void => {
     if (this.config.reloadFileOnReset) {
@@ -272,8 +272,8 @@ class ClockUI implements IModule {
       });
       this.event_transceiver.emit("dbg:program:reload");
     } else {
-      this.event_transceiver.emit("signal:reset");
       this.updateFn?.({ machineState: "paused", cycles: 0 });
+      this.event_transceiver.emit("signal:reset");
     }
   };
 
