@@ -1,5 +1,7 @@
 import {
   decompose,
+  hex,
+  hexSign,
   intNToNumber,
   numberToIntN,
   signExtend,
@@ -347,6 +349,7 @@ export function generateInstructionElement(
 export function getSymbolicAddress(
   symbols: Symbol[],
   address: number,
+  maxOffset: number,
 ): [string, number] | [undefined, undefined] {
   // We find the symbol that is closest to the address, but not greater than it.
 
@@ -354,6 +357,9 @@ export function getSymbolicAddress(
     const [symbol, symbolAddress] = symbols[i];
     if (symbolAddress <= address) {
       const offset = address - symbolAddress;
+      if (offset > maxOffset)
+        // If the offset is greater than the maximum offset, we don't return it.
+        return [undefined, undefined];
       return [symbol, offset];
     }
   }
@@ -364,116 +370,117 @@ export function getSymbolicAddress(
 
 export function generateRowData(
   decompiled: DecompiledInstruction | FailedDecompilation,
-  formatAddress: (data: number, addressLocation: "address" | "extra") => string,
+  formatAddress: (address: number, addressLocation: "address" | "extra") => string,
+  formatOffset: (offset: number, address: number) => string = (offset) => hexSign(offset, 0),
   generateTitle: (address: number) => string | undefined = () => undefined,
 ): AllInstructionRowData {
-  const address = formatAddress(decompiled.startAddress, "address");
-  const raw = decompiled.bytes.map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
+  const startAddressField = formatAddress(decompiled.startAddress, "address");
+  const rawBytesField = decompiled.bytes.map((byte) => hex(byte)).join(" ");
 
-  if (decompiled.failed) {
+  if (decompiled.failed)
     return {
-      address,
-      raw,
+      address: startAddressField,
+      raw: rawBytesField,
       ok: false,
     };
-  } else {
-    const { args, addressing } = decompiled;
-    const { mnemonic } = decompiled.instruction;
-    const { mode } = addressing;
 
-    let data = mnemonic;
-    let extra = `${mode.slice(0, 3)}`;
+  const { args, addressing } = decompiled;
+  const { mnemonic } = decompiled.instruction;
+  const { mode } = addressing;
 
-    switch (mode) {
-      case "immediate": {
-        if (decompiled.instruction.extra.postbyte) {
+  let dataField = mnemonic;
+  let extraField = `${mode.slice(0, 3)}`;
+
+  switch (mode) {
+    case "immediate": {
+      if (decompiled.instruction.extra.postbyte) {
+        // If the instruction has a postbyte, we don't want to display the value
+        // as a number, but rather as the registers that are affected by the
+        // operation.
+        if (mnemonic.startsWith("psh") || mnemonic.startsWith("pul")) {
           // PSH or PUL
-          if (
-            decompiled.instruction.mnemonic.startsWith("psh") ||
-            decompiled.instruction.mnemonic.startsWith("pul")
-          ) {
-            data += ` ${decompiled.registersAffectedStack!.join(",")}`;
-          } else {
-            // EXG or TFR (the only instructions with immediate addressing and no register)
-            const [src, dst] = decompiled.exgRegisters!;
-            const intermediateStr = decompiled.instruction.mnemonic === "exg" ? "<->" : "->";
-            data += ` ${src}${intermediateStr}${dst}`;
-          }
+          dataField += ` ${decompiled.registersAffectedStack!.join(",")}`;
         } else {
-          const registerHexSize = REGISTER_SIZE[decompiled.instruction.register!] * 2;
-          data += ` #0x${args[0].toString(16).padStart(registerHexSize, "0")}`;
+          // EXG or TFR
+          const [src, dst] = decompiled.exgRegisters!;
+          dataField += ` ${src},${dst}`;
         }
-        break;
+      } else {
+        const registerSize = REGISTER_SIZE[decompiled.instruction.register!];
+        dataField += ` #0x${hex(args[0], registerSize)}`;
       }
-      case "direct":
-        data += ` 0x${addressing.low}`;
-        extra += ` <${formatAddress(addressing.address, "extra")}>`;
-        break;
-      case "indexed": {
-        let idxStr = " ";
-
-        const { parsedPostbyte, result } = addressing;
-        // The offset.
-        switch (parsedPostbyte.action) {
-          case IndexedAction.Offset0:
-            idxStr += "";
-            break;
-          case IndexedAction.Offset5:
-          case IndexedAction.Offset8:
-          case IndexedAction.Offset16:
-          case IndexedAction.OffsetPC8:
-          case IndexedAction.OffsetPC16: {
-            const offset = intNToNumber(result.offset, 16);
-            idxStr += `${offset >= 0 ? "+" : ""}${offset}`;
-            extra += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
-            break;
-          }
-          case IndexedAction.OffsetA:
-            idxStr += "A";
-            break;
-          case IndexedAction.OffsetB:
-            idxStr += "B";
-            break;
-          case IndexedAction.OffsetD:
-            idxStr += "D";
-            break;
-        }
-
-        idxStr += ",";
-
-        // The register.
-        if (parsedPostbyte.action === IndexedAction.PreDec1) idxStr += "-";
-        else if (parsedPostbyte.action === IndexedAction.PreDec2) idxStr += "--";
-
-        if (parsedPostbyte.register === "pc") idxStr += "PCR";
-        else idxStr += parsedPostbyte.register;
-
-        if (parsedPostbyte.action === IndexedAction.PostInc1) idxStr += "+";
-        else if (parsedPostbyte.action === IndexedAction.PostInc2) idxStr += "++";
-
-        if (parsedPostbyte.indirect) idxStr = `[${idxStr}]`;
-        data += idxStr;
-        break;
-      }
-      case "extended":
-        data += ` <${formatAddress(addressing.address, "extra")}>`;
-        break;
-      case "relative": {
-        // NOTE: Convert the relative address to a signed number for display.
-        const offset = intNToNumber(addressing.offset, 8);
-        data += ` pc${offset >= 0 ? "+" : ""}${offset}`;
-        extra += ` <${formatAddress(addressing.address, "extra")}>`;
-        break;
-      }
+      break;
     }
+    case "direct":
+      dataField += ` <${hex(addressing.low)}`;
+      extraField += ` <${formatAddress(addressing.address, "extra")}>`;
+      break;
+    case "indexed": {
+      let idxStr = "";
 
-    return {
-      address,
-      raw,
-      data,
-      extra,
-      title: generateTitle(decompiled.startAddress),
-      ok: true,
-    };
+      const { parsedPostbyte, result } = addressing;
+      // The offset.
+      switch (parsedPostbyte.action) {
+        case IndexedAction.Offset0:
+          idxStr += "";
+          break;
+        case IndexedAction.Offset5:
+        case IndexedAction.Offset8:
+        case IndexedAction.Offset16:
+        case IndexedAction.OffsetPC8:
+        case IndexedAction.OffsetPC16: {
+          // if (decompiled.startAddress === 0x18d) debugger;
+          const offset = intNToNumber(result.offset, 16);
+          const offsetStr = formatOffset(offset, result.effectiveAddress);
+          idxStr += offsetStr;
+          extraField += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
+          break;
+        }
+        case IndexedAction.OffsetA:
+          idxStr += "A";
+          break;
+        case IndexedAction.OffsetB:
+          idxStr += "B";
+          break;
+        case IndexedAction.OffsetD:
+          idxStr += "D";
+          break;
+      }
+
+      idxStr += ",";
+
+      // The register.
+      if (parsedPostbyte.action === IndexedAction.PreDec1) idxStr += "-";
+      else if (parsedPostbyte.action === IndexedAction.PreDec2) idxStr += "--";
+
+      if (parsedPostbyte.register === "pc") idxStr += "PC";
+      else idxStr += parsedPostbyte.register;
+
+      if (parsedPostbyte.action === IndexedAction.PostInc1) idxStr += "+";
+      else if (parsedPostbyte.action === IndexedAction.PostInc2) idxStr += "++";
+
+      if (parsedPostbyte.indirect) idxStr = `[${idxStr}]`;
+      dataField += ` ${idxStr}`;
+      break;
+    }
+    case "extended":
+      dataField += ` <${formatAddress(addressing.address, "extra")}>`;
+      break;
+    case "relative": {
+      // NOTE: Convert the relative address to a signed number for display.
+      const offset = intNToNumber(addressing.offset, 8);
+      dataField += ` pc${offset >= 0 ? "+" : ""}${offset}`;
+      extraField += ` <${formatAddress(addressing.address, "extra")}>`;
+      break;
+    }
   }
+
+  return {
+    address: startAddressField,
+    raw: rawBytesField,
+    data: dataField,
+    extra: extraField,
+    title: generateTitle(decompiled.startAddress),
+    ok: true,
+  };
 }

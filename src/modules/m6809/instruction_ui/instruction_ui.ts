@@ -23,6 +23,7 @@ import {
 } from "../cpu/decompile.js";
 import { InstructionCache } from "./instruction_ui/inst_cache.js";
 import { InstructionHistory } from "./instruction_ui/inst_history.js";
+import { hex, hexSign } from "../../../utils/numbers.js";
 
 type InstructionUIConfig = {
   /*
@@ -46,6 +47,11 @@ type InstructionUIConfig = {
    */
   symbols: "offset" | "single" | "none";
   maxSymbolLength: number;
+  /**
+   * The maximum offset to show in the instruction UI, if the offset from the
+   * nearest symbol is larger than this value, no symbol will be shown.
+   */
+  maxSymbolOffset: number;
 };
 
 const InstructionUIStrings = createLanguageStrings({
@@ -164,6 +170,11 @@ class InstructionUI implements IModule {
         required: false,
         default: undefined,
         enum: ["m6809"],
+      },
+      maxSymbolOffset: {
+        type: "number",
+        required: false,
+        default: 10000,
       },
     });
 
@@ -360,17 +371,52 @@ class InstructionUI implements IModule {
     this.updateQueue.queueUpdate();
   };
 
-  formatAddress = (data: number, addressLocation: "address" | "extra"): string => {
+  /**
+   * Formats an address for display in the instruction UI, based on the type of
+   * column and the current configuration.
+   * If the symbols are enabled (offset, extra) and found:
+   * - If writing an address to the data field, it will return the symbol and
+   *   offset if the config is set to "offset".
+   * - If writing an address to the extra field, it will return the symbol
+   *   and offset if the config is set to either "offset" or "extra".
+   * Otherwise, it will return the address as a hexadecimal string.
+   */
+  formatAddress = (data: number, column: "address" | "extra"): string => {
     // If we have symbols, we will use them to display the address.
     // Otherwise, we will use the address.
     if (this.config.symbols && this.symbols.length > 0) {
-      const [symbol, offset] = getSymbolicAddress(this.symbols, data);
-      if (symbol && (this.config.symbols === "offset" || addressLocation === "extra")) {
+      const [symbol, offset] = getSymbolicAddress(this.symbols, data, this.config.maxSymbolOffset);
+      if (symbol && (this.config.symbols === "offset" || column === "extra")) {
         const truncatedSymbol = symbol.slice(0, this.config.maxSymbolLength);
-        return `${truncatedSymbol}+${offset.toString(16).padStart(2, "0")}`;
+
+        if (offset === 0) return truncatedSymbol;
+        else return `${truncatedSymbol}${hexSign(offset, 1)}`;
       }
     }
-    return data.toString(16).padStart(4, "0");
+    return hex(data, 2);
+  };
+  /**
+   * Formats an offset for display in the instruction UI.
+   * If the symbols are enabled and found for the given address,
+   * it will return the symbol and offset.
+   */
+  formatOffset = (offset: number, address: number): string => {
+    // If we have symbols, we will use them to display the offset.
+    // Otherwise, we will use the offset as a hexadecimal string.
+    if (this.config.symbols && this.symbols.length > 0) {
+      const [symbol, offset] = getSymbolicAddress(
+        this.symbols,
+        address,
+        this.config.maxSymbolOffset,
+      );
+      if (symbol && this.config.symbols !== "none") {
+        const truncatedSymbol = symbol.slice(0, this.config.maxSymbolLength);
+
+        if (offset === 0) return truncatedSymbol;
+        else return `${truncatedSymbol}${hexSign(offset, 1)}`;
+      }
+    }
+    return hexSign(offset, 0);
   };
 
   generateTitle = (data: number): string | undefined => {
@@ -378,10 +424,8 @@ class InstructionUI implements IModule {
     // Otherwise, no title will be shown.
 
     if (this.config.symbols === "offset" && this.symbols.length > 0) {
-      const [symbol, offset] = getSymbolicAddress(this.symbols, data);
-      if (symbol) {
-        return `${data.toString(16).padStart(4, "0")}`;
-      }
+      const [symbol, offset] = getSymbolicAddress(this.symbols, data, this.config.maxSymbolOffset);
+      if (symbol) return `${hex(data, 2)}`;
     }
 
     return undefined;
@@ -410,7 +454,12 @@ class InstructionUI implements IModule {
     if (extras.isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
     else if (extras.isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
 
-    const rowData = generateRowData(disass, this.formatAddress, this.generateTitle);
+    const rowData = generateRowData(
+      disass,
+      this.formatAddress,
+      this.formatOffset,
+      this.generateTitle,
+    );
 
     // Get the parts of the row.
     const addressElement = children.find((el) => el.classList.contains("address"))!;
