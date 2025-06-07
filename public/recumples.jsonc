@@ -256,6 +256,12 @@
             }
           ]
         }
+      },
+      {
+        "id": "messager",
+        "type": "extra",
+        "url": "./modules/m6809/messager/messager.js",
+        "config": {}
       }
     ]
   }
