@@ -80,12 +80,14 @@ class Clock implements IModule {
     this.startTime = performance.now();
 
     // Send a clock cycle start event every 1/frequency seconds.
-    this.interval_id = setTimer(this.sendCycleEvent, 1000 / this.config.frequency, {
+    setTimer(this.sendCycleEvent, 1000 / this.config.frequency, {
       frequencyReportInterval: 1000,
       frequencyReportCallback: (frequency) => {
         console.log(`[${this.id}] Clock frequency: ${frequency}Hz`);
       },
       immediate: true,
+      intervalIdObject: this,
+      intervalIdName: "interval_id",
     });
   }
 

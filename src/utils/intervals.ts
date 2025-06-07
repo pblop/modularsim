@@ -37,20 +37,32 @@ function calculateAnimationFrameTime(callback: (time: number) => void, amount = 
 
 const BATCH_TIME = 16; // 10ms
 
-type TimerOptions = {
+type TimerOptions<K extends string = ""> = {
   immediate: boolean;
   frequencyReportInterval: number; // in ms
   frequencyReportCallback?: (frequency: number) => void;
+  intervalIdObject?: { [P in K]?: number }; // Object to store the interval ID
+  // If provided, the interval ID will be stored in this property of the
+  // intervalIdObject. This is useful for the edge case where you want to
+  // stop the clock during the first tick on an immediate call.
+  // Example:
+  // I start the timer with immediate: true, and during the first tick the CPU
+  // finishes an instruction and calls clock, and it tries to stop the timer.
+  // Because the function is called immediately (during the setTimer function),
+  // the interval ID is not available yet (we haven't returned from the setTimer
+  // function). Using this, we can store the interval ID in the object, just
+  // before the first immediate call to the function.
+  intervalIdName?: K;
 };
 const DEFAULT_OPTIONS: TimerOptions = {
   immediate: true,
   frequencyReportInterval: 0,
 };
 
-function setTimer<A extends unknown[]>(
+function setTimer<A extends unknown[], K extends string>(
   func: (...args: A) => unknown,
   time: number,
-  options: Partial<TimerOptions> = {},
+  options: Partial<TimerOptions<K>> = {},
   ...args: A
 ): number {
   // If the time is greater than 10ms, we don't need to do any magic.
@@ -69,7 +81,8 @@ function setTimer<A extends unknown[]>(
   //   return yieldingTimer(func, time, {}, ...args);
   // } else {
   //   console.log("Using interval timer");
-  return intervalTimer(func, time, fullOptions, ...args);
+  //@ts-ignore
+  return intervalTimer<A, K>(func, time, fullOptions, ...args);
   // }
 }
 
@@ -129,10 +142,10 @@ function yieldingTimer<A extends unknown[]>(
 // NOTA: Esto tiene el problema de que ahora que hay varios ciclos por cada
 // Task de JavaScript. Y ahora las partes del código que utilizan Promises se
 // van a desincronizar, porque se ejecutan una vez por cada varios ciclos.
-function intervalTimer<A extends unknown[]>(
+function intervalTimer<A extends unknown[], K extends string>(
   func: (...args: A) => unknown,
   time: number,
-  options: TimerOptions,
+  options: TimerOptions<K>,
   ...args: A
 ): number {
   // Number of calls per 10ms (we ignore the decimal part. setInterval doesn't
@@ -231,12 +244,17 @@ function intervalTimer<A extends unknown[]>(
   };
 
   const intervalCode = setInterval(intervalFn, BATCH_TIME);
+  // If we have been provided an object and a name, we store the interval ID
+  // in that object.
+  if (options.intervalIdObject && options.intervalIdName)
+    options.intervalIdObject[options.intervalIdName] = intervalCode;
+
+  breakInterval[intervalCode] = false;
   if (options.immediate) {
     intervalFn(); // setInterval doesn't call the function immediately, so we call it
     // manually the first time.
   }
 
-  breakInterval[intervalCode] = false;
   return intervalCode;
 }
 
