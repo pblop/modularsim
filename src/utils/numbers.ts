@@ -90,3 +90,22 @@ export function intNToNumber(int: number, size: number): number {
   // need any conversion.
   return int;
 }
+
+/**
+ * Convert a number to a hexadecimal string representation.
+ * @param val The number to convert.
+ * @param bytes The width of the hexadecimal string in bytes (default is 1).
+ * @returns The hexadecimal string representation of the number, padded to the
+ * specified width.
+ * @example
+ * hex(255) // returns "ff"
+ * hex(255, 2) // returns "00ff"
+ */
+export function hex(val: number, bytes = 1): string {
+  const hexString = val.toString(16);
+  return hexString.padStart(bytes * 2, "0");
+}
+
+export function hexSign(val: number, bytes = 1): string {
+  return (val > 0 ? "+" : "") + hex(val, bytes);
+}
