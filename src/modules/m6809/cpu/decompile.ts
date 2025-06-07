@@ -41,7 +41,7 @@ export async function disassIdxAdressing(
   let bytesReadOffPC = 0;
   const bytes = [];
 
-  let baseAddress: number = registers[register];
+  let baseAddress: number = register === "pc" ? pc : registers[register];
   let offset: number; // A signed 16-bit offset
   switch (action) {
     case IndexedAction.Offset0:
@@ -95,7 +95,12 @@ export async function disassIdxAdressing(
   }
 
   // Overflow!
-  const effectiveAddress = truncate(baseAddress + offset, 16);
+  let untruncEffectiveAddress = baseAddress + offset;
+  if (register === "pc")
+    // If the register is PC, the offset is relative to the end of the
+    // instruction.
+    untruncEffectiveAddress += bytesReadOffPC;
+  const effectiveAddress = truncate(untruncEffectiveAddress, 16);
   let address = effectiveAddress;
 
   if (indirect) {
