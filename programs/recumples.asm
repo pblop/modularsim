@@ -34,6 +34,9 @@ a_mes           .equ 0x85
 .globl imprime_cifras
 .globl imprime_cifra2
 .globl lista_nombres
+.globl aNo
+.globl mes
+.globl dIa
 
 ; INTERFAZ DE ENTRADA.
 aNo:         .word 0x2000          ; Año de nacimiento (BCD)
