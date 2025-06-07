@@ -68,6 +68,8 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "ui:breakpoint:add": [address: number];
   "ui:breakpoint:remove": [address: number];
   // Add more events here.
+
+  "clock:paused": [];
 }
 
 // Extract the parameters from the event map, but also allow any array of parameters,

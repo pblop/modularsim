@@ -29,7 +29,7 @@ class Clock implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: [],
+        provided: ["clock:paused"],
         required: {
           "signal:reset": this.onResetSignal,
         },
@@ -74,6 +74,7 @@ class Clock implements IModule {
 
     clearTimer(this.interval_id);
     this.interval_id = undefined;
+    this.simulation.emit("clock:paused");
   }
 
   createInterval(): void {
