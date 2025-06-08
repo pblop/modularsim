@@ -74,6 +74,7 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
 
   // UI messages.
   "ui:message:status": [message: string];
+  "ui:language": [language: string];
 }
 
 // Extract the parameters from the event map, but also allow any array of parameters,

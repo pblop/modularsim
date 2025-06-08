@@ -38,7 +38,7 @@ class Gui implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["gui:panel_created"],
+        provided: ["gui:panel_created", "ui:language"],
         required: { "system:load_finish": this.onSystemLoadFinish },
         optional: {
           "ui:message:status": this.onStatusMessage,
@@ -172,6 +172,7 @@ class Gui implements IModule {
   };
 
   onSystemLoadFinish = (): void => {
+    this.et.emit("ui:language", this.language);
     // Now that the system is loaded, we can start rendering the GUI, and (most importantly) tell
     // the other modules that the GUI is ready, and what their panel ids are.
     console.log(`[${this.id}] Creating GUI panels`);
