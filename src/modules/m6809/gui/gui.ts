@@ -5,6 +5,7 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../../types/eve
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import { VirtualListElement } from "../../../utils/VirtualListElement.js";
+import { UpdateQueue } from "../../../utils/updatequeue.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
@@ -30,6 +31,9 @@ class Gui implements IModule {
 
   rootElement: HTMLElement;
   statusElement?: HTMLElement;
+  statusMessage?: string;
+
+  statusUpdateQueue?: UpdateQueue;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -117,7 +121,11 @@ class Gui implements IModule {
     this.rootElement = root_element;
 
     this.createDeploymentInfoElement();
-    if (this.config.show_status !== "no") this.statusElement = this.createStatusElement();
+    if (this.config.show_status !== "no") {
+      this.statusElement = this.createStatusElement();
+      this.statusMessage = "";
+      this.statusUpdateQueue = new UpdateQueue(this._refreshStatusElement.bind(this));
+    }
     VirtualListElement.define();
 
     console.log(`[${this.id}] Module initialized with language ${this.language}.`);
@@ -148,15 +156,19 @@ class Gui implements IModule {
 
   onStatusMessage = (message: string): void => {
     if (!this.statusElement) return;
-
+    this.statusMessage = message;
+    console.log(`[${this.id}] Status message: ${message}`);
+    this.statusUpdateQueue!.queueUpdate();
+  };
+  _refreshStatusElement = (): void => {
     // If the message is empty, remove the status element.
-    if (message === "") {
-      this.statusElement.innerText = "";
+    if (this.statusMessage === "") {
+      this.statusElement!.innerText = "";
       return;
     }
 
     // Otherwise, set the message.
-    this.statusElement.innerText = message;
+    this.statusElement!.innerText = this.statusMessage!;
   };
 
   onSystemLoadFinish = (): void => {
