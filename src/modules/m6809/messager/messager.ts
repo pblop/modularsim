@@ -1,14 +1,36 @@
 import { verify } from "../../../utils/config.js";
 import type { TypedEventTransceiver } from "../../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
+import { createLanguageStrings } from "../../../utils/lang.js";
 
 type MessagerConfig = {};
+
+const MessagerUIStrings = createLanguageStrings({
+  en: {
+    programLoaded: "Program loaded: {name}.",
+    performingInstruction: "Performing instruction, {cycles} cycle(s) in.",
+    finishedInstruction: "Finished instruction in {cycles} cycle(s).",
+    running: "Running.",
+    paused: "Paused.",
+    stopped: "Stopped.",
+  },
+  es: {
+    programLoaded: "Programa cargado: {name}.",
+    performingInstruction: "Ejecutando instrucción, {cycles} ciclo(s) transcurridos.",
+    finishedInstruction: "Instrucción finalizada en {cycles} ciclo(s).",
+    running: "Ejecutando.",
+    paused: "Pausado.",
+    stopped: "Detenido.",
+  },
+});
 
 class Messager implements IModule {
   et: TypedEventTransceiver;
   id: string;
 
   config: MessagerConfig;
+  language!: string;
+  localeStrings!: typeof MessagerUIStrings.en;
 
   currentClockState: "paused" | "running" | "step" = "paused";
   currentProgramState: "ok" | "finished" = "ok";
@@ -30,6 +52,7 @@ class Messager implements IModule {
           "clock:paused": this.setClockPause,
           "ui:clock:fast_reset": this.setClockRunning,
           "stop:finished": this.onFinished,
+          "ui:language": this.onLanguageChange,
         },
       },
       cycles: {
@@ -47,7 +70,7 @@ class Messager implements IModule {
   };
 
   onProgramLoaded = (name: string): void => {
-    this.et.emit("ui:message:status", `Program loaded: ${name}.`);
+    this.et.emit("ui:message:status", this.localeStrings.programLoaded.replace("{name}", name));
   };
   setClockStep = (): void => {
     this.currentClockState = "step";
@@ -79,28 +102,36 @@ class Messager implements IModule {
     }
   };
   onFinished = (): void => {
-    this.et.emit("ui:message:status", "Stopped.");
+    this.et.emit("ui:message:status", this.localeStrings.stopped);
     this.currentProgramState = "finished";
   };
 
   sendPerformingInstruction(): void {
     this.et.emit(
       "ui:message:status",
-      `Performing instruction, ${this.cyclesInInstruction + 1} cycles in.`,
+      this.localeStrings.performingInstruction.replace(
+        "{cycles}",
+        `${this.cyclesInInstruction + 1}`,
+      ),
     );
   }
   sendFinishedInstruction(): void {
     this.et.emit(
       "ui:message:status",
-      `Finished instruction in ${this.cyclesInInstruction + 1} cycles.`,
+      this.localeStrings.finishedInstruction.replace("{cycles}", `${this.cyclesInInstruction + 1}`),
     );
   }
   sendRunningMessage(): void {
-    this.et.emit("ui:message:status", "Running.");
+    this.et.emit("ui:message:status", this.localeStrings.running);
   }
   sendPausedMessage(): void {
-    this.et.emit("ui:message:status", "Paused.");
+    this.et.emit("ui:message:status", this.localeStrings.paused);
   }
+
+  onLanguageChange = (language: string): void => {
+    this.language = language;
+    this.localeStrings = MessagerUIStrings[language] || MessagerUIStrings.en;
+  };
 
   constructor(
     id: string,
@@ -113,6 +144,7 @@ class Messager implements IModule {
 
     this.config = verify<MessagerConfig>(config, {}, this.id);
 
+    this.localeStrings = MessagerUIStrings.en;
     console.log(`[${this.id}] Initializing messager module.`);
   }
 }
