@@ -35,7 +35,7 @@
           "./config-colors.css"
         ],
         "config": {
-          "language": "es",
+          // "language": "es",
           "panels": [
             {
               "langName": {
