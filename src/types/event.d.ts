@@ -21,8 +21,9 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "dbg:symbol:clear": [];
   "dbg:program:loaded": [name: string];
   "dbg:program:reload": [];
-
   "dbg:register_update": [register: string, value: number];
+
+  "stop:finished": [];
 
   // System syncronisation events. These act as a barrier.
   "system:load_finish": [];

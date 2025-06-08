@@ -24,7 +24,11 @@ class Stop implements IModule {
 
     return {
       events: {
-        provided: ["ui:clock:pause", eventAsMultiplexedOutput("memory:write:result")],
+        provided: [
+          "ui:clock:pause",
+          "stop:finished",
+          eventAsMultiplexedOutput("memory:write:result"),
+        ],
         required: {
           [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
         },
@@ -52,6 +56,7 @@ class Stop implements IModule {
   }
 
   onMemoryWrite = (address: number, data: number): void => {
+    this.event_transceiver.emit("stop:finished");
     this.event_transceiver.emit("ui:clock:pause");
     this.event_transceiver.emit(
       joinEventName("memory:write:result", this.config.multiplexer),
