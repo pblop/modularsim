@@ -1,7 +1,7 @@
 {
   "simulator": {
     // "url" es la ruta del archivo que contiene el simulador
-    "url": "./modules/simulator.js",
+    "url": "./modules/simulator/simulator.js",
     "modules": [
       {
         // "id" es un identificador único para cada módulo
@@ -47,7 +47,7 @@
         "id": "clock_ui",
         "type": "ui",
         "url": "./modules/m6809/clock_ui/clock_ui.js",
-        "css": ["./m6809/ui/clock_ui.css"],
+        "css": ["./modules/m6809/clock_ui/clock_ui.css"],
         "config": {
           "frequency": 100000000000
         }
@@ -68,8 +68,8 @@
         "url": "./modules/m6809/loader/loader.js",
         "css": ["./modules/m6809/loader/loader.css"],
         "config": {
-          "file": "./programs/holalargo.s19",
-          "symbolsFile": "./programs/2d.noi"
+          "file": "./programs/recumples.s19",
+          "symbolsFile": "./programs/recumples.noi"
           // "file": "http://localhost:6809/m6809/programs/loop.bin"
         }
       },

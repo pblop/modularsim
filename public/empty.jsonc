@@ -1,7 +1,7 @@
 {
   "simulator": {
     // "url" es la ruta del archivo que contiene el simulador
-    "url": "./modules/simulator.js",
+    "url": "./modules/simulator/simulator.js",
     "modules": []
   }
 }
