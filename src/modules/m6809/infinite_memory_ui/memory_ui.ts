@@ -207,7 +207,7 @@ class MemoryUI implements IModule {
     this.memoryTable.itemGenerator = this.itemGenerator;
     this.memoryTable.itemCount = Math.ceil(this.config.size / 0x10);
     this.memoryTable.itemHeight = 1.5;
-    this.memoryTable.itemHeightUnits = "rem";
+    this.memoryTable.itemHeightUnits = "em";
     this.moveToAddress(this.config.initialPosition);
   }
 
