@@ -13,9 +13,6 @@ export class VirtualListElement extends HTMLElement {
   // Height of each item in the specified units
   #itemHeight = 40;
   #itemHeightUnits = "px";
-  // The multiplier for converting item height to pixels.
-  // itemHeightPixels = #itemHeight * #itemHeightMultiplier;
-  #itemHeightMultiplier = 1;
   // The elements whose content will be swapped
   #nodes: HTMLElement[] = [];
   // The indices of the items that are currently visible
@@ -93,7 +90,6 @@ export class VirtualListElement extends HTMLElement {
   }
   set itemHeightUnits(units: string) {
     this.#itemHeightUnits = units;
-    // this.#itemHeightMultiplier = convertToPixels(1, this.#itemHeightUnits);
     this.updateContents();
   }
   get itemHeightUnits() {
@@ -120,9 +116,9 @@ export class VirtualListElement extends HTMLElement {
     this.updateContentsQueue.queueUpdate();
   }
   _updateContents() {
+    this.updatePlaceholder();
     this.updateVisibleItems();
     this.updateRenderBounds();
-    this.updatePlaceholder();
     this.render();
   }
 
@@ -181,13 +177,8 @@ export class VirtualListElement extends HTMLElement {
   }
 
   get #itemHeightPx() {
-    // NOTE: This solution is faster than converToPixels, because
-    // convertToPixels creates a temporary element to measure the height.
-    // But, if the unit used is somewhat dynamic, this will break, because it
-    // assumes that the multiplier (the conversion factor from the unit to
-    // pixels) is constant.
-    // return this.#itemHeightMultiplier * this.#itemHeight;
-    return convertToPixels(this.list, this.#itemHeight, this.#itemHeightUnits);
+    if (this.#itemHeightUnits === "px") return this.#itemHeight;
+    return this.placeholder.getBoundingClientRect().height / this.#itemCount || 1;
   }
 
   updateRenderBounds() {
