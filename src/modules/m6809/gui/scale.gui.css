@@ -1,0 +1,11 @@
+@import url("common.css");
+
+
+.gui-root {
+  display: grid;
+
+  grid-gap: 1rem;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(24, calc(100vh / 24));
+  grid-auto-flow: column;
+}
