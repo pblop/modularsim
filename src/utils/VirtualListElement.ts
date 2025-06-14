@@ -28,6 +28,9 @@ export class VirtualListElement extends HTMLElement {
   // visible items when the height changes).
   #prevHeight = 0;
 
+  // The scroll position, in items, of the list.
+  #scrollPosition = 0;
+
   private list!: HTMLDivElement;
   private placeholder!: HTMLDivElement;
   private resizeObserver!: ResizeObserver;
@@ -98,6 +101,7 @@ export class VirtualListElement extends HTMLElement {
 
   set start(value: number) {
     this.scrollTop = value * this.#itemHeightPx;
+    this.#scrollPosition = value;
     this.updateContents();
   }
   get start() {
@@ -156,7 +160,14 @@ export class VirtualListElement extends HTMLElement {
   }
 
   // TODO: scroll queue
+  // Ignore the next scroll event, used when changing the scrollTop
+  ignoreNextScroll = false;
   onScroll() {
+    if (this.ignoreNextScroll) {
+      this.ignoreNextScroll = false;
+      return;
+    }
+    this.#scrollPosition = this.scrollTop / this.#itemHeightPx;
     this.updateRenderBounds();
     this.render();
   }
@@ -170,6 +181,12 @@ export class VirtualListElement extends HTMLElement {
     const height = entry.contentRect.height;
     if (height !== this.#prevHeight) {
       this.#prevHeight = height;
+
+      // Because the height of the items may have changed, we need to
+      // recalculate the correct scroll position. Otherwise, the list will
+      // scroll to the wrong position sometimes.
+      this.ignoreNextScroll = true; // Ignore the scroll event that will be triggered by changing the scrollTop
+      this.scrollTop = this.#scrollPosition * this.#itemHeightPx;
       this.updateVisibleItems();
       this.updateRenderBounds();
       this.render();
@@ -198,22 +215,4 @@ export class VirtualListElement extends HTMLElement {
       customElements.define(tagName, VirtualListElement);
     }
   }
-}
-
-function convertToPixels(root: HTMLElement, value: number, unit: string): number {
-  // Handle common units directly
-  if (unit === "px") return value;
-
-  // For other units, create a temporary element to measure
-  const tempElement = document.createElement("div");
-  tempElement.style.visibility = "hidden";
-  tempElement.style.position = "absolute";
-  tempElement.style.height = `${value}${unit}`;
-  root.appendChild(tempElement);
-
-  // Get the computed height in pixels
-  const pixels = tempElement.getBoundingClientRect().height;
-  root.removeChild(tempElement);
-
-  return pixels;
 }
