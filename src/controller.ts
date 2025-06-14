@@ -1,6 +1,6 @@
-import type { Config, ModuleConfig } from "../types/config.js";
-import type { ModuleConstructor } from "../types/module.js";
-import type { ISimulator, SimulatorConstructor } from "../types/simulator.js";
+import type { Config, ModuleConfig } from "./types/config.js";
+import type { ModuleConstructor } from "./types/module.js";
+import type { ISimulator, SimulatorConstructor } from "./types/simulator.js";
 
 const DEFAULT_CONFIG_URL = "config.jsonc";
 
