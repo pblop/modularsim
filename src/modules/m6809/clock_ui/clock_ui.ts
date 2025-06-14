@@ -233,11 +233,19 @@ class ClockUI implements IModule {
     this.event_transceiver.emit("ui:clock:step_instruction");
   };
   onClickPause = (): void => {
-    this.updateFn?.({ machineState: "paused", eventInfo: null });
+    // This line is not necessary, as the clock will emit the "clock:paused"
+    // event after it receives the "ui:clock:pause" event, and our onClockPaused
+    // method will update the state. But the UI will be updated immediately
+    // to reflect the paused state if this line is in the code.
+    // this.updateFn?.({ machineState: "paused", eventInfo: null });
     this.event_transceiver.emit("ui:clock:pause");
   };
   onClickContinue = (): void => {
-    this.updateFn?.({ machineState: "running" });
+    // This line is not necessary, as the clock will emit the "clock:started"
+    // event after it receives the "ui:clock:start" event, and our onClockStarted
+    // method will update the state. But the UI will be updated immediately
+    // to reflect the running state this way if this line is in the code.
+    // this.updateFn?.({ machineState: "running" });
     this.event_transceiver.emit("ui:clock:start");
   };
   onClickReset = (): void => {
