@@ -74,6 +74,8 @@ class ClockUI implements IModule {
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
           "clock:paused": this.onClockPaused,
+          "clock:started": this.onClockStarted,
+          "signal:reset": this.onResetEvent,
         },
         optional: {
           "cpu:reset_finish": this.onResetFinish,
@@ -155,6 +157,11 @@ class ClockUI implements IModule {
   onClockPaused = (): void => {
     this.updateFn?.({ machineState: "paused", eventInfo: null });
   };
+  onClockStarted = (): void => {
+    if (this.state.machineState === "paused" || this.state.machineState === "stopped") {
+      this.updateFn?.({ machineState: "running", eventInfo: null });
+    }
+  };
 
   /**
    * Callback used to automatically reset the system if required by the config.
@@ -211,6 +218,12 @@ class ClockUI implements IModule {
 
     return frag;
   }
+
+  onResetEvent = (context: EventContext): void => {
+    console.log(`[${this.id}] Reset event received`, context);
+    if (context.emitter === this.id) return;
+    this.updateFn?.({ machineState: "paused", eventInfo: null, cycles: 0 });
+  };
 
   onClickStepCycle = (): void => {
     this.event_transceiver.emit("ui:clock:step_cycle");

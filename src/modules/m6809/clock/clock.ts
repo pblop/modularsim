@@ -29,7 +29,7 @@ class Clock implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["clock:paused"],
+        provided: ["clock:paused", "clock:started"],
         required: {
           "signal:reset": this.onResetSignal,
         },
@@ -79,6 +79,7 @@ class Clock implements IModule {
 
   createInterval(): void {
     this.startTime = performance.now();
+    this.simulation.emit("clock:started");
 
     // Send a clock cycle start event every 1/frequency seconds.
     setTimer(this.sendCycleEvent, 1000 / this.config.frequency, {
