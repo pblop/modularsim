@@ -192,7 +192,7 @@ function pushEnd(
   stateInfo: ExecuteStateInfo,
   addressingData: CpuAddressingData<"immediate">,
 ): boolean {
-  const { memoryPending, memoryAction, commitRegisters, registers } = cpuInfo;
+  const { memoryPending, sendInstructionExtra, memoryAction, commitRegisters, registers } = cpuInfo;
   if (memoryPending) return false;
 
   const instructionCtx = stateInfo.ctx.instructionCtx;
@@ -202,6 +202,11 @@ function pushEnd(
     const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
     if (postbyte === null) return false;
     instructionCtx.registers = parseStackPostbyte(postbyte, register, "push");
+    sendInstructionExtra({
+      instruction: "psh",
+      stackRegister: register,
+      registers: instructionCtx.registers,
+    });
   }
 
   // All the push logic is done in the start function.
@@ -241,7 +246,7 @@ function pullEnd(
   stateInfo: ExecuteStateInfo,
   addressingData: CpuAddressingData<"immediate">,
 ): boolean {
-  const { memoryPending, memoryAction, commitRegisters, registers } = cpuInfo;
+  const { memoryPending, sendInstructionExtra, memoryAction, commitRegisters, registers } = cpuInfo;
   if (memoryPending) return false;
 
   const instructionCtx = stateInfo.ctx.instructionCtx;
@@ -251,6 +256,11 @@ function pullEnd(
     const postbyte = retrieveReadAddressing(addressingData, cpuInfo, stateInfo);
     if (postbyte === null) return false;
     instructionCtx.registers = parseStackPostbyte(postbyte, register, "pull");
+    sendInstructionExtra({
+      instruction: "pul",
+      stackRegister: register,
+      registers: instructionCtx.registers,
+    });
   }
 
   if (stateInfo.ticksOnState < 3) return false;

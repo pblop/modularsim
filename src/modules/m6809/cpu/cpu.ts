@@ -70,6 +70,18 @@ export type CpuAddressingData<M extends AddressingMode> =
   M extends "inherent" ? CpuInherentAddressingData :
   never;
 
+export type InstructionPostbyteInfo =
+  | {
+      instruction: "exg" | "tfr";
+      reg1: AllRegisters | null;
+      reg2: AllRegisters | null;
+    }
+  | {
+      instruction: "psh" | "pul";
+      stackRegister: "S" | "U";
+      registers: AllRegisters[];
+    };
+
 export class RWHelper {
   raw: number[] = [];
   bytesDone = 0;
@@ -176,6 +188,7 @@ class Cpu implements IModule {
           "cpu:instruction_decoded",
           "cpu:instruction_finish",
           "cpu:instruction_begin",
+          "cpu:instruction_extra",
           "memory:read",
           "memory:write",
           "cpu:register_update",
@@ -424,6 +437,11 @@ class Cpu implements IModule {
     this.addressing = undefined;
   };
 
+  sendInstructionExtra = (extra: InstructionPostbyteInfo) => {
+    if (!this.instruction || !this.addressing) return;
+    this.et.emit("cpu:instruction_extra", extra);
+  };
+
   /**
    * Notify other modules that the instruction has been fetched.
    */
@@ -471,6 +489,7 @@ class Cpu implements IModule {
       registers: this.registers,
       memoryAction: this.memoryAction,
       commitRegisters: this.commitRegisters,
+      sendInstructionExtra: this.sendInstructionExtra,
       et: this.et,
       cpu: this,
     };

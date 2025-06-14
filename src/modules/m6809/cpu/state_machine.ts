@@ -1,7 +1,7 @@
 import type { EmptyObject } from "../../../types/common.js";
 import type { TypedEventTransceiver } from "../../../types/event.js";
 import type Cpu from "./cpu.js";
-import type { CpuConfig, RWHelper } from "./cpu.js";
+import type { CpuConfig, InstructionPostbyteInfo, RWHelper } from "./cpu.js";
 import type { Registers } from "./cpu_parts.js";
 import type { ParsedIndexedPostbyte } from "./instructions.js";
 
@@ -41,6 +41,7 @@ export type CpuInfo = {
   memoryAction: RWHelper | null;
   commitRegisters: () => void;
   et: TypedEventTransceiver;
+  sendInstructionExtra: (extra: InstructionPostbyteInfo) => void;
   cpu: Cpu;
 };
 export type AnyStateInfo = {

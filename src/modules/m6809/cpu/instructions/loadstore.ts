@@ -21,6 +21,10 @@ export type AllRegisters = Register | Accumulator | "pc" | "cc" | "dp";
 const REGISTER_LIST_EXG: (AllRegisters | null)[] = ["D", "X", "Y", "U", "S", 
   "pc", null, null, "A", "B", "cc", "dp"];
 export function parseExgPostbyte(postbyte: number): [AllRegisters | null, AllRegisters | null] {
+  /**
+   * Parses the postbyte of the EXG instruction and returns the two
+   * registers involved in the exchange (or null if the value is invalid).
+   */
   const reg1i = (postbyte & 0xf0) >> 4;
   const reg2i = postbyte & 0x0f;
 
@@ -82,7 +86,7 @@ function exg(
   stateInfo: ExecuteStateInfo,
   addressingData: CpuAddressingData<"immediate">,
 ): boolean {
-  const { registers } = cpuInfo;
+  const { registers, sendInstructionExtra } = cpuInfo;
   const {
     ticksOnState,
     ctx: { instructionCtx },
@@ -95,6 +99,11 @@ function exg(
   if (postbyte === null) return false;
 
   const [name1, name2] = parseExgPostbyte(postbyte);
+  sendInstructionExtra({
+    instruction: "exg",
+    reg1: name1,
+    reg2: name2,
+  });
 
   // NOTE: I perform the swap on the last cycle because I send events for every
   // PC change, and it seems most sensible (even if it's not the most accurate)
@@ -180,7 +189,7 @@ function tfr(
   stateInfo: ExecuteStateInfo,
   addressingData: CpuAddressingData<"immediate">,
 ): boolean {
-  const { registers } = cpuInfo;
+  const { registers, sendInstructionExtra } = cpuInfo;
   const {
     ticksOnState,
     ctx: { instructionCtx },
@@ -193,6 +202,11 @@ function tfr(
   if (postbyte === null) return false;
 
   const [name1, name2] = parseExgPostbyte(postbyte);
+  sendInstructionExtra({
+    instruction: "tfr",
+    reg1: name1,
+    reg2: name2,
+  });
 
   if (name2 === null) return true;
 
