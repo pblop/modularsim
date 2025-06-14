@@ -44,6 +44,7 @@ export class VirtualListElement extends HTMLElement {
   connectedCallback() {
     this.style.display = "block";
     this.style.overflowY = "auto";
+    this.style.position = "relative";
 
     this.list = document.createElement("div");
     this.appendChild(this.list);
@@ -92,7 +93,7 @@ export class VirtualListElement extends HTMLElement {
   }
   set itemHeightUnits(units: string) {
     this.#itemHeightUnits = units;
-    this.#itemHeightMultiplier = convertToPixels(1, this.#itemHeightUnits);
+    // this.#itemHeightMultiplier = convertToPixels(1, this.#itemHeightUnits);
     this.updateContents();
   }
   get itemHeightUnits() {
@@ -158,6 +159,7 @@ export class VirtualListElement extends HTMLElement {
     }
   }
 
+  // TODO: scroll queue
   onScroll() {
     this.updateRenderBounds();
     this.render();
@@ -184,8 +186,8 @@ export class VirtualListElement extends HTMLElement {
     // But, if the unit used is somewhat dynamic, this will break, because it
     // assumes that the multiplier (the conversion factor from the unit to
     // pixels) is constant.
-    return this.#itemHeightMultiplier * this.#itemHeight;
-    // return convertToPixels(this.#itemHeight, this.#itemHeightUnits);
+    // return this.#itemHeightMultiplier * this.#itemHeight;
+    return convertToPixels(this.list, this.#itemHeight, this.#itemHeightUnits);
   }
 
   updateRenderBounds() {
@@ -207,7 +209,7 @@ export class VirtualListElement extends HTMLElement {
   }
 }
 
-function convertToPixels(value: number, unit: string): number {
+function convertToPixels(root: HTMLElement, value: number, unit: string): number {
   // Handle common units directly
   if (unit === "px") return value;
 
@@ -216,11 +218,11 @@ function convertToPixels(value: number, unit: string): number {
   tempElement.style.visibility = "hidden";
   tempElement.style.position = "absolute";
   tempElement.style.height = `${value}${unit}`;
-  document.body.appendChild(tempElement);
+  root.appendChild(tempElement);
 
   // Get the computed height in pixels
   const pixels = tempElement.getBoundingClientRect().height;
-  document.body.removeChild(tempElement);
+  root.removeChild(tempElement);
 
   return pixels;
 }
