@@ -111,4 +111,6 @@ button:hover {
 .gui-panel-content {
   overflow: auto;
   max-height: 100%;
+  font-family: var(--gui-font-monospace);
+  font-weight: var(--gui-font-monospace-weight, auto);
 }

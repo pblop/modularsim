@@ -1,9 +1,5 @@
 .memory-ui {
-
-
   .memory-table {
-    font-family: var(--gui-font-monospace);
-  font-weight: var(--gui-font-monospace-weight, auto);
     text-align: center;
     width: 100%;
 
