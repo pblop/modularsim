@@ -100,18 +100,20 @@ button:hover {
 }
 .gui-panel-header {
   border-bottom: 1px solid var(--gui-color-border);
+  /* max-height: calc(var(--gui-font-title-size, 1.5rem) * 2.5); */
 }
 .gui-panel-title {
   font-family: var(--gui-font-title);
   font-weight: var(--gui-font-title-weight, 900);
   font-size: var(--gui-font-title-size, auto);
-  padding-left: 0.5rem;
+  padding-left: 0.75ch;
   box-decoration-break: clone;
   text-transform: uppercase;
+  display: block;
 }
 .gui-panel-content {
   overflow: auto;
-  max-height: calc(100% - var(--gui-font-title-size, 1.5rem));
+  /* max-height: calc(100% - var(--gui-font-title-size, 1.5rem) * 2.5); */
   font-family: var(--gui-font-monospace);
   font-weight: var(--gui-font-monospace-weight, auto);
   font-size: var(--gui-font-monospace-size, auto);
