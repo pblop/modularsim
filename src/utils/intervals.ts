@@ -66,7 +66,17 @@ function setTimer<A extends unknown[], K extends string>(
   ...args: A
 ): number {
   // If the time is greater than 10ms, we don't need to do any magic.
-  if (time >= BATCH_TIME) return setInterval(func, time, ...args);
+  if (time >= BATCH_TIME) {
+    const id = setInterval(func, time, ...args);
+    if (options.intervalIdObject && options.intervalIdName) {
+      options.intervalIdObject[options.intervalIdName] = id;
+    }
+    if (options.immediate) {
+      func(...args); // setInterval doesn't call the function immediately, so we call it
+      // manually the first time.
+    }
+    return id;
+  }
 
   // To avoid zero or negative timings
   if (time <= 0) time = MIN_TIME;
