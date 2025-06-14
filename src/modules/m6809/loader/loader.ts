@@ -1,5 +1,5 @@
 import { verify } from "../../../utils/config.js";
-import { element } from "../../../utils/html.js";
+import { element, iconButton } from "../../../utils/html.js";
 import { truncate } from "../../../utils/numbers.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
@@ -8,6 +8,7 @@ type LoaderConfig = {
   file: string;
   symbolsFile?: string;
   reloadOnPowerOn: boolean;
+  reloadOnFileChange: "no" | "reset" | "fast_reset";
   symbolIgnoreRegex?: string;
   symbolIgnoreList: string[];
 };
@@ -46,6 +47,8 @@ class Loader implements IModule {
     return {
       events: {
         provided: [
+          "signal:reset",
+          "ui:clock:fast_reset",
           "ui:memory:write",
           "ui:memory:bulk:write",
           "dbg:symbol:add",
@@ -90,6 +93,12 @@ class Loader implements IModule {
           required: false,
           default: false,
         },
+        reloadOnFileChange: {
+          type: "string",
+          required: false,
+          default: "fast_reset",
+          enum: ["reset", "fast_reset", "no"],
+        },
         symbolIgnoreRegex: {
           type: "string",
           required: false,
@@ -133,12 +142,20 @@ class Loader implements IModule {
     if (id !== this.id) return;
     panel.classList.add("loader");
     panel.appendChild(
-      element("label", {
-        innerText: "Load machine code file",
-        htmlFor: `${this.id}-file`,
-      }),
+      element(
+        "label",
+        {
+          htmlFor: `${this.id}-file`,
+        },
+        iconButton("file-up", "Load machine code file", () => {
+          const input = document.getElementById(`${this.id}-file`) as HTMLInputElement;
+          input.click();
+        }),
+        element("span", {
+          innerText: "Load machine code file",
+        }),
+      ),
     );
-    panel.appendChild(element("br"));
     panel.appendChild(
       element("input", {
         id: `${this.id}-file`,
@@ -150,18 +167,23 @@ class Loader implements IModule {
           const file = target.files[0];
           const url = URL.createObjectURL(file);
           this.loadFile(url, file.name.endsWith(".bin") ? "bin" : "s19");
+          this.userChangedFile();
         },
       }),
     );
-    panel.appendChild(element("br"));
     panel.appendChild(
       element(
         "label",
         {
-          innerText: "Load symbol file",
           htmlFor: `${this.id}-symbols`,
         },
-        element("br"),
+        iconButton("file-up", "Load symbols file", () => {
+          const input = document.getElementById(`${this.id}-symbols`) as HTMLInputElement;
+          input.click();
+        }),
+        element("span", {
+          innerText: "Load symbols file",
+        }),
       ),
     );
     panel.appendChild(
@@ -175,9 +197,22 @@ class Loader implements IModule {
           const file = target.files[0];
           const url = URL.createObjectURL(file);
           this.loadSymbols(url, "noice");
+          this.userChangedFile();
         },
       }),
     );
+  };
+
+  userChangedFile = () => {
+    if (
+      this.config.reloadOnFileChange === "reset" ||
+      this.config.reloadOnFileChange === "fast_reset"
+    )
+      // emit a reset signal always
+      this.evt.emit("signal:reset");
+
+    // tell the clock to reset fast
+    if (this.config.reloadOnFileChange === "fast_reset") this.evt.emit("ui:clock:fast_reset");
   };
 
   loadFile = async (file: string, fileType: "s19" | "bin"): Promise<void> => {

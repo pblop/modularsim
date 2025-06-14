@@ -1,5 +1,17 @@
 .loader {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5em 0.5em 0.5em 0.5em;
+  justify-content: space-between;
+  height: 100%;
+
+  span {
+    vertical-align: super;
+  }
   input[type="file"] {
-    width: 100%;
+    display: none;
+  }
+  .gui-icon.file-up {
+    --icon: url("../gui/icons/file-up.svg");
   }
 }

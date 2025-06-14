@@ -71,6 +71,7 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   // Add more events here.
 
   "clock:paused": [];
+  "clock:started": [];
 
   // UI messages.
   "ui:message:status": [message: string];
