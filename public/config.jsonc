@@ -18,11 +18,11 @@
       {
         "id": "main_memory_ui",
         "type": "ui",
-        "url": "./modules/m6809/memory_ui/memory_ui.js",
-        "css": ["./modules/m6809/memory_ui/memory_ui.css"],
+        "url": "./modules/m6809/infinite_memory_ui/memory_ui.js",
+        "css": ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
         "config": {
-          "start": 256,
-          "size": 256
+          "size": "0x10000",
+          "autoPosition": "m6809"
         }
       },
       {
@@ -31,61 +31,65 @@
         "url": "./modules/m6809/gui/gui.js",
         "css": [
           "./modules/m6809/gui/reset.css",
-          "./modules/m6809/gui/gui.css",
+          "./modules/m6809/gui/scale.gui.css",
           "./config-colors.css"
         ],
         "config": {
           "language": "es",
           "panels": [
             {
+              "langName": {
+                "en": "Registers",
+                "es": "Registros"
+              },
               "id": "register_ui",
               "column": "1 / span 3",
               "row": "1 / span 2"
             },
             {
+              "langName": {
+                "en": "Instructions",
+                "es": "Instrucciones"
+              },
               "id": "instruction_ui",
-              "column": "1 / span 3",
+              "column": "1 / span 5",
               "row": "3 / span 6"
             },
             {
+              "langName": {
+                "en": "Memory",
+                "es": "Memoria"
+              },
               "id": "main_memory_ui",
               "column": "5 / span 3",
-              "row": "3 / span 6"
+              "row": "9 / span 6"
             },
             {
+              "langName": {
+                "en": "Screen",
+                "es": "Pantalla"
+              },
               "id": "screen_ui",
               "column": "1 / span 3",
               "row": "9 / span 2"
             },
-            // {
-            //   "id": "history_ui",
-            //   "column": "4 / span 3",
-            //   "row": "9 / span 2"
-            // },
             {
+              "langName": {
+                "en": "Breakpoints",
+                "es": "Puntos de ruptura"
+              },
               "id": "breakpoint_ui",
               "column": "4 / span 1",
-              "row": "3 / span 6"
+              "row": "9 / span 6"
             },
-            // {
-            //   "id": "ui2",
-            //   "column": 1,
-            //   "row": 2
-            // },
             {
+              "langName": {
+                "en": "Status",
+                "es": "Estado"
+              },
               "id": "clock_ui",
               "column": "-3 / -1",
               "row": "1 / span 2"
-            },
-            {
-              "id": "loader",
-              "column": "-3 / -1",
-              "row": "3 / span 2"
-            },
-            {
-              "id": "2d_screen",
-              "column": "8 / span 3",
-              "row": "3 / span 6"
             }
           ]
         }
@@ -104,7 +108,8 @@
         "url": "./modules/m6809/clock_ui/clock_ui.js",
         "css": ["./modules/m6809/clock_ui/clock_ui.css"],
         "config": {
-          "frequency": 10000000
+          "frequency": 10000000,
+          "autoReset": "fast_reset"
         }
       },
       {
@@ -123,18 +128,11 @@
         "url": "./modules/m6809/loader/loader.js",
         "css": ["./modules/m6809/loader/loader.css"],
         "config": {
-          "file": "./programs/interrupt.s19",
-          "symbolsFile": "./programs/2d.noi"
+          "file": "./programs/recumples.s19",
+          "symbolsFile": "./programs/recumples.noi",
+          // Ignorar los símbolos extra que genera el ensamblador.
+          "symbolIgnoreRegex": "^(\\.__\\.|s_|l_).*$"
           // "file": "http://localhost:6809/programs/loop.bin"
-        }
-      },
-      {
-        "id": "interrupter",
-        "type": "hw",
-        "url": "./modules/m6809/interrupter/interrupter.js",
-        "config": {
-          "each": 1000,
-          "type": "nmi"
         }
       },
       {
@@ -142,7 +140,10 @@
         "type": "ui",
         "url": "./modules/m6809/instruction_ui/instruction_ui.js",
         "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
-        "config": {}
+        "config": {
+          "symbols": "single",
+          "autoPosition": "m6809"
+        }
       },
       {
         "id": "breakpoint_ui",
@@ -252,26 +253,15 @@
               "module": "main_memory",
               "size": 65536,
               "priority": 1
-            },
-            {
-              "start": "0xEF00",
-              "module": "2d_screen",
-              "size": "0x1000",
-              "priority": 0
             }
           ]
         }
       },
       {
-        "id": "2d_screen",
+        "id": "messager",
         "type": "extra",
-        "url": "./modules/m6809/screen2d_ui/screen2d_ui.js",
-        "css": ["./modules/m6809/screen2d_ui/screen2d_ui.css"],
-        "config": {
-          "multiplexer": "multiplexer",
-          "width": 64,
-          "height": 64
-        }
+        "url": "./modules/m6809/messager/messager.js",
+        "config": {}
       }
     ]
   }
