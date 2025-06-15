@@ -163,7 +163,7 @@ export async function disassembleIndexed(
 // biome-ignore format: this is easier to read if not biome-formatted
 type DecompiledAddressingInfo<T extends AddressingMode> = 
   T extends "immediate" ? { mode: T, value: number } :
-  T extends "direct" ? { mode: T, address: number, low: number } :
+  T extends "direct" ? { mode: T, address?: number, low: number } :
   T extends "indexed" ? { mode: "indexed"; address?: number, postbyte: number; 
                           parsedPostbyte: ParsedIndexedPostbyte, result: IndexedDisassembledObj } :
   T extends "extended" ? { mode: T, address: number } :
@@ -207,10 +207,10 @@ export function eqDecompilation(
   );
 }
 
-export async function decompileInstruction(
+export async function disassembleInstruction(
   read: ReadFunction,
-  registers: Registers,
   startAddress: number,
+  registers?: Registers,
 ): Promise<DecompiledInstruction | FailedDecompilation> {
   const opcodeBytes = [];
   const args = [];
@@ -260,8 +260,11 @@ export async function decompileInstruction(
     }
     case "direct": {
       const low = await read(startAddress + size++, 1);
-      const address = (registers.dp << 8) | low;
-      args.push(address);
+      let address: number | undefined;
+      if (registers !== undefined) {
+        address = (registers.dp << 8) | low;
+        args.push(address);
+      }
 
       addressing = { mode: "direct", address, low };
       bytes.push(low);
@@ -455,7 +458,9 @@ export function generateRowData(
     }
     case "direct":
       dataField += ` <${hex(addressing.low)}`;
-      extraField += ` <${formatAddress(addressing.address, "extra")}>`;
+      if (addressing.address !== undefined) {
+        extraField += ` <${formatAddress(addressing.address, "extra")}>`;
+      }
       break;
     case "indexed": {
       let idxStr = "";

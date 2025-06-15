@@ -15,7 +15,7 @@ import {
   type DecompiledInstruction,
   type FailedDecompilation,
   type InstructionRowData,
-  decompileInstruction,
+  disassembleInstruction,
   eqDecompilation,
   generateInstructionElement,
   generateRowData,
@@ -182,9 +182,7 @@ class InstructionUI implements IModule {
     this.history = new InstructionHistory();
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
-    this.cache = new InstructionCache((addr) =>
-      decompileInstruction(this.read, this.registers!, addr),
-    );
+    this.cache = new InstructionCache((addr) => disassembleInstruction(this.read, addr));
     this.lockPC = true;
 
     if (this.config.initialPosition !== undefined) {

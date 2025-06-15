@@ -3,7 +3,7 @@ import {
   type DecompiledInstruction,
   type FailedDecompilation,
   type InstructionRowData,
-  decompileInstruction,
+  disassembleInstruction,
   eqDecompilation,
   generateInstructionElement,
   generateRowData,

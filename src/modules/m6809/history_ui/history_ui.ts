@@ -7,7 +7,7 @@ import type { Registers } from "../cpu/cpu_parts.js";
 import {
   DecompiledInstruction,
   FailedDecompilation,
-  decompileInstruction,
+  disassembleInstruction,
   generateInstructionElement,
   generateRowData,
 } from "../cpu/decompile.js";
@@ -64,7 +64,7 @@ class HistoryUI implements IModule {
 
     this.updateQueue = new UpdateQueue(this.refreshUI.bind(this));
     this.cache = new InstructionCache((addr) =>
-      decompileInstruction(this.read, this.registers!, addr),
+      disassembleInstruction(this.read, addr, this.registers!),
     );
 
     console.log(`[${this.id}] Memory Initializing module.`);
