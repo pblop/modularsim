@@ -358,7 +358,8 @@ export type InstructionRowData = {
   address: string;
   title?: string;
   raw: string;
-  data: string;
+  mnemonic: string;
+  args: string;
   extra: string;
   ok: true;
 };
@@ -372,12 +373,14 @@ export function generateInstructionElement(
   row: AllInstructionRowData,
   addressElement: HTMLElement,
   rawElement: HTMLElement,
-  dataElement: HTMLElement,
+  mnemonicElement: HTMLElement,
+  argsElement: HTMLElement,
   extraElement: HTMLElement,
 ) {
   addressElement.innerText = row.address;
   rawElement.innerText = row.raw;
-  dataElement.innerText = row.ok ? row.data : "???";
+  mnemonicElement.innerText = row.ok ? row.mnemonic : "???";
+  argsElement.innerText = row.ok ? row.args : "???";
   extraElement.innerText = row.ok ? row.extra : "???";
   if (row.ok && row.title) addressElement.title = row.title;
 }
@@ -433,8 +436,8 @@ export function generateRowData(
   const { mnemonic } = decompiled.instruction;
   const { mode } = addressing;
 
-  let dataField = mnemonic;
-  let extraField = `${mode.slice(0, 3)}`;
+  let argsField = "";
+  let extraField = "";
 
   switch (mode) {
     case "immediate": {
@@ -444,22 +447,23 @@ export function generateRowData(
         // operation.
         if (mnemonic.startsWith("psh") || mnemonic.startsWith("pul")) {
           // PSH or PUL
-          dataField += ` ${decompiled.registersAffectedStack!.join(",")}`;
+          argsField += ` ${decompiled.registersAffectedStack!.join(",")}`;
         } else {
           // EXG or TFR
           const [src, dst] = decompiled.exgRegisters!;
-          dataField += ` ${src},${dst}`;
+          argsField += ` ${src},${dst}`;
         }
       } else {
         const registerSize = REGISTER_SIZE[decompiled.instruction.register!];
-        dataField += ` #0x${hex(args[0], registerSize)}`;
+        argsField += ` #0x${hex(args[0], registerSize)}`;
       }
       break;
     }
     case "direct":
-      dataField += ` <${hex(addressing.low)}`;
       if (addressing.address !== undefined) {
-        extraField += ` <${formatAddress(addressing.address, "extra")}>`;
+        argsField += ` ${formatAddress(addressing.address, "extra")}`;
+      } else {
+        argsField += ` <${hex(addressing.low)}`;
       }
       break;
     case "indexed": {
@@ -484,7 +488,7 @@ export function generateRowData(
             const offset = intNToNumber(result.offset, 16);
             const offsetStr = formatOffset(offset, result.effectiveAddress, "indexed");
             idxStr += offsetStr;
-            extraField += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
+            // extraField += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
           }
           break;
         }
@@ -512,18 +516,18 @@ export function generateRowData(
       else if (parsedPostbyte.action === IndexedAction.PostInc2) idxStr += "++";
 
       if (parsedPostbyte.indirect) idxStr = `[${idxStr}]`;
-      dataField += ` ${idxStr}`;
+      argsField += ` ${idxStr}`;
       break;
     }
     case "extended":
-      dataField += ` <${formatAddress(addressing.address, "extra")}>`;
+      argsField += ` <${formatAddress(addressing.address, "extra")}>`;
       break;
     case "relative": {
       // NOTE: Convert the relative address to a signed number for display.
       const offset = intNToNumber(addressing.offset, 8);
-      dataField += ` ${formatOffset(offset, decompiled.startAddress, "relative")}`;
-      // dataField += ` pc${offset >= 0 ? "+" : ""}${offset}`;
-      extraField += ` <${formatAddress(addressing.address, "extra")}>`;
+      argsField += ` ${formatOffset(offset, decompiled.startAddress, "relative")}`;
+      // argsField += ` pc${offset >= 0 ? "+" : ""}${offset}`;
+      // extraField += ` <${formatAddress(addressing.address, "extra")}>`;
       break;
     }
   }
@@ -531,7 +535,8 @@ export function generateRowData(
   return {
     address: startAddressField,
     raw: rawBytesField,
-    data: dataField,
+    mnemonic,
+    args: argsField,
     extra: extraField,
     title: generateTitle(decompiled.startAddress),
     ok: true,

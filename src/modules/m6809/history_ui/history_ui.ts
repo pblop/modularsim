@@ -172,7 +172,12 @@ class HistoryUI implements IModule {
         innerText: "0000",
       }),
       element("span", { className: "raw", innerText: "..." }),
-      element("span", { className: "data", innerText: "..." }),
+      element(
+        "span",
+        { className: "data", innerText: "" },
+        element("span", { className: "mnemonic", innerText: "..." }),
+        element("span", { className: "operands", innerText: "" }),
+      ),
       element("span", { className: "extra", innerText: "" }),
     );
 
@@ -182,7 +187,8 @@ class HistoryUI implements IModule {
       rowData,
       row.children[0] as HTMLSpanElement,
       row.children[1] as HTMLSpanElement,
-      row.children[2] as HTMLSpanElement,
+      row.children[2].children[0] as HTMLSpanElement,
+      row.children[2].children[1] as HTMLSpanElement,
       row.children[3] as HTMLSpanElement,
     );
 

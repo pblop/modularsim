@@ -17,7 +17,6 @@ import {
   type InstructionRowData,
   disassembleInstruction,
   eqDecompilation,
-  generateInstructionElement,
   generateRowData,
   getSymbolicAddress,
 } from "../cpu/decompile.js";
@@ -466,13 +465,18 @@ class InstructionUI implements IModule {
     const addressElement = children.find((el) => el.classList.contains("address"))!;
     const rawElement = children.find((el) => el.classList.contains("raw"))!;
     const symbolElement = children.find((el) => el.classList.contains("symbol"));
-    const dataElement = children.find((el) => el.classList.contains("data"))!;
+    const dataChildren = Array.from(
+      children.find((el) => el.classList.contains("data"))!.children,
+    ) as HTMLSpanElement[];
+    const mnemonicElement = dataChildren.find((el) => el.classList.contains("mnemonic"))!;
+    const argsElement = dataChildren.find((el) => el.classList.contains("args"))!;
     const extraElement = children.find((el) => el.classList.contains("extra"))!;
 
     // Fill the parts with data.
     addressElement.innerText = rowData.address;
     rawElement.innerText = rowData.raw;
-    dataElement.innerText = rowData.ok ? rowData.data : "???";
+    mnemonicElement.innerText = rowData.ok ? rowData.mnemonic : "???";
+    argsElement.innerText = rowData.ok ? rowData.args : "???";
     extraElement.innerText = rowData.ok ? rowData.extra : "???";
     if (rowData.ok && row.title) addressElement.title = row.title;
     if (this.config.symbols === "single" && this.symbolsMap.has(address)) {
@@ -609,7 +613,18 @@ class InstructionUI implements IModule {
           })
         : undefined,
       element("span", { className: "raw", innerText: "..." }),
-      element("span", { className: "data", innerText: "..." }),
+      element(
+        "span",
+        { className: "data", innerText: "" },
+        element("span", {
+          className: "mnemonic",
+          innerText: "...",
+        }),
+        element("span", {
+          className: "args",
+          innerText: "",
+        }),
+      ),
       element("span", { className: "extra", innerText: "" }),
     );
     return rowElement;
