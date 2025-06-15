@@ -14,6 +14,7 @@ import {
   IndexedAction,
   type InstructionData,
   type ParsedIndexedPostbyte,
+  type Register,
   parseIndexedPostbyte,
 } from "../cpu/instructions.js";
 import { type AllRegisters, parseExgPostbyte } from "../cpu/instructions/loadstore.js";
@@ -24,27 +25,50 @@ export type ReadFunction = (address: number, bytes?: number) => Promise<number>;
 
 export type Symbol = [string, number];
 
-type DisassIdxAddressingResult = {
+type IndexedDisassembledObj = {
   bytes: number[];
   // The number of bytes read from the PC
   bytesReadOffPC: number;
-  baseAddress: number;
-  offset: number;
-  effectiveAddress: number;
-  address: number;
+
+  // The offset is a signed 16-bit value, or a register name (if we don't have
+  // information about the value of the registers).
+  offset: number | AllRegisters;
+  // Base address is the value of the register used as the base for the
+  // indexed addressing (or the name of the register if we don't have info about
+  // the value of the registers).
+  baseAddress: number | Register;
+
+  // The address before indirections (base + offset), calculated only if the
+  // registers are known or the register is PC.
+  effectiveAddress?: number;
+  // The address after indirections (only if effectiveAddress is known).
+  address?: number;
 };
-export async function disassIdxAdressing(
+export async function disassembleIndexed(
   read: ReadFunction,
   parsedPostbyte: ParsedIndexedPostbyte,
   pc: number,
-  registers: Registers,
-): Promise<DisassIdxAddressingResult> {
+  registers?: Registers,
+): Promise<IndexedDisassembledObj> {
   const { action, register, indirect, rest } = parsedPostbyte;
   let bytesReadOffPC = 0;
   const bytes = [];
 
-  let baseAddress: number = register === "pc" ? pc : registers[register];
-  let offset: number; // A signed 16-bit offset
+  let baseAddress: number | Register;
+  if (register === "pc") {
+    // We always know the value of PC.
+    baseAddress = pc;
+  } else if (registers !== undefined) {
+    // If we have the registers, we can use the value of the register.
+    baseAddress = registers[register];
+  } else {
+    // If we don't have the registers, we just use the register name.
+    baseAddress = register;
+  }
+
+  // A signed 16-bit offset or a register name (if we don't have the
+  // register info).
+  let offset: number | "A" | "B" | "D";
   switch (action) {
     case IndexedAction.Offset0:
       offset = 0;
@@ -68,13 +92,13 @@ export async function disassIdxAdressing(
       break;
     }
     case IndexedAction.OffsetA:
-      offset = registers.A;
+      offset = registers ? registers.A : "A";
       break;
     case IndexedAction.OffsetB:
-      offset = registers.B;
+      offset = registers ? registers.B : "B";
       break;
     case IndexedAction.OffsetD:
-      offset = registers.D;
+      offset = registers ? registers.D : "D";
       break;
     case IndexedAction.PostInc1:
       offset = 0;
@@ -96,12 +120,29 @@ export async function disassIdxAdressing(
       break;
   }
 
-  // Overflow!
+  // We can only calculate the effective address if we have a base address
+  // and an offset (that is, if we have the registers or the register is PC,
+  // which we always know).
+  if (typeof baseAddress === "string" || typeof offset === "string") {
+    // If we don't have the registers, we can't calculate the effective address.
+    // We just return the base address and offset.
+    return {
+      bytes,
+      bytesReadOffPC,
+      baseAddress,
+      offset,
+    };
+  }
+
+  // Overflow the effective address if the offset is larger than 16 bits.
   let untruncEffectiveAddress = baseAddress + offset;
-  if (register === "pc")
-    // If the register is PC, the offset is relative to the end of the
-    // instruction.
+  if (register === "pc") {
+    // If the register is PC, the offset is relative to the value of the PC
+    // at the end of the instruction and all of its operands. So we add the
+    // bytes we read off the PC to the efective address, so that it reflects the
+    // value of the PC after the instruction is executed.
     untruncEffectiveAddress += bytesReadOffPC;
+  }
   const effectiveAddress = truncate(untruncEffectiveAddress, 16);
   let address = effectiveAddress;
 
@@ -123,8 +164,8 @@ export async function disassIdxAdressing(
 type DecompiledAddressingInfo<T extends AddressingMode> = 
   T extends "immediate" ? { mode: T, value: number } :
   T extends "direct" ? { mode: T, address: number, low: number } :
-  T extends "indexed" ? { mode: "indexed"; address: number, postbyte: number; 
-                          parsedPostbyte: ParsedIndexedPostbyte, result: DisassIdxAddressingResult } :
+  T extends "indexed" ? { mode: "indexed"; address?: number, postbyte: number; 
+                          parsedPostbyte: ParsedIndexedPostbyte, result: IndexedDisassembledObj } :
   T extends "extended" ? { mode: T, address: number } :
   T extends "relative" ? { mode: T, address: number, offset: number } :
   T extends "inherent" ? { mode: T } :
@@ -198,7 +239,6 @@ export async function decompileInstruction(
   const instruction = INSTRUCTIONS[opcode];
 
   // Perform addressing.
-  let address: number | "pc";
 
   switch (instruction.mode) {
     case "immediate": {
@@ -209,7 +249,7 @@ export async function decompileInstruction(
       // PSH and PUL.
       const registerSize = instruction.extra.postbyte ? 1 : REGISTER_SIZE[instruction.register!];
 
-      address = "pc";
+      const address = "pc";
       const value = await read(startAddress + size, registerSize);
       args.push(value);
       size += registerSize;
@@ -220,7 +260,7 @@ export async function decompileInstruction(
     }
     case "direct": {
       const low = await read(startAddress + size++, 1);
-      address = (registers.dp << 8) | low;
+      const address = (registers.dp << 8) | low;
       args.push(address);
 
       addressing = { mode: "direct", address, low };
@@ -242,7 +282,7 @@ export async function decompileInstruction(
           reason: "indexed_postbyte",
         };
 
-      const idxResult = await disassIdxAdressing(
+      const idxResult = await disassembleIndexed(
         read,
         parsedPostbyte,
         startAddress + size,
@@ -251,13 +291,13 @@ export async function decompileInstruction(
       bytes.push(...idxResult.bytes);
       args.push(...idxResult.bytes);
       size += idxResult.bytesReadOffPC;
-      address = idxResult.address;
+      const address = idxResult.address;
 
       addressing = { mode: "indexed", postbyte, parsedPostbyte, result: idxResult, address };
       break;
     }
     case "extended": {
-      address = await read(startAddress + size, 2);
+      const address = await read(startAddress + size, 2);
       size += 2;
       args.push(address);
       bytes.push(...decompose(address, 2));
@@ -269,7 +309,7 @@ export async function decompileInstruction(
       const offsetBytes = instruction.extra.isLongBranch ? 2 : 1;
 
       const offset = await read(startAddress + size++, offsetBytes);
-      address = truncate(startAddress + signExtend(offset, offsetBytes * 2, 16), 16);
+      const address = truncate(startAddress + signExtend(offset, offsetBytes * 2, 16), 16);
       args.push(address);
 
       addressing = { mode: "relative", offset, address };
@@ -432,10 +472,15 @@ export function generateRowData(
         case IndexedAction.OffsetPC8:
         case IndexedAction.OffsetPC16: {
           // if (decompiled.startAddress === 0x18d) debugger;
-          const offset = intNToNumber(result.offset, 16);
-          const offsetStr = formatOffset(offset, result.effectiveAddress, "indexed");
-          idxStr += offsetStr;
-          extraField += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
+          if (typeof result.offset === "string" || result.effectiveAddress === undefined) {
+            // If the offset is a register name, we just display the register name.
+            idxStr += result.offset;
+          } else {
+            const offset = intNToNumber(result.offset, 16);
+            const offsetStr = formatOffset(offset, result.effectiveAddress, "indexed");
+            idxStr += offsetStr;
+            extraField += ` <${formatAddress(result.effectiveAddress, "extra")}>`;
+          }
           break;
         }
         case IndexedAction.OffsetA:

@@ -76,12 +76,30 @@ export enum IndexedAction {
   OffsetPC16,
   ExtendedIndirect,
 }
+
+/*
+ * A type that represents the index postbyte information.
+ * It contains the action of the indexed addressing mode, the register that the
+ * action is applied to, whether the indexed addressing mode is indirect or not,
+ * and the rest of the postbyte (the 4-bit integer that is not used in the
+ * action).
+ */
 export type ParsedIndexedPostbyte<A extends IndexedAction = IndexedAction> = {
   action: A;
   register: A extends IndexedAction.OffsetPC8 | IndexedAction.OffsetPC16 ? "pc" : Register;
   indirect: boolean;
   rest: number; // 4-bit integer
 };
+/**
+ * Parses the postbyte of an indexed addressing mode.
+ * The returned object contains:
+ * - action: the action to perform (e.g., Offset0, PostInc1, etc.)
+ * - register: the register that the action is applied to (X, Y, U, S, or pc)
+ * - indirect: whether indirect indexing is used (true or false)
+ * - rest: the 4-bit integer that is not used in the action
+ * @param postbyte the byte to parse (a number between 0 and 255)
+ * @returns ParsedIndexedPostbyte or null if the postbyte is invalid.
+ */
 export function parseIndexedPostbyte(postbyte: number): ParsedIndexedPostbyte | null {
   const fivebit = !((postbyte & 0x80) >> 7);
   const indirect = (postbyte & 0x10) >> 4;
