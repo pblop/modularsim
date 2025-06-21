@@ -2,6 +2,14 @@
 <html xmlns="http://www.w3.org/Profiles/xhtml1-strict.dtd">
   <head>
     <title>Computadores II - Primera sesi&oacute;n</title>
+    <style>
+      .simulator-container {
+        width: calc(100vw - 96px) !important;
+        aspect-ratio: 16/9;
+        border: 1px solid black;
+        box-sizing: border-box;
+      }
+    </style>
   </head>
   <body>
     <center>
@@ -56,18 +64,14 @@
       <li>
         <h3>Simulador 1</h3>
         <div
-          style="width: calc(100vw - 48px); border: 1px solid black"
+          class="simulator-container"
           id="simulador1"
           data-color-scheme="light"></div>
       </li>
       <li>
         <h3>Simulador 2</h3>
         <div
-          style="
-            width: calc(100vw - 48px);
-            border: 1px solid black;
-            margin: 0 auto;
-          "
+          class="simulator-container"
           data-color-scheme="light"
           id="simulador2"></div>
       </li>
@@ -109,11 +113,7 @@
               id: "gui",
               type: "gui",
               url: "./modules/m6809/gui/gui.js",
-              css: [
-                "./modules/m6809/gui/reset.css",
-                "./modules/m6809/gui/scale.gui.css",
-                "./config-colors.css",
-              ],
+              css: ["./modules/m6809/gui/scale.gui.css", "./config-colors.css"],
               config: {
                 language: "es",
                 panels: [
