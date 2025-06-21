@@ -58,9 +58,19 @@ export default class Controller {
 
     return await Promise.all(promises);
   }
+
+  getExistingCssUrls(): Set<string> {
+    const existing_links = Array.from(document.querySelectorAll("link[rel='stylesheet']")).map(
+      (link) => (link as HTMLLinkElement).href,
+    );
+    return new Set(existing_links);
+  }
+
   loadModulesCss(modules: ModuleConfig[]): void {
     // Using a set to avoid loading the same css multiple times.
     const css_urls = new Set<string>();
+    const existing_css_urls = this.getExistingCssUrls();
+
     for (const module of modules) {
       if (module.css) {
         for (const url of module.css) {
@@ -69,7 +79,17 @@ export default class Controller {
       }
     }
 
+    const css_to_load = new Set<string>();
+    // css_to_load.difference(existing_css_urls), but manually to avoid
+    // depending on ES-20whatever.
     for (const url of css_urls) {
+      const absoluteUrl = new URL(url, window.location.href).href;
+      if (!existing_css_urls.has(absoluteUrl)) {
+        css_to_load.add(url);
+      }
+    }
+
+    for (const url of css_to_load) {
       console.debug("[Controller]", `Loading css from ${url}`);
       const link = document.createElement("link");
       link.rel = "stylesheet";
