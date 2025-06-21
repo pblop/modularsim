@@ -56,12 +56,7 @@
       <li>
         <h3>Simulador 1</h3>
         <div
-          style="
-            width: auto;
-            height: 50em;
-            border: 1px solid black;
-            margin: 0 auto;
-          "
+          style="width: calc(100vw - 48px); border: 1px solid black"
           id="simulador1"
           data-color-scheme="light"></div>
       </li>
@@ -69,8 +64,7 @@
         <h3>Simulador 2</h3>
         <div
           style="
-            width: auto;
-            height: 50em;
+            width: calc(100vw - 48px);
             border: 1px solid black;
             margin: 0 auto;
           "
@@ -117,7 +111,7 @@
               url: "./modules/m6809/gui/gui.js",
               css: [
                 "./modules/m6809/gui/reset.css",
-                "./modules/m6809/gui/gui.css",
+                "./modules/m6809/gui/scale.gui.css",
                 "./config-colors.css",
               ],
               config: {

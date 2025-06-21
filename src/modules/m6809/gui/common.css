@@ -14,9 +14,6 @@ button:hover {
 }
 
 .gui-root {
-  height: 100vh;
-  width: 100vw;
-  padding: 1rem;
 
   /* Make the position relative so that child elements can use absolute 
    * positioning
@@ -25,6 +22,9 @@ button:hover {
 
   background-color: var(--gui-color-background);
   color: var(--gui-color-text);
+
+  container-type: inline-size;
+  container-name: gui-root;
 
   .gui-floating {
     position: absolute;
@@ -117,4 +117,12 @@ button:hover {
   font-family: var(--gui-font-monospace);
   font-weight: var(--gui-font-monospace-weight, auto);
   font-size: var(--gui-font-monospace-size, auto);
+}
+@container gui-root (min-width: 0) {
+  .gui-panel-title {
+    font-size: var(--gui-font-title-size, auto);
+  }
+  .gui-panel-content {
+    font-size: var(--gui-font-monospace-size, auto);
+  }
 }

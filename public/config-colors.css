@@ -46,8 +46,8 @@
 .gui-root {
   --gui-font-monospace: "JetBrains Mono", "Courier New", Courier, monospace;
   --gui-font-monospace-weight: 100;
-  --gui-font-monospace-size: 0.75vw;
+  --gui-font-monospace-size: 0.75cqw;
   --gui-font-title: "Montserrat", sans-serif;
   --gui-font-title-weight: 700;
-  --gui-font-title-size: 0.75vw;
+  --gui-font-title-size: 0.75cqw;
 }
