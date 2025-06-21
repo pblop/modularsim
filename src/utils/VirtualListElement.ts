@@ -195,6 +195,8 @@ export class VirtualListElement extends HTMLElement {
 
   get #itemHeightPx() {
     if (this.#itemHeightUnits === "px") return this.#itemHeight;
+    // || 1 because if the placeholder is not set (e.g. no items, or not yet
+    // rendered), we want to avoid division by zero.
     return this.placeholder.getBoundingClientRect().height / this.#itemCount || 1;
   }
 
