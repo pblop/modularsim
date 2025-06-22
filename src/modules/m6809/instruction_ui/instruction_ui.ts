@@ -690,8 +690,12 @@ class InstructionUI implements IModule {
         });
         this.instructionsElement.appendChild(rowElement);
 
-        if (this.lockPC && entry.address === this.registers.pc)
-          rowElement.scrollIntoView({ block: "nearest", inline: "nearest" });
+        if (this.lockPC && entry.address === this.registers.pc) {
+          // scrollIntoView moves the whole viewport, so we will change the
+          // panel's scrollTop to match the row's position.
+          this.instructionsElement!.scrollTop = rowElement.offsetTop;
+          // rowElement.scrollIntoView({ block: "nearest", inline: "nearest" });
+        }
         if (firstElement === undefined) firstElement = rowElement;
         lastElement = rowElement;
         lastAddress = entry.disass.startAddress + entry.disass.bytes.length;
