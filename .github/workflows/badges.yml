@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "bun.lockb"
+      - "package.json"
+      - "tsconfig.json"
 
 jobs:
   test:

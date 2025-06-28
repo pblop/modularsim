@@ -2,6 +2,15 @@ name: Test
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "test/**"
+      - "programs/**"
+      - "bun.lockb"
+      - "package.json"
+      - "tsconfig.json"
 
 permissions:
   contents: read
