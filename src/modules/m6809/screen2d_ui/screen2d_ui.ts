@@ -16,15 +16,6 @@ type Screen2DConfig = {
   height: number;
 };
 
-const Screen2DUIStrings = createLanguageStrings({
-  en: {
-    title: "2D Screen",
-  },
-  es: {
-    title: "Pantalla 2D",
-  },
-});
-
 const findLastIndex = <T>(
   arr: T[],
   predicate: (value: T, index: number, arr: T[]) => boolean,
@@ -48,7 +39,6 @@ class ScreenUI implements IModule {
   image: ImageData;
 
   language!: string;
-  localeStrings!: typeof Screen2DUIStrings.en;
 
   updateQueue: UpdateQueue;
 
@@ -103,11 +93,6 @@ class ScreenUI implements IModule {
     console.log(`[${this.id}] Module initialized.`);
   }
 
-  setLanguage(language: string): void {
-    this.language = language;
-    this.localeStrings = Screen2DUIStrings[this.language] || Screen2DUIStrings.en;
-  }
-
   onReset = (): void => {
     this.image = new ImageData(this.config.width, this.config.height);
     this.updateQueue.queueUpdate();
@@ -139,9 +124,6 @@ class ScreenUI implements IModule {
     if (panel_id !== this.id) return;
 
     panel.classList.add("screen2d-ui");
-    this.setLanguage(language);
-
-    panel.appendChild(element("h2", { textContent: this.localeStrings.title }));
 
     const canvas = element("canvas", {
       width: this.config.width,
