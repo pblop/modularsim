@@ -31,8 +31,8 @@
         "url": "./modules/m6809/gui/gui.js",
         "css": [
           "./modules/m6809/gui/reset.css",
-          "./modules/m6809/gui/scale-small.gui.css",
-          "./config-colors-small.css"
+          "./modules/m6809/gui/scale.gui.css",
+          "./config-colors.css"
         ],
         "config": {
           "language": "es",

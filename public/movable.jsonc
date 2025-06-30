@@ -28,11 +28,11 @@
       {
         "id": "gui",
         "type": "gui",
-        "url": "./modules/m6809/gui/gui.js",
+        "url": "./modules/m6809/gui/gui_movable.js",
         "css": [
           "./modules/m6809/gui/reset.css",
-          "./modules/m6809/gui/scale-small.gui.css",
-          "./config-colors-small.css"
+          "./modules/m6809/gui/gui_movable.css",
+          "./config-colors.css"
         ],
         "config": {
           "language": "es",
@@ -43,7 +43,7 @@
                 "es": "Registros"
               },
               "id": "register_ui",
-              "column": "1 / span 4",
+              "column": "1 / span 3",
               "row": "1 / span 2"
             },
             {
@@ -52,8 +52,8 @@
                 "es": "Instrucciones"
               },
               "id": "instruction_ui",
-              "column": "4 / span 3",
-              "row": "3 / span 12"
+              "column": "1 / span 5",
+              "row": "3 / span 6"
             },
             {
               "langName": {
@@ -61,7 +61,7 @@
                 "es": "Memoria"
               },
               "id": "main_memory_ui",
-              "column": "1 / span 3",
+              "column": "5 / span 3",
               "row": "9 / span 6"
             },
             {
@@ -70,8 +70,8 @@
                 "es": "Pantalla"
               },
               "id": "screen_ui",
-              "column": "1 / span 2",
-              "row": "3 / span 6"
+              "column": "1 / span 3",
+              "row": "9 / span 2"
             },
             {
               "langName": {
@@ -79,16 +79,16 @@
                 "es": "Puntos de ruptura"
               },
               "id": "breakpoint_ui",
-              "column": "3 / span 1",
-              "row": "3 / span 6"
+              "column": "4 / span 1",
+              "row": "9 / span 6"
             },
             {
               "langName": {
-                "en": "Simulation status",
-                "es": "Estado de la simulación"
+                "en": "Status",
+                "es": "Estado"
               },
               "id": "clock_ui",
-              "column": "5 / span 2",
+              "column": "-3 / -1",
               "row": "1 / span 2"
             }
           ]
@@ -142,8 +142,7 @@
         "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
         "config": {
           "symbols": "single",
-          "autoPosition": "m6809",
-          "lines": 25
+          "autoPosition": "m6809"
         }
       },
       {
