@@ -3,6 +3,7 @@ import { element, iconButton } from "../../../utils/html.js";
 import { truncate } from "../../../utils/numbers.js";
 import type { EventDeclaration, TypedEventTransceiver } from "../../../types/event.js";
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
+import { createLanguageStrings } from "../../../utils/lang.js";
 
 type LoaderConfig = {
   file: string;
@@ -34,6 +35,17 @@ function calculateSRECChecksum(...byteArrs: Uint8Array[]): number {
   return 0xff - (checksum & 0xff);
 }
 
+const LoaderStrings = createLanguageStrings({
+  en: {
+    loadMachineCodeFile: "Load machine code file",
+    loadSymbolsFile: "Load symbols file",
+  },
+  es: {
+    loadMachineCodeFile: "Cargar archivo de código",
+    loadSymbolsFile: "Cargar archivo de símbolos",
+  },
+});
+
 class Loader implements IModule {
   evt: TypedEventTransceiver;
   id: string;
@@ -42,6 +54,9 @@ class Loader implements IModule {
   fileType: "bin" | "s19";
   symbolsType: "noice" | undefined;
   symbolIgnoreRegex: RegExp | undefined;
+
+  language!: string;
+  localeStrings = LoaderStrings.en;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
@@ -138,8 +153,16 @@ class Loader implements IModule {
     console.log(`[${this.id}] Initialized with config:`, this.config);
   }
 
+  setLanguage = (language: string): void => {
+    this.language = language;
+    this.localeStrings = LoaderStrings[this.language] || LoaderStrings.en;
+  };
+
   onPanelCreated = (id: string, panel: HTMLElement, language: string) => {
     if (id !== this.id) return;
+
+    this.setLanguage(language);
+
     panel.classList.add("loader");
     panel.appendChild(
       element(
@@ -147,12 +170,12 @@ class Loader implements IModule {
         {
           htmlFor: `${this.id}-file`,
         },
-        iconButton("file-up", "Load machine code file", () => {
+        iconButton("file-up", this.localeStrings.loadMachineCodeFile, () => {
           const input = document.getElementById(`${this.id}-file`) as HTMLInputElement;
           input.click();
         }),
         element("span", {
-          innerText: "Load machine code file",
+          innerText: this.localeStrings.loadMachineCodeFile,
         }),
       ),
     );
@@ -177,12 +200,12 @@ class Loader implements IModule {
         {
           htmlFor: `${this.id}-symbols`,
         },
-        iconButton("file-up", "Load symbols file", () => {
+        iconButton("file-up", this.localeStrings.loadSymbolsFile, () => {
           const input = document.getElementById(`${this.id}-symbols`) as HTMLInputElement;
           input.click();
         }),
         element("span", {
-          innerText: "Load symbols file",
+          innerText: this.localeStrings.loadSymbolsFile,
         }),
       ),
     );
