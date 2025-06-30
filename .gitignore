@@ -22,3 +22,8 @@ doc/main.glo.ilg
 doc/main.lof
 doc/.DS_Store
 .DS_Store
+doc/labels.txt
+doc/common/privatedata.tex
+doc/res/00-cert-signed.pdf
+doc/misc/Anexo III Firmado.pdf
+doc/misc/Anexo III.pdf
