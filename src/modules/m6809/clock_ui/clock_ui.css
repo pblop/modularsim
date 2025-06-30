@@ -1,4 +1,11 @@
 .clock-ui {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: hidden;  
+
+  padding-bottom: 2%;
+
   button {
     margin: 0.25em;
     border: 0px;
