@@ -45,20 +45,25 @@
     scroll-snap-type: y mandatory;
   }
 
-  /* Show a pointer cursor when hovering over an address, in a row that has a
+  /* Show a pointer cursor when hovering over a row if it has a
    * data-address attribute. (If the row doesn't have a data-address attribute,
-   * the address is not clickable).
+   * it is not clickable).
    */
   .row[data-address] {
-    .address {
-      cursor: pointer;
-    }
+    cursor: pointer;
   }
 
   .row {
-    &:hover {
+    &:hover, &.pc {
       --current-bg: var(--gui-color-highlight);
       background-color: var(--gui-color-highlight);
+    }
+    &.breakpoint {
+      --current-bg: var(--gui-color-red-background);
+      &:hover, &.pc {
+        --current-bg: var(--gui-color-red-highlight);
+        background-color: var(--gui-color-red-highlight);
+      }
     }
 
     scroll-snap-align: end;
@@ -68,9 +73,7 @@
     justify-content: space-between;
     align-items: center;
     
-    &.pc {
-      background-color: var(--gui-color-highlight);
-    }
+
     
     &.overlap {
       cursor: help;
@@ -92,13 +95,12 @@
        * length strings, so I don't need to specify a fixed size with flex-basis.
        * A padding works well enough */
       /* flex-basis: 10%; */ 
-      padding-right: 1em;
+      padding-right: 0.5em;
+      padding-left: 0.5em;
       min-width: var(--instruction-ui-address-size, auto);
       text-align: right;
     }
-    .address.breakpoint {
-      --current-bg: var(--gui-color-red-background);
-    }
+
     .symbol {
       min-width: calc(var(--instruction-ui-symbol-size, auto) + 1em);
     }

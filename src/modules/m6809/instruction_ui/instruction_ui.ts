@@ -489,8 +489,8 @@ class InstructionUI implements IModule {
 
     // Mark the address as a breakpoint if it is in the breakpoints list.
     if (this.breakpoints.includes(address)) {
-      children[0].classList.add("breakpoint");
-      children[0].classList.add("contrast-color");
+      row.classList.add("breakpoint");
+      row.classList.add("contrast-color");
     }
 
     return disass.bytes.length;
@@ -585,12 +585,10 @@ class InstructionUI implements IModule {
   #createBasicRowElement = (): HTMLDivElement => {
     const rowElement = element(
       "div",
-      { className: "row" },
-      element("span", {
-        className: "address",
-        innerText: "0000",
+      {
+        className: "row",
         onClick: (el) => {
-          const addressStr = rowElement.getAttribute("data-address");
+          const addressStr = el.getAttribute("data-address");
           if (!addressStr) return;
           const address = Number.parseInt(addressStr);
 
@@ -605,6 +603,10 @@ class InstructionUI implements IModule {
           el.classList.toggle("breakpoint");
           el.classList.toggle("contrast-color");
         },
+      },
+      element("span", {
+        className: "address",
+        innerText: "0000",
       }),
       this.config.symbols === "single"
         ? element("span", {
@@ -723,12 +725,10 @@ class InstructionUI implements IModule {
   onBreakpointAdd = (address: number, ctx: EventContext): void => {
     if (ctx.emitter === this.id) return;
 
-    const addressElement = this.instructionsElement?.querySelector(
-      `.row[data-address="${address}"] > .address`,
-    );
-    if (addressElement) {
-      addressElement.classList.add("breakpoint");
-      addressElement.classList.add("contrast-color");
+    const rowElement = this.instructionsElement?.querySelector(`.row[data-address="${address}"]`);
+    if (rowElement) {
+      rowElement.classList.add("breakpoint");
+      rowElement.classList.add("contrast-color");
     }
 
     this.breakpoints.push(address);
@@ -737,12 +737,10 @@ class InstructionUI implements IModule {
   onBreakpointRemove = (address: number, ctx: EventContext): void => {
     if (ctx.emitter === this.id) return;
 
-    const addressElement = this.instructionsElement?.querySelector(
-      `.row[data-address="${address}"] > .address`,
-    );
-    if (addressElement) {
-      addressElement.classList.remove("breakpoint");
-      addressElement.classList.remove("contrast-color");
+    const rowElement = this.instructionsElement?.querySelector(`.row[data-address="${address}"]`);
+    if (rowElement) {
+      rowElement.classList.remove("breakpoint");
+      rowElement.classList.remove("contrast-color");
     }
 
     this.breakpoints = this.breakpoints.filter((a) => a !== address);
