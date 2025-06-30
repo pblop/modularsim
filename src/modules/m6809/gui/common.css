@@ -30,6 +30,13 @@ button:hover {
     position: absolute;
 
     color: gray;
+    /* background-color: hotpink; */
+    border-radius: 5px;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    background-color: color-mix(in srgb, var(--gui-color-background) 80%, transparent);
+    z-index: 1000;
+
     font-weight: 500;
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 
