@@ -4,12 +4,14 @@
   --gui-color-highlight: #4e4e4e;
   --gui-color-border: #4e4e4e;
   --gui-color-text: #d4d4d4;
-  --gui-color-text-blue: #7777ff;
+  --gui-color-text-blue: oklch(80.17% 0.091 258.88);
 
-  --gui-color-red-background: hsl(351, 100%, 56%);
-  --gui-color-green-background: hsl(120, 74%, 27%);
-  --gui-color-blue-background: hsl(195, 53%, 49%);
-  --gui-color-yellow-background: hsl(60, 100%, 64%);
+  --gui-color-red: oklch(58.63% 0.231 19.6);
+
+  --gui-color-red-background: oklch(41.17% 0.157 16.58);
+  --gui-color-green-background: oklch(79.33% 0.179 145.62);
+  --gui-color-blue-background: oklch(62.39% 0.181 258.33);
+  --gui-color-yellow-background: oklch(90.92% 0.125 92.56);
 }
 [data-color-scheme="light"] .gui-root, .gui-root[data-color-scheme="light"] {
   --gui-color-background: #ffffff;
@@ -17,9 +19,11 @@
   --gui-color-highlight: #f0f0f0;
   --gui-color-border: #d4d4d4;
   --gui-color-text: #111111;
-  --gui-color-text-blue: #0000ff;
+  --gui-color-text-blue: oklch(62.39% 0.181 258.33);
 
-  --gui-color-yellow-background: hsl(60, 68%, 53%);
+  --gui-color-red-background: oklch(62.73% 0.209 12.37);
+  --gui-color-yellow-background: oklch(92.76% 0.098 92.58);
+  --gui-color-blue-background: oklch(89.66% 0.046 260.67);
 }
 @media (prefers-color-scheme: light) {
   .gui-root {
@@ -28,9 +32,11 @@
     --gui-color-highlight: #f0f0f0;
     --gui-color-border: #d4d4d4;
     --gui-color-text: #111111;
-    --gui-color-text-blue: #0000ff;
-
-    --gui-color-yellow-background: hsl(60, 68%, 53%);
+    --gui-color-text-blue: oklch(54.87% 0.222 260.33);
+    
+    --gui-color-red-background: oklch(62.73% 0.209 12.37);
+    --gui-color-yellow-background: oklch(92.76% 0.098 92.58);
+    --gui-color-blue-background: oklch(89.66% 0.046 260.67);
   }
 }
 
