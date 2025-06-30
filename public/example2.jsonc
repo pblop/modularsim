@@ -1,0 +1,304 @@
+{
+  "simulator": {
+    // "url" es la ruta del archivo que contiene el simulador
+    "url": "./modules/simulator/simulator.js",
+    "modules": [
+      {
+        // "id" es un identificador único para cada módulo
+        "id": "main_memory",
+        "type": "memory",
+        // "url" es la ruta del archivo que contiene el módulo
+        "url": "./modules/m6809/memory/memory.js",
+        "config": {
+          "multiplexer": "multiplexer",
+          "size": 65536,
+          "type": "ram"
+        }
+      },
+      {
+        "id": "main_memory_ui",
+        "type": "ui",
+        "url": "./modules/m6809/infinite_memory_ui/memory_ui.js",
+        "css": ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
+        "config": {
+          "size": "0x10000",
+          "autoPosition": "m6809"
+        }
+      },
+      {
+        "id": "gui",
+        "type": "gui",
+        "url": "./modules/m6809/gui/gui.js",
+        "css": [
+          "./modules/m6809/gui/reset.css",
+          "./modules/m6809/gui/scale.gui.css",
+          "./config-colors.css"
+        ],
+        "config": {
+          "language": "es",
+          "panels": [
+            {
+              "langName": {
+                "en": "Registers",
+                "es": "Registros"
+              },
+              "id": "register_ui",
+              "column": "1 / span 4",
+              "row": "1 / span 2"
+            },
+            {
+              "langName": {
+                "en": "Instructions",
+                "es": "Instrucciones"
+              },
+              "id": "instruction_ui",
+              "column": "2 / span 4",
+              "row": "3 / 20"
+            },
+            {
+              "langName": {
+                "en": "Memory",
+                "es": "Memoria"
+              },
+              "id": "main_memory_ui",
+              "column": "6 / span 3",
+              "row": "3 / 17"
+            },
+            {
+              "langName": {
+                "en": "Screen",
+                "es": "Pantalla"
+              },
+              "id": "screen_ui",
+              "column": "9 / -1",
+              "row": "3 / span 6"
+            },
+            {
+              "langName": {
+                "en": "2D Screen",
+                "es": "Pantalla 2D"
+              },
+              "id": "2d_screen",
+              "column": "9 / span 4",
+              "row": "9 / 20"
+            },
+            {
+              "langName": {
+                "en": "Breakpoints",
+                "es": "Puntos de ruptura"
+              },
+              "id": "breakpoint_ui",
+              "column": "1 / span 1",
+              "row": "3 / span 12"
+            },
+            {
+              "langName": {
+                "en": "Simulation status",
+                "es": "Estado de la simulación"
+              },
+              "id": "clock_ui",
+              "column": "-5 / -1",
+              "row": "1 / span 2"
+            },
+            {
+              "langName": {
+                "en": "Loader",
+                "es": "Cargador"
+              },
+              "id": "loader",
+              "column": "6 / span 3",
+              "row": "17 / 20"
+            }
+          ]
+        }
+      },
+      {
+        "id": "clock",
+        "type": "clock",
+        "url": "./modules/m6809/clock/clock.js",
+        "config": {
+          "frequency": 10000000 // Hz
+        }
+      },
+      {
+        "id": "clock_ui",
+        "type": "ui",
+        "url": "./modules/m6809/clock_ui/clock_ui.js",
+        "css": ["./modules/m6809/clock_ui/clock_ui.css"],
+        "config": {
+          "frequency": 10000000,
+          "autoReset": "fast_reset"
+        }
+      },
+      {
+        "id": "cpu",
+        "type": "cpu",
+        "url": "./modules/m6809/cpu/cpu.js",
+        "config": {
+          // "functions": {
+          //   "0x8000": "myfunctionmodule"
+          // }
+        }
+      },
+      {
+        "id": "loader",
+        "type": "extra",
+        "url": "./modules/m6809/loader/loader.js",
+        "css": ["./modules/m6809/loader/loader.css"],
+        "config": {
+          "file": "./programs/2d.s19",
+          "symbolsFile": "./programs/2d.noi",
+          // Ignorar los símbolos extra que genera el ensamblador.
+          "symbolIgnoreRegex": "^(\\.__\\.|s_|l_).*$"
+          // "file": "http://localhost:6809/programs/loop.bin"
+        }
+      },
+      {
+        "id": "instruction_ui",
+        "type": "ui",
+        "url": "./modules/m6809/instruction_ui/instruction_ui.js",
+        "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
+        "config": {
+          "symbols": "single",
+          "autoPosition": "m6809",
+          "lines": 40
+        }
+      },
+      {
+        "id": "breakpoint_ui",
+        "type": "ui",
+        "url": "./modules/m6809/breakpoint_ui/breakpoint_ui.js",
+        "css": ["./modules/m6809/breakpoint_ui/breakpoint_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "history_ui",
+        "type": "ui",
+        "url": "./modules/m6809/history_ui/history_ui.js",
+        "css": ["./modules/m6809/history_ui/history_ui.css"],
+        "config": {}
+      },
+      {
+        "id": "screen_ui",
+        "type": "ui",
+        "url": "./modules/m6809/screen_ui/screen_ui.js",
+        "css": ["./modules/m6809/screen_ui/screen_ui.css"],
+        "config": {
+          "multiplexer": "multiplexer"
+        }
+      },
+      {
+        "id": "stopper",
+        "type": "extra",
+        "url": "./modules/m6809/stop/stop.js",
+        "config": {
+          "multiplexer": "multiplexer"
+        }
+      },
+      {
+        "id": "register_ui",
+        "type": "ui",
+        "url": "./modules/m6809/register_ui/register_ui.js",
+        "css": ["./modules/m6809/register_ui/register_ui.css"],
+        "config": {
+          "registers": {
+            "A": {
+              "bits": 8,
+              "mirror": {
+                "register": "D",
+                "mask": "0xFF00"
+              }
+            },
+            "B": {
+              "bits": 8,
+              "mirror": {
+                "register": "D",
+                "mask": "0x00FF"
+              }
+            },
+            "D": {
+              "bits": 16
+            },
+            "X": {
+              "bits": 16,
+              "pointer": true
+            },
+            "Y": {
+              "bits": 16,
+              "pointer": true
+            },
+            "U": {
+              "bits": 16,
+              "pointer": true
+            },
+            "S": {
+              "bits": 16,
+              "pointer": true
+            },
+            "pc": {
+              "bits": 16,
+              "pointer": true
+            },
+            "cc": {
+              "bits": 8,
+              "flags": ["E", "F", "H", "I", "N", "Z", "V", "C"]
+            },
+            "dp": {
+              "bits": 8
+            }
+          }
+        }
+      },
+      {
+        "id": "multiplexer",
+        "type": "hw",
+        "url": "./modules/m6809/multiplexer/multiplexer.js",
+        "config": {
+          "entries": [
+            {
+              "start": "0xFF00",
+              "size": 1,
+              "module": "screen_ui",
+              "priority": 0
+            },
+            {
+              "start": "0xFF01",
+              "size": 1,
+              "module": "stopper",
+              "priority": 0
+            },
+            {
+              "start": "0x0",
+              "module": "main_memory",
+              "size": 65536,
+              "priority": 1
+            },
+            {
+              "start": "0xEF00",
+              "module": "2d_screen",
+              "size": "0x1000",
+              "priority": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "messager",
+        "type": "extra",
+        "url": "./modules/m6809/messager/messager.js",
+        "config": {}
+      },
+      {
+        "id": "2d_screen",
+        "type": "extra",
+        "url": "./modules/m6809/screen2d_ui/screen2d_ui.js",
+        "css": ["./modules/m6809/screen2d_ui/screen2d_ui.css"],
+        "config": {
+          "multiplexer": "multiplexer",
+          "width": 64,
+          "height": 64
+        }
+      }
+    ]
+  }
+}
