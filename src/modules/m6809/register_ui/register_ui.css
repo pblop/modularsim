@@ -21,6 +21,9 @@
       cursor: not-allowed !important;
     }
     .editable {
+      /* this border won't be visible, but it is here to prevent the
+       * table from jerking when turning it editable and back */
+      border: transparent 1px dashed;
       cursor: text !important;
     }
 
