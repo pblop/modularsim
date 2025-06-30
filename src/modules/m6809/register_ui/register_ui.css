@@ -1,6 +1,10 @@
 .register-ui {
-  .register-table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 
+  .register-table {
     width: 100%;
     text-align: center;
 
