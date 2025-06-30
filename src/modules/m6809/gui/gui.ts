@@ -30,6 +30,7 @@ class Gui implements IModule {
   id: string;
 
   rootElement: HTMLElement;
+  gridElement: HTMLElement;
   statusElement?: HTMLElement;
   statusMessage?: string;
 
@@ -120,6 +121,12 @@ class Gui implements IModule {
     root_element.classList.add("gui-root");
     this.rootElement = root_element;
 
+    const gridElement = element("div", {
+      className: "gui-grid",
+    });
+    this.rootElement.appendChild(gridElement);
+    this.gridElement = gridElement;
+
     this.createDeploymentInfoElement();
     if (this.config.show_status !== "no") {
       this.statusElement = this.createStatusElement();
@@ -142,7 +149,7 @@ class Gui implements IModule {
           innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
           title: `${info.message}\n\n${info.body ?? ""}`.trimEnd(),
         });
-        this.rootElement.appendChild(deployment_info_element);
+        this.gridElement.appendChild(deployment_info_element);
       })
       .catch(() => {});
   }
@@ -150,7 +157,7 @@ class Gui implements IModule {
     const status_element = element("div", {
       className: `gui-floating ${this.config.show_status}`,
     });
-    this.rootElement.appendChild(status_element);
+    this.gridElement.appendChild(status_element);
     return status_element;
   }
 
@@ -220,7 +227,7 @@ class Gui implements IModule {
         },
         ...children,
       );
-      this.rootElement.appendChild(panel_element);
+      this.gridElement.appendChild(panel_element);
 
       // Notify other modules that the panel has been created
       this.et.emit("gui:panel_created", panel.id, panel_content, this.language);

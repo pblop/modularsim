@@ -26,6 +26,11 @@ button:hover {
   container-type: inline-size;
   container-name: gui-root;
 
+  .gui-grid {
+    height: 100%;
+    width: 100%;
+  }
+
   .gui-floating {
     position: absolute;
 
