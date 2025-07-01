@@ -84,8 +84,8 @@
             },
             {
               "langName": {
-                "en": "Simulation status",
-                "es": "Estado de la simulación"
+                "en": "Simulation control",
+                "es": "Control de la simulación"
               },
               "id": "clock_ui",
               "column": "5 / span 2",
