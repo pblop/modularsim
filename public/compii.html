@@ -24,7 +24,7 @@
     <ol>
       <li>
         <h3>6809</h3>
-        <center><img src="6809.jpg" alt="CPU 6809" /></center>
+        <center><img src="assets/6809.jpg" alt="CPU 6809" /></center>
         El MC6809 es un procesador creado por Motorola en 1977 como
         sustituci&oacute;n y mejora del 6800. Es un procesador de 8 bits, con
         algunas caracter&iacute;sticas de 16 bits. Presenta como ventajas para
@@ -66,7 +66,12 @@
         </ul>
       </li>
       <li>
-        <h3>Simulador 1</h3>
+        <h3>Primer programa en ensamblador</h3>
+        Como ya conocéis, manda la tradición que el primer programa que se
+        prueba en un nuevo lenguaje de programación sea uno que imprima en la
+        pantalla las palabras Hola mundo.
+
+        <p>Ejecutamos el programa pinchando en el botón de <i>play</i>.</p>
         <div
           class="simulator-container"
           id="simulador1"
@@ -117,7 +122,10 @@
               id: "gui",
               type: "gui",
               url: "./modules/m6809/gui/gui.js",
-              css: ["./modules/m6809/gui/scale.gui.css", "./config-colors.css"],
+              css: [
+                "./modules/m6809/gui/scale-small.gui.css",
+                "./config-colors-small.css",
+              ],
               config: {
                 language: "es",
                 panels: [
@@ -127,7 +135,7 @@
                       es: "Registros",
                     },
                     id: "register_ui",
-                    column: "1 / span 3",
+                    column: "1 / span 6",
                     row: "1 / span 2",
                   },
                   {
@@ -136,8 +144,8 @@
                       es: "Instrucciones",
                     },
                     id: "instruction_ui",
-                    column: "1 / span 5",
-                    row: "3 / span 6",
+                    column: "8 / span 5",
+                    row: "3 / span 12",
                   },
                   {
                     langName: {
@@ -145,8 +153,8 @@
                       es: "Memoria",
                     },
                     id: "main_memory_ui",
-                    column: "5 / span 3",
-                    row: "9 / span 6",
+                    column: "1 / span 5",
+                    row: "3 / span 7",
                   },
                   {
                     langName: {
@@ -154,8 +162,8 @@
                       es: "Pantalla",
                     },
                     id: "screen_ui",
-                    column: "1 / span 3",
-                    row: "9 / span 2",
+                    column: "1 / span 5",
+                    row: "10 / span 5",
                   },
                   {
                     langName: {
@@ -163,16 +171,16 @@
                       es: "Puntos de ruptura",
                     },
                     id: "breakpoint_ui",
-                    column: "4 / span 1",
-                    row: "9 / span 6",
+                    column: "6 / span 2",
+                    row: "3 / span 12",
                   },
                   {
                     langName: {
-                      en: "Status",
-                      es: "Estado",
+                      en: "Simulation control",
+                      es: "Control de la simulación",
                     },
                     id: "clock_ui",
-                    column: "-3 / -1",
+                    column: "9 / span 4",
                     row: "1 / span 2",
                   },
                 ],
@@ -207,8 +215,8 @@
               url: "./modules/m6809/loader/loader.js",
               css: ["./modules/m6809/loader/loader.css"],
               config: {
-                file: "./programs/recumples.s19",
-                symbolsFile: "./programs/recumples.noi",
+                file: "./programs/hola.s19",
+                symbolsFile: "./programs/hola.noi",
               },
             },
             {
