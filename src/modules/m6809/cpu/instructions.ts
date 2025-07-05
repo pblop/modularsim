@@ -5,8 +5,8 @@ import {
   truncate,
   twosComplement,
 } from "../../../utils/numbers.js";
-import type Cpu from "cpu.js";
-import type { CpuAddressingData, CpuRelativeAddressingData } from "cpu.js";
+import type Cpu from "./cpu.js";
+import type { CpuAddressingData, CpuRelativeAddressingData } from "./cpu.js";
 import {
   ConditionCodes,
   REGISTER_SIZE,
