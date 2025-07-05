@@ -5,53 +5,68 @@ import type { EventDeclaration, TypedEventTransceiver } from "../../../types/eve
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import { VirtualListElement } from "../../../utils/VirtualListElement.js";
-import { GridStack } from "https://cdn.jsdelivr.net/npm/gridstack@12.2.1/+esm";
+import { UpdateQueue } from "../../../utils/updatequeue.js";
+import {
+  createDockview,
+  type DockviewApi,
+  type GroupPanelPartInitParameters,
+  type IContentRenderer,
+} from "https://unpkg.com/dockview-core@4.4.0/dist/esm/index.js";
 
-type GuiMovablePanelConfig = {
+type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
-  column: string;
-  row: string;
+  column: string | number;
+  row: string | number;
   name?: string; // Name of the panel, used for the title.
   // Language-specific name of the panel, has higher priority than `name`.
   langName: Record<string, string>;
 };
-type GuiMovableConfig = {
-  panels: GuiMovablePanelConfig[];
+type GuiConfig = {
+  panels: GuiPanelConfig[];
   language?: string;
   root_selector: string;
   show_titles: boolean;
+  show_status: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "no";
 };
 
-function parseRowSpan(rowSpan: string): [number, number] {
-  const match = rowSpan.match(/(\d+)(?:\s*\/\s*span\s*(\d+))?/);
-  if (!match) {
-    throw new Error(`Invalid row/column format: ${rowSpan}`);
-  } else {
-    const row = Number.parseInt(match[1], 10);
-    let col = 1; // Default span is 1 if not specified
-    if (match[2]) {
-      col = Number.parseInt(match[2], 10);
-    }
+class Panel implements IContentRenderer {
+  private readonly _element: HTMLElement;
 
-    return [row, col];
+  get element(): HTMLElement {
+    return this._element;
+  }
+
+  constructor() {
+    this._element = document.createElement("div");
+  }
+
+  init(parameters: GroupPanelPartInitParameters): void {
+    // console.log(`[gui] Panel initialized with parameters:`, parameters);
   }
 }
 
-class GuiMovable implements IModule {
+class Gui implements IModule {
   et: TypedEventTransceiver;
-  config: GuiMovableConfig;
+  config: GuiConfig;
   language: string;
   id: string;
 
   rootElement: HTMLElement;
-  grid: GridStack;
+  gridElement: HTMLElement;
+  dockViewApi: DockviewApi;
+  statusElement?: HTMLElement;
+  statusMessage?: string;
+
+  statusUpdateQueue?: UpdateQueue;
 
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: ["gui:panel_created"],
+        provided: ["gui:panel_created", "ui:language"],
         required: { "system:load_finish": this.onSystemLoadFinish },
-        optional: {},
+        optional: {
+          "ui:message:status": this.onStatusMessage,
+        },
       },
     };
   }
@@ -103,6 +118,12 @@ class GuiMovable implements IModule {
           required: false,
           default: true,
         },
+        show_status: {
+          type: "string",
+          required: false,
+          default: "bottom-left",
+          enum: ["top-left", "top-right", "bottom-left", "bottom-right", "no"],
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -123,110 +144,118 @@ class GuiMovable implements IModule {
     root_element.classList.add("gui-root");
     this.rootElement = root_element;
 
-    this.createDeploymentInfoElement();
+    const gridElement = element("div", {
+      className: "gui-grid",
+    });
+    this.rootElement.appendChild(gridElement);
+    this.gridElement = gridElement;
 
-    GridStack.renderCB = (el, w) => {
-      el.innerHTML = w.content!;
-    };
-
-    this.grid = GridStack.init(
-      {
-        animate: false,
-        cellHeight: 70,
-        margin: 0,
-        layout: "none",
+    this.dockViewApi = createDockview(gridElement, {
+      className: "dockview-theme-abyss",
+      createComponent: (options) => {
+        // console.log(`[gui] Creating component for panel:`, options);
+        return new Panel();
       },
-      this.rootElement,
-    );
-
-    this.grid.on("added", (event, items) => {
-      // When a panel is added, we notify its corresponding module that the
-      // panel has been created.
-      for (const item of items) {
-        item.el!.classList.add("gui-panel");
-        const guiPanel = item.el!.querySelector("[data-panel]")!;
-        const panelId = guiPanel.getAttribute("data-panel")!;
-        // Notify other modules that the panel has been created
-        this.et.emit(
-          "gui:panel_created",
-          panelId,
-          guiPanel.querySelector(".gui-panel-content")!,
-          this.language,
-        );
-      }
     });
 
+    this.createDeploymentInfoElement();
+    if (this.config.show_status !== "no") {
+      this.statusElement = this.createStatusElement();
+      this.statusMessage = "";
+      this.statusUpdateQueue = new UpdateQueue(this._refreshStatusElement.bind(this));
+    }
     VirtualListElement.define();
 
     console.log(`[${this.id}] Module initialized with language ${this.language}.`);
   }
 
   createDeploymentInfoElement() {
+    const position = this.config.show_status === "bottom-left" ? "bottom-right" : "bottom-left";
     fetch("deployment-info.json")
       .then((r) => r.json())
       .then((info) => {
         const date = new Date(info.date);
         const deployment_info_element = element("div", {
-          className: "deployment-info",
+          className: `gui-floating ${position}`,
           innerText: `${info.commit.slice(0, 7)} (${timeAgo(date)})`,
           title: `${info.message}\n\n${info.body ?? ""}`.trimEnd(),
         });
-        this.rootElement.appendChild(deployment_info_element);
+        this.gridElement.appendChild(deployment_info_element);
       })
       .catch(() => {});
   }
+  createStatusElement() {
+    const status_element = element("div", {
+      className: `gui-floating ${this.config.show_status}`,
+    });
+    this.gridElement.appendChild(status_element);
+    return status_element;
+  }
+
+  onStatusMessage = (message: string): void => {
+    if (!this.statusElement) return;
+    this.statusMessage = message;
+    console.log(`[${this.id}] Status message: ${message}`);
+    this.statusUpdateQueue!.queueUpdate();
+  };
+  _refreshStatusElement = (): void => {
+    // If the message is empty, remove the status element.
+    if (this.statusMessage === "") {
+      this.statusElement!.innerText = "";
+      return;
+    }
+
+    // Otherwise, set the message.
+    this.statusElement!.innerText = this.statusMessage!;
+  };
 
   onSystemLoadFinish = (): void => {
+    this.et.emit("ui:language", this.language);
     // Now that the system is loaded, we can start rendering the GUI, and (most importantly) tell
     // the other modules that the GUI is ready, and what their panel ids are.
     console.log(`[${this.id}] Creating GUI panels`);
     for (const panel of this.config.panels) {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
+      const dvPanel = this.dockViewApi.addPanel({
+        id: panel.id,
+        component: "default",
+        title: panel.langName[this.language] || panel.name || panel.id,
+      });
+      const panel_content = dvPanel.view.content.element;
+      console.log(`[${this.id}] Panel ${panel.id} created with content element:`, panel_content);
 
-      let header = "";
+      const children = [];
 
       // If the config says to show titles, we create a header for the panel,
       // and use the name from the config or the id of the panel, if no name is
       // provided.
-      if (this.config.show_titles) {
-        const lang_name = panel.langName[this.language] || panel.name || panel.id;
-        header = `
-          <div class="gui-panel-header">
-            <span class="gui-panel-title">${lang_name}</span>
-          </div>
-        `;
-      }
+
       // This panel content div is the main area where the module will render
       // its content. This is passed to the module.
-      const panelContent = `
-          <div class="gui-panel-content" id="panel_content_${panel.id}"></div>
-          `;
+      // const panel_content = element("div", {
+      //   className: "gui-panel-content",
+      //   id: `panel_content_${panel.id}`,
+      // });
+      // children.push(panel_content);
 
-      const template = `
-        <div id="panel_${panel.id}" data-panel="${panel.id}">
-          ${header}
-          ${panelContent}
-        </div>
-      `;
+      // const panel_element = element(
+      //   "div",
+      //   {
+      //     id: `panel_${panel.id}`,
+      //     className: "gui-panel",
+      //     style: {
+      //       gridColumn: `${panel.column}`,
+      //       gridRow: `${panel.row}`,
+      //     },
+      //   },
+      //   ...children,
+      // );
+      // this.gridElement.appendChild(panel_element);
 
-      const rowSpan = parseRowSpan(panel.row);
-      const colSpan = parseRowSpan(panel.column);
-      console.log(
-        `Parsed panel ${panel.id} rowSpan: ${rowSpan}, colSpan: ${colSpan} from row: ${panel.row}, column: ${panel.column}`,
-      );
-
-      this.grid.addWidget({
-        content: template,
-        w: colSpan[1],
-        h: rowSpan[1],
-        x: colSpan[0] - 1, // GridStack uses 0-based indexing, CSS uses 1-based indexing.
-        y: rowSpan[0] - 1,
-      });
-      console.log(`[${this.id}] Panel ${panel.id} created `);
-      // this.rootElement.appendChild(panel_element);
-      // break;
+      // Notify other modules that the panel has been created
+      this.et.emit("gui:panel_created", panel.id, panel_content, this.language);
     }
   };
 }
 
-export default GuiMovable;
+export default Gui;

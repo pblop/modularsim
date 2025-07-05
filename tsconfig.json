@@ -5,6 +5,12 @@
     "target": "es2022",
     "outDir": "./dist",
     "module": "es2022",
+    "moduleResolution": "node",
+    "paths": {
+      "https://unpkg.com/dockview-core@4.4.0/dist/esm/*": [
+        "./node_modules/dockview-core/dist/esm/*"
+      ]
+    },
 
     // Source map
     "sourceMap": true,

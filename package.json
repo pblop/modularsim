@@ -7,6 +7,7 @@
     "@biomejs/biome": "^1.9.4",
     "@types/gridstack": "^0.5.2",
     "copyfiles": "^2.4.1",
+    "dockview-core": "^4.4.0",
     "gridstack": "^12.2.1",
     "nodemon": "^3.1.7",
     "serve": "^14.2.4",

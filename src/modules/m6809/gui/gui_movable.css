@@ -1,11 +1,10 @@
 @import url("common.css");
-@import url("https://cdn.jsdelivr.net/npm/gridstack@12.2.1/dist/gridstack.min.css");
+@import url("https://cdn.jsdelivr.net/npm/dockview-core@4.4.0/dist/styles/dockview.css");
 
 .gui-root {
-  height: 100vh !important
+  height: 100vh;
+  width: 100vw;
 }
 
-/* .grid-stack-item-content {
-  margin: 0;
-  padding: 0;
-} */
+.gui-grid {
+}
