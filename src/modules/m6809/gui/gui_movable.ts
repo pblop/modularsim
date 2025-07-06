@@ -11,6 +11,8 @@ import {
   type DockviewApi,
   type GroupPanelPartInitParameters,
   type IContentRenderer,
+  themeDark,
+  themeLight,
 } from "https://unpkg.com/dockview-core@4.4.0/dist/esm/index.js";
 
 type GuiPanelConfig = {
@@ -151,7 +153,11 @@ class Gui implements IModule {
     this.gridElement = gridElement;
 
     this.dockViewApi = createDockview(gridElement, {
-      className: "dockview-theme-abyss",
+      // theme: {
+      //   name: "mytheme",
+      //   className: "",
+      // },
+      theme: themeDark,
       createComponent: (options) => {
         // console.log(`[gui] Creating component for panel:`, options);
         return new Panel();
@@ -220,6 +226,10 @@ class Gui implements IModule {
         id: panel.id,
         component: "default",
         title: panel.langName[this.language] || panel.name || panel.id,
+      });
+      this.dockViewApi.addFloatingGroup(dvPanel, {
+        // x: panel.column!,
+        // y: panel.row!,
       });
       const panel_content = dvPanel.view.content.element;
       console.log(`[${this.id}] Panel ${panel.id} created with content element:`, panel_content);
