@@ -9,7 +9,15 @@
     "paths": {
       "https://unpkg.com/dockview-core@4.4.0/dist/esm/*": [
         "./node_modules/dockview-core/dist/esm/*"
-      ]
+      ],
+      "https://unpkg.com/dockview-core@4.4.0/dist/dockview-core.esm.js": [
+        "./node_modules/dockview-core/dist/esm"
+      ],
+      "https://unpkg.com/dockview-core@4.4.0/dist/dockview-core.esm.min.js": [
+        "./node_modules/dockview-core/dist/esm"
+      ],
+      "/lib/dockview-core.esm.js": ["./node_modules/dockview-core/dist/esm"],
+      "/lib/dockview-core.esm.min.js": ["./node_modules/dockview-core/dist/esm"]
     },
 
     // Source map
