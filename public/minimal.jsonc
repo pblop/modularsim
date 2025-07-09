@@ -6,7 +6,6 @@
       {
         // "id" es un identificador único para cada módulo
         "id": "main_memory",
-        "type": "memory",
         // "url" es la ruta del archivo que contiene el módulo
         "url": "./modules/m6809/memory/memory.js",
         "config": {
@@ -17,7 +16,6 @@
       },
       {
         "id": "gui",
-        "type": "gui",
         "url": "./modules/m6809/gui/gui.js",
         "css": [
           "./modules/m6809/gui/reset.css",
@@ -37,7 +35,6 @@
       },
       {
         "id": "clock",
-        "type": "clock",
         "url": "./modules/m6809/clock/clock.js",
         "config": {
           "frequency": 100000000000 // Hz
@@ -45,7 +42,6 @@
       },
       {
         "id": "clock_ui",
-        "type": "ui",
         "url": "./modules/m6809/clock_ui/clock_ui.js",
         "css": ["./modules/m6809/clock_ui/clock_ui.css"],
         "config": {
@@ -54,7 +50,6 @@
       },
       {
         "id": "cpu",
-        "type": "cpu",
         "url": "./modules/m6809/cpu/cpu.js",
         "config": {
           // "functions": {
@@ -64,7 +59,6 @@
       },
       {
         "id": "loader",
-        "type": "extra",
         "url": "./modules/m6809/loader/loader.js",
         "css": ["./modules/m6809/loader/loader.css"],
         "config": {
@@ -75,7 +69,6 @@
       },
       {
         "id": "stopper",
-        "type": "extra",
         "url": "./modules/m6809/stop/stop.js",
         "config": {
           "multiplexer": "multiplexer"
@@ -83,7 +76,6 @@
       },
       {
         "id": "multiplexer",
-        "type": "hw",
         "url": "./modules/m6809/multiplexer/multiplexer.js",
         "config": {
           "entries": [

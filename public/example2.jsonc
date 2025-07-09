@@ -6,7 +6,6 @@
       {
         // "id" es un identificador único para cada módulo
         "id": "main_memory",
-        "type": "memory",
         // "url" es la ruta del archivo que contiene el módulo
         "url": "./modules/m6809/memory/memory.js",
         "config": {
@@ -17,7 +16,6 @@
       },
       {
         "id": "main_memory_ui",
-        "type": "ui",
         "url": "./modules/m6809/infinite_memory_ui/memory_ui.js",
         "css": ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
         "config": {
@@ -27,7 +25,6 @@
       },
       {
         "id": "gui",
-        "type": "gui",
         "url": "./modules/m6809/gui/gui.js",
         "css": [
           "./modules/m6809/gui/reset.css",
@@ -114,7 +111,6 @@
       },
       {
         "id": "clock",
-        "type": "clock",
         "url": "./modules/m6809/clock/clock.js",
         "config": {
           "frequency": 10000000 // Hz
@@ -122,7 +118,6 @@
       },
       {
         "id": "clock_ui",
-        "type": "ui",
         "url": "./modules/m6809/clock_ui/clock_ui.js",
         "css": ["./modules/m6809/clock_ui/clock_ui.css"],
         "config": {
@@ -132,7 +127,6 @@
       },
       {
         "id": "cpu",
-        "type": "cpu",
         "url": "./modules/m6809/cpu/cpu.js",
         "config": {
           // "functions": {
@@ -142,7 +136,6 @@
       },
       {
         "id": "loader",
-        "type": "extra",
         "url": "./modules/m6809/loader/loader.js",
         "css": ["./modules/m6809/loader/loader.css"],
         "config": {
@@ -155,7 +148,6 @@
       },
       {
         "id": "instruction_ui",
-        "type": "ui",
         "url": "./modules/m6809/instruction_ui/instruction_ui.js",
         "css": ["./modules/m6809/instruction_ui/instruction_ui.css"],
         "config": {
@@ -166,21 +158,18 @@
       },
       {
         "id": "breakpoint_ui",
-        "type": "ui",
         "url": "./modules/m6809/breakpoint_ui/breakpoint_ui.js",
         "css": ["./modules/m6809/breakpoint_ui/breakpoint_ui.css"],
         "config": {}
       },
       {
         "id": "history_ui",
-        "type": "ui",
         "url": "./modules/m6809/history_ui/history_ui.js",
         "css": ["./modules/m6809/history_ui/history_ui.css"],
         "config": {}
       },
       {
         "id": "screen_ui",
-        "type": "ui",
         "url": "./modules/m6809/screen_ui/screen_ui.js",
         "css": ["./modules/m6809/screen_ui/screen_ui.css"],
         "config": {
@@ -189,7 +178,6 @@
       },
       {
         "id": "stopper",
-        "type": "extra",
         "url": "./modules/m6809/stop/stop.js",
         "config": {
           "multiplexer": "multiplexer"
@@ -197,7 +185,6 @@
       },
       {
         "id": "register_ui",
-        "type": "ui",
         "url": "./modules/m6809/register_ui/register_ui.js",
         "css": ["./modules/m6809/register_ui/register_ui.css"],
         "config": {
@@ -251,7 +238,6 @@
       },
       {
         "id": "multiplexer",
-        "type": "hw",
         "url": "./modules/m6809/multiplexer/multiplexer.js",
         "config": {
           "entries": [
@@ -284,13 +270,11 @@
       },
       {
         "id": "messager",
-        "type": "extra",
         "url": "./modules/m6809/messager/messager.js",
         "config": {}
       },
       {
         "id": "2d_screen",
-        "type": "extra",
         "url": "./modules/m6809/screen2d_ui/screen2d_ui.js",
         "css": ["./modules/m6809/screen2d_ui/screen2d_ui.css"],
         "config": {

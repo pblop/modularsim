@@ -6,17 +6,12 @@ export type SimulatorConfig = {
 export type ModuleConfig = {
   // Unique identifier for the module.
   id: string;
-  // The module type.
-  type: string;
   // The url to load the module from.
   url: string;
   // The css files to load with the module.
   css?: string[];
   // The module config.
   config?: Record<string, unknown>;
-  // Removed child modules for now.
-  // // Child modules.
-  // modules?: ModuleConfig[];
 };
 
 export type Config = {
