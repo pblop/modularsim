@@ -9,14 +9,11 @@ import { UpdateQueue } from "../../../utils/updatequeue.js";
 import {
   createDockview,
   type DockviewApi,
-  DockviewComponent,
+  type DockviewComponent,
   type GroupPanelPartInitParameters,
   type IContentRenderer,
-  IDockviewPanelProps,
-  ITabRenderer,
-  Orientation,
+  type ITabRenderer,
   themeDark,
-  themeLight,
 } from "/lib/dockview-core.esm.min.js";
 
 type GuiPanelConfig = {
@@ -304,7 +301,17 @@ class Gui implements IModule {
     // the other modules that the GUI is ready, and what their panel ids are.
     console.log(`[${this.id}] Creating GUI panels`);
 
-    const [screenWidth, screenHeight] = [window.innerWidth, window.innerHeight];
+    let [screenWidth, screenHeight] = [window.innerWidth, window.innerHeight];
+
+    // Ensure the panels are placed in a 16/9 aspect ratio, if possible.
+    if (screenWidth / screenHeight > 16 / 9) {
+      // Too wide, reduce width.
+      screenWidth = (screenHeight * 16) / 9;
+    } else if (screenWidth / screenHeight < 16 / 9) {
+      // Too tall, reduce height.
+      screenHeight = (screenWidth * 9) / 16;
+    }
+
     const rowHeight = screenHeight / this.config.rows;
     const colWidth = screenWidth / this.config.columns;
 
