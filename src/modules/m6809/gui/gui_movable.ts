@@ -9,6 +9,7 @@ import { UpdateQueue } from "../../../utils/updatequeue.js";
 import {
   createDockview,
   type DockviewApi,
+  DockviewComponent,
   type GroupPanelPartInitParameters,
   type IContentRenderer,
   Orientation,
@@ -80,8 +81,6 @@ class Gui implements IModule {
   dockViewApi: DockviewApi;
   statusElement?: HTMLElement;
   statusMessage?: string;
-
-  dockViewInitialized = false; // Flag to check if Dockview is initialized.
 
   statusUpdateQueue?: UpdateQueue;
 
@@ -256,13 +255,8 @@ class Gui implements IModule {
   // only create the GUI panels after both the system and Dockview are ready.
   isDoneInitializing = false;
 
-  elements: Record<string, HTMLElement> = {};
+  requiredPositions: Record<string, { x: number; y: number }> = {};
   createGuiPanels = (): void => {
-    // if (!this.isDoneInitializing) {
-    //   this.isDoneInitializing = true;
-    //   return;
-    // }
-
     this.et.emit("ui:language", this.language);
     // Now that the system is loaded, we can start rendering the GUI, and (most importantly) tell
     // the other modules that the GUI is ready, and what their panel ids are.
@@ -298,7 +292,20 @@ class Gui implements IModule {
         id: panel.id,
         component: "default",
         title: panel.langName[this.language] || panel.name || panel.id,
+        floating: {
+          width: colSpan * colWidth,
+          height: rowSpan * rowHeight,
+          position: { left: colPos * colWidth, top: rowPos * rowHeight },
+        },
       });
+      const requiredX = colPos * colWidth;
+      const requiredY = rowPos * rowHeight;
+      if (requiredX !== 0 || requiredY !== 0) {
+        this.requiredPositions[panel.id] = {
+          x: colPos * colWidth,
+          y: rowPos * rowHeight,
+        };
+      }
 
       console.log(`[${this.id}] Panel created:`, dvPanel);
 
@@ -306,7 +313,41 @@ class Gui implements IModule {
       const panel_content = dvPanel.view.content.element;
       this.et.emit("gui:panel_created", panel.id, panel_content, this.language);
     }
-    setTimeout(this.moveGuiPanels, 10);
+    // setTimeout(this.moveGuiPanels, 10);
+    this.ensureCorrectPanelPositions();
+  };
+  ensureCorrectPanelPositions = (): void => {
+    const component = (this.dockViewApi as unknown as { component: DockviewComponent }).component;
+
+    for (const floatingPanel of component.floatingGroups) {
+      const panels = floatingPanel.group.panels;
+      if (panels.length === 0) continue; // No panels in this group
+      if (panels.length > 1) {
+        console.warn(`[${this.id}] Floating group has more than one panel, this is not expected.`);
+      }
+      // We create one-panel floating groups, so we can just take the first one.
+      const panelId = panels[0].id;
+      if (!(panelId in this.requiredPositions)) continue;
+
+      // console.log(`[${this.id}] Checking panel ${panelId} position`);
+      const requiredPosition = this.requiredPositions[panelId];
+      const panelX = floatingPanel.overlay.element.style.left;
+      const panelY = floatingPanel.overlay.element.style.top;
+      if (panelX === `${requiredPosition.x}px` || panelY === `${requiredPosition.y}px`) {
+        delete this.requiredPositions[panelId];
+        continue;
+      }
+      // console.warn(
+      //   `[${this.id}] Panel ${panelId} position is incorrect, moving it to (${requiredPosition.x}, ${requiredPosition.y})`,
+      // );
+      floatingPanel.position({
+        left: requiredPosition.x,
+        top: requiredPosition.y,
+      });
+    }
+    if (Object.keys(this.requiredPositions).length > 0) {
+      setTimeout(this.ensureCorrectPanelPositions, 0);
+    }
   };
   moveGuiPanels = (): void => {
     const [screenWidth, screenHeight] = [window.innerWidth, window.innerHeight];
