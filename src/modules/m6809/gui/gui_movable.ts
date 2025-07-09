@@ -224,7 +224,10 @@ class Gui implements IModule {
       //   name: "mytheme",
       //   className: "",
       // },
-      theme: themeDark,
+      theme: {
+        name: "simtheme",
+        className: "dv-theme-sim",
+      },
       createComponent: (options) => {
         return new Panel();
       },

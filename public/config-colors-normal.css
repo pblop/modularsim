@@ -1,0 +1,64 @@
+.gui-root, [data-color-scheme="dark"] .gui-root, .gui-root[data-color-scheme="dark"] {
+  --gui-color-background: #1e1e1e;
+  --gui-color-foreground-dark: #555555;
+  --gui-color-highlight: #4e4e4e;
+  --gui-color-border: #4e4e4e;
+  --gui-color-text: #d4d4d4;
+  --gui-color-text-blue: oklch(80.17% 0.091 258.88);
+
+  --gui-color-red: oklch(58.63% 0.231 19.6);
+  --gui-color-red-highlight: oklch(0.4644 0.157 16.58);
+
+  --gui-color-red-background: oklch(41.17% 0.157 16.58);
+  --gui-color-green-background: oklch(79.33% 0.179 145.62);
+  --gui-color-blue-background: oklch(62.39% 0.181 258.33);
+  --gui-color-yellow-background: oklch(90.92% 0.125 92.56);
+}
+[data-color-scheme="light"] .gui-root, .gui-root[data-color-scheme="light"] {
+  --gui-color-background: #ffffff;
+  --gui-color-foreground-dark: #555555;
+  --gui-color-highlight: #f0f0f0;
+  --gui-color-border: #d4d4d4;
+  --gui-color-text: #111111;
+  --gui-color-text-blue: oklch(62.39% 0.181 258.33);
+
+  --gui-color-red-highlight: oklch(69.86% 0.162 7.82);
+  
+  --gui-color-red-background: oklch(78.78% 0.109 4.54);
+  --gui-color-yellow-background: oklch(92.76% 0.098 92.58);
+  --gui-color-blue-background: oklch(89.66% 0.046 260.67);
+}
+@media (prefers-color-scheme: light) {
+  .gui-root {
+    --gui-color-background: #ffffff;
+    --gui-color-foreground-dark: #555555;
+    --gui-color-highlight: #f0f0f0;
+    --gui-color-border: #d4d4d4;
+    --gui-color-text: #111111;
+    --gui-color-text-blue: oklch(54.87% 0.222 260.33);
+
+    --gui-color-red-highlight: oklch(69.86% 0.162 7.82);
+    
+    --gui-color-red-background: oklch(78.78% 0.109 4.54);
+    --gui-color-yellow-background: oklch(92.76% 0.098 92.58);
+    --gui-color-blue-background: oklch(89.66% 0.046 260.67);
+  }
+}
+
+/* FONTS */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/assets/Montserrat-VariableFont_wght.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/JetBrainsMono[wght].woff2") format("woff2-variations");
+}
+.gui-root {
+  --gui-font-monospace: "JetBrains Mono", "Courier New", Courier, monospace;
+  --gui-font-monospace-weight: 100;
+  --gui-font-monospace-size: 1rem;
+  --gui-font-title: "Montserrat", sans-serif;
+  --gui-font-title-weight: 700;
+  --gui-font-title-size: 1rem;
+}

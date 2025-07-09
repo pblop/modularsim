@@ -29,7 +29,7 @@
         "css": [
           "./modules/m6809/gui/reset.css",
           "./modules/m6809/gui/gui_movable.css",
-          "./config-colors.css"
+          "./config-colors-small.css"
         ],
         "config": {
           "language": "es",

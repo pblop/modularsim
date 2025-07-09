@@ -6,5 +6,31 @@
   width: 100vw;
 }
 
-.gui-grid {
+.dv-theme-sim {
+  /* gui-panel equivalent */
+  .dv-groupview {
+    background-color: var(--gui-color-background);
+    border: 1px solid var(--gui-color-border); 
+    border-radius: 5px;
+
+    .dv-tabs-and-actions-container {
+      font-family: var(--gui-font-title);
+      font-weight: var(--gui-font-title-weight, 900);
+      font-size: var(--gui-font-title-size, auto);
+      padding-left: 0.75ch;
+      box-decoration-break: clone;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--gui-color-border);
+    }
+    .dv-tab {
+      background-color: var(--gui-color-background);
+      /* Disable user interaction so they cannot drag and drop the tab */
+      pointer-events: none;
+    }
+    .dv-content-container {
+      font-family: var(--gui-font-monospace);
+      font-weight: var(--gui-font-monospace-weight, auto);
+      font-size: var(--gui-font-monospace-size, auto);
+    }
+  }
 }
