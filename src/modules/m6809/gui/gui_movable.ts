@@ -12,6 +12,8 @@ import {
   DockviewComponent,
   type GroupPanelPartInitParameters,
   type IContentRenderer,
+  IDockviewPanelProps,
+  ITabRenderer,
   Orientation,
   themeDark,
   themeLight,
@@ -52,6 +54,41 @@ function parsePosition(raw: string | number): [number, number | undefined] {
   const pos = Number(split[0].trim());
   const span = split[1] ? Number(split[1].trim().replace("span", "")) : undefined;
   return [pos, span];
+}
+
+class CustomTabRenderer implements ITabRenderer {
+  private _element: HTMLElement;
+  private draggableSetToFalse = false;
+
+  get element() {
+    if (!this.draggableSetToFalse) {
+      setTimeout(() => {
+        //https://github.com/mathuo/dockview/issues/950
+        console.log(this._element.closest(".dv-tab"));
+        const parentTab = this._element.closest(".dv-tab") as HTMLElement | null;
+        if (!parentTab) return;
+        parentTab.draggable = false;
+      }, 0);
+    }
+    return this._element;
+  }
+
+  constructor() {
+    this._element = document.createElement("div");
+    this._element.className = "";
+  }
+
+  // Required methods for the interface
+  init(parameters: GroupPanelPartInitParameters): void {
+    parameters.api.onDidTitleChange((event) => {
+      this._element.innerText = parameters.api.title!;
+    });
+    this._element.innerText = parameters.api.title || parameters.api.id;
+  }
+  update() {
+    console.log(this._element.closest(".dv-tab"));
+  }
+  dispose() {}
 }
 
 class Panel implements IContentRenderer {
@@ -194,6 +231,11 @@ class Gui implements IModule {
       createComponent: (options) => {
         return new Panel();
       },
+      createTabComponent: (props) => {
+        return new CustomTabRenderer();
+      },
+      disableDnd: true,
+      locked: true,
     });
     console.log((this.gridElement.children[0] as HTMLDivElement).style);
 
@@ -291,6 +333,7 @@ class Gui implements IModule {
       const dvPanel = this.dockViewApi.addPanel({
         id: panel.id,
         component: "default",
+        tabComponent: "no-x",
         title: panel.langName[this.language] || panel.name || panel.id,
         floating: {
           width: colSpan * colWidth,
@@ -332,6 +375,9 @@ class Gui implements IModule {
     const component = (this.dockViewApi as unknown as { component: DockviewComponent }).component;
 
     for (const floatingPanel of component.floatingGroups) {
+      // We want to lock every floating group, so we exploit the fact that we're
+      // already iterating over them for another reason.
+      floatingPanel.group.locked = true;
       const panels = floatingPanel.group.panels;
       if (panels.length === 0) continue; // No panels in this group
       if (panels.length > 1) {
