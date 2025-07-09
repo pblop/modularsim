@@ -36,6 +36,8 @@
         ],
         "config": {
           "language": "es",
+          "columns": 12,
+          "rows": 14,
           "panels": [
             {
               "langName": {
