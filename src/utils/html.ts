@@ -38,7 +38,7 @@ type ExtraFields<K extends keyof TagNameMap> = {
   customAttributes?: Record<string, string>;
   cssProperties?: Record<string, string>;
   onClick?: (element: TagNameMap[K], ev: MouseEvent) => void;
-  override?: TagNameMap[K];
+  overwrite?: TagNameMap[K];
 };
 
 export function element<K extends keyof TagNameMap>(
@@ -51,6 +51,8 @@ export function element<K extends keyof TagNameMap>(
   // Allow for children to be passed as the second argument (no properties).
   if (properties instanceof HTMLElement) {
     children.unshift(properties);
+    // We can't use a provided element, because no properties were passed,
+    // so we create a new element.
     el = document.createElement(tag) as TagNameMap[K];
   } else {
     // Remove extra fields from properties and set them separately.
@@ -59,12 +61,14 @@ export function element<K extends keyof TagNameMap>(
     properties.onClick = undefined;
     properties.cssProperties = undefined;
 
-    if (properties.override) {
-      el = properties.override;
+    // If an element is provided to overwrite, use it instead of creating a new
+    // one.
+    if (properties.overwrite) {
+      el = properties.overwrite;
     } else {
       el = document.createElement(tag) as TagNameMap[K];
     }
-    properties.override = undefined;
+    properties.overwrite = undefined;
 
     setProperties(el, properties as DeepPartial<TagNameMap[K]>);
 
@@ -149,6 +153,7 @@ export function rewrittableTableElement(
   }
 
   return element("td", {
+    overwrite,
     ...options,
     cssProperties: {
       "--register-edit-width": `${editWidth}ch`,

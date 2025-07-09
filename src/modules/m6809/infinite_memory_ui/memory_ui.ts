@@ -171,6 +171,9 @@ class MemoryUI implements IModule {
     if (!this.panel || !this.memoryTable) return;
 
     this.memory[address] = data;
+    console.log(
+      `[${this.id}] Memory write result: 0x${address.toString(16).padStart(4, "0")} = 0x${data.toString(16).padStart(2, "0")}`,
+    );
     this.updateQueue.queueUpdate();
   };
   onReset = (): void => {
@@ -238,15 +241,35 @@ class MemoryUI implements IModule {
         const cell = cells[j];
         const address = startAddress + j;
         if (address < endAddress) {
-          let className = "contrast-color";
+          let className = `byte-${address} contrast-color`;
           if (this.lastMemoryRead === address) className += " read-highlight";
           if (this.lastMemoryWrite === address) className += " write-highlight";
           if (this.pc === address) className += " pc-highlight";
-          element("td", {
-            override: cell,
-            textContent: this.formatMemoryData(this.memory[address]),
-            className,
-          });
+
+          rewrittableTableElement(
+            {
+              className,
+              textContent: this.formatMemoryData(this.memory[address]),
+              title: `0x${address.toString(16).padStart(4, "0")}`,
+            },
+            {
+              onChange: (newValue) => {
+                // Convert the hex value to a number.
+                const parsedValue = Number.parseInt(newValue, 16);
+                if (Number.isNaN(parsedValue) || parsedValue < 0 || parsedValue > 255) {
+                  return this.localeStrings.onlyHex;
+                }
+                // We will receive the result of the write operation in the
+                // `ui:memory:write:result` event, and will update the memory
+                // cell accordingly, then.
+                this.event_transceiver.emit("ui:memory:write", address, parsedValue);
+              },
+              bytes: 1,
+              pattern: "^(0x)?[0-9a-fA-F]{2}$",
+              validationFailedMsg: this.localeStrings.onlyHex,
+              overwrite: cell,
+            },
+          );
         } else {
           cell.textContent = "";
           cell.className = "";
