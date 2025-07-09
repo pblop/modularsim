@@ -298,6 +298,11 @@ class Gui implements IModule {
           position: { left: colPos * colWidth, top: rowPos * rowHeight },
         },
       });
+
+      // Set our wanted position in the requiredPositions map. This will be
+      // used to place the panel in the correct position after it is created,
+      // if Dockview does not place it correctly (which most likely won't
+      // happen).
       const requiredX = colPos * colWidth;
       const requiredY = rowPos * rowHeight;
       if (requiredX !== 0 || requiredY !== 0) {
@@ -309,11 +314,18 @@ class Gui implements IModule {
 
       console.log(`[${this.id}] Panel created:`, dvPanel);
 
-      // debugger;
       const panel_content = dvPanel.view.content.element;
       this.et.emit("gui:panel_created", panel.id, panel_content, this.language);
     }
-    // setTimeout(this.moveGuiPanels, 10);
+    // WORKAROUND:
+    // If we add _floating_ panels too fast after the Dockview panel is created,
+    // it will not update the positions correctly, placing them all at (0, 0)
+    // (that is, top-left corner if using position: {left: smth, top: smth}, or
+    // the correct corner if using another position type).
+    // So we loop over the floating panels and ensure they are at the correct
+    // position (accessing a private property of the DockviewApi), and if
+    // they are not, we move them to the correct position.
+    // This is a workaround, but it works.
     this.ensureCorrectPanelPositions();
   };
   ensureCorrectPanelPositions = (): void => {
