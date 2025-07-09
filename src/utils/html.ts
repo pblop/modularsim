@@ -38,6 +38,7 @@ type ExtraFields<K extends keyof TagNameMap> = {
   customAttributes?: Record<string, string>;
   cssProperties?: Record<string, string>;
   onClick?: (element: TagNameMap[K], ev: MouseEvent) => void;
+  override?: TagNameMap[K];
 };
 
 export function element<K extends keyof TagNameMap>(
@@ -45,17 +46,25 @@ export function element<K extends keyof TagNameMap>(
   properties: DeepPartial<TagNameMap[K]> & ExtraFields<K> = {},
   ...children: (HTMLElement | undefined)[]
 ): TagNameMap[K] {
-  const el = document.createElement(tag) as TagNameMap[K];
+  let el: TagNameMap[K];
 
   // Allow for children to be passed as the second argument (no properties).
   if (properties instanceof HTMLElement) {
     children.unshift(properties);
+    el = document.createElement(tag) as TagNameMap[K];
   } else {
     // Remove extra fields from properties and set them separately.
     const { customAttributes, onClick, cssProperties } = properties;
     properties.customAttributes = undefined;
     properties.onClick = undefined;
     properties.cssProperties = undefined;
+
+    if (properties.override) {
+      el = properties.override;
+    } else {
+      el = document.createElement(tag) as TagNameMap[K];
+    }
+    properties.override = undefined;
 
     setProperties(el, properties as DeepPartial<TagNameMap[K]>);
 
@@ -127,9 +136,10 @@ export function rewrittableTableElement(
     pattern: string;
     validationFailedMsg: string;
     editWidth?: number; // Optional width for the input element
+    overwrite?: HTMLTableCellElement; // Optional element to overwrite
   },
 ): HTMLTableCellElement {
-  const { onChange, bytes, pattern, validationFailedMsg, editWidth } = customOptions;
+  const { onChange, bytes, pattern, validationFailedMsg, editWidth, overwrite } = customOptions;
 
   if (options.title === undefined) {
     // If options.title is undefined, the string "undefined" will be used as the

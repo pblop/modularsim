@@ -238,12 +238,15 @@ class MemoryUI implements IModule {
         const cell = cells[j];
         const address = startAddress + j;
         if (address < endAddress) {
-          cell.textContent = this.formatMemoryData(this.memory[address]);
           let className = "contrast-color";
           if (this.lastMemoryRead === address) className += " read-highlight";
           if (this.lastMemoryWrite === address) className += " write-highlight";
           if (this.pc === address) className += " pc-highlight";
-          cell.className = className;
+          element("td", {
+            override: cell,
+            textContent: this.formatMemoryData(this.memory[address]),
+            className,
+          });
         } else {
           cell.textContent = "";
           cell.className = "";
