@@ -28,9 +28,12 @@
       background-color: var(--gui-color-background);
       /* Disable user interaction so they cannot drag and drop the tab */
       pointer-events: none;
+      /* Make correct height, because the actual tab will be position: absolute,
+         and it will not affect the layout */
       position: initial !important;
       height: 2em;
-      padding: 0.25em;
+      padding: 0;
+      width: 0;
     }
     .dv-scrollable {
       position: initial !important;
@@ -41,5 +44,9 @@
       font-size: var(--gui-font-monospace-size, auto);
       overflow: auto;
     }
+  }
+  .my-dv-tab {
+    position: absolute;
+    padding: 0.25em;
   }
 }

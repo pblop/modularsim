@@ -72,7 +72,7 @@ class CustomTabRenderer implements ITabRenderer {
 
   constructor() {
     this._element = document.createElement("div");
-    this._element.style.position = "absolute";
+    this._element.className = "my-dv-tab";
   }
 
   // Required methods for the interface
