@@ -400,14 +400,19 @@ class Gui implements IModule {
 
       // console.log(`[${this.id}] Checking panel ${panelId} position`);
       const requiredPosition = this.requiredPositions[panelId];
-      const panelX = floatingPanel.overlay.element.style.left;
-      const panelY = floatingPanel.overlay.element.style.top;
-      if (panelX === `${requiredPosition.x}px` && panelY === `${requiredPosition.y}px`) {
+
+      // Round the numbers to avoid floating point precision issues. 1-pixel
+      // precision is enough for our purposes, the problem we have is that
+      // the position is set to 0,0 by default, which is going to be a _much_
+      // bigger difference than 1 pixel.
+      const panelX = Math.round(Number.parseFloat(floatingPanel.overlay.element.style.left) || 0);
+      const panelY = Math.round(Number.parseFloat(floatingPanel.overlay.element.style.top) || 0);
+      if (panelX === Math.round(requiredPosition.x) && panelY === Math.round(requiredPosition.y)) {
         delete this.requiredPositions[panelId];
         continue;
       }
       // console.warn(
-      //   `[${this.id}] Panel ${panelId} position is incorrect, moving it to (${requiredPosition.x}, ${requiredPosition.y})`,
+      //   `[${this.id}] Panel ${panelId} position is incorrect, (${requiredPosition.x}, ${requiredPosition.y}) != (${panelX}, ${panelY})`,
       // );
       floatingPanel.position({
         left: requiredPosition.x,
@@ -415,6 +420,10 @@ class Gui implements IModule {
       });
     }
     if (Object.keys(this.requiredPositions).length > 0) {
+      console.warn(
+        `[${this.id}] Some panels were not positioned correctly, retrying in 100ms.`,
+        this.requiredPositions,
+      );
       setTimeout(this.ensureCorrectPanelPositions, 0);
     }
   };
