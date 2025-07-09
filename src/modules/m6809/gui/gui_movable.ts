@@ -11,9 +11,10 @@ import {
   type DockviewApi,
   type GroupPanelPartInitParameters,
   type IContentRenderer,
+  Orientation,
   themeDark,
   themeLight,
-} from "https://unpkg.com/dockview-core@4.4.0/dist/esm/index.js";
+} from "/lib/dockview-core.esm.min.js";
 
 type GuiPanelConfig = {
   id: string; // Id of the module being loaded.
@@ -29,7 +30,28 @@ type GuiConfig = {
   root_selector: string;
   show_titles: boolean;
   show_status: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "no";
+  rows: number; // Number of rows in the grid.
+  columns: number; // Number of columns in the grid.
 };
+
+/**
+ * Parse CSS Grid position and span.
+ * Example: 1 / span 2 -> [1, 2]
+ *        : 1          -> [1, undefined]
+ * @param position The CSS Grid format string
+ * @returns [position, span]
+ */
+function parsePosition(raw: string | number): [number, number | undefined] {
+  if (typeof raw === "number") {
+    // If the raw input is a number, it's just a position without span.
+    return [raw, undefined];
+  }
+
+  const split = raw.split("/");
+  const pos = Number(split[0].trim());
+  const span = split[1] ? Number(split[1].trim().replace("span", "")) : undefined;
+  return [pos, span];
+}
 
 class Panel implements IContentRenderer {
   private readonly _element: HTMLElement;
@@ -43,7 +65,7 @@ class Panel implements IContentRenderer {
   }
 
   init(parameters: GroupPanelPartInitParameters): void {
-    // console.log(`[gui] Panel initialized with parameters:`, parameters);
+    console.log(`[gui] Panel initialized with parameters:`, parameters);
   }
 }
 
@@ -58,6 +80,8 @@ class Gui implements IModule {
   dockViewApi: DockviewApi;
   statusElement?: HTMLElement;
   statusMessage?: string;
+
+  dockViewInitialized = false; // Flag to check if Dockview is initialized.
 
   statusUpdateQueue?: UpdateQueue;
 
@@ -126,6 +150,16 @@ class Gui implements IModule {
           default: "bottom-left",
           enum: ["top-left", "top-right", "bottom-left", "bottom-right", "no"],
         },
+        rows: {
+          type: "number",
+          required: false,
+          default: 20,
+        },
+        columns: {
+          type: "number",
+          required: false,
+          default: 10,
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -159,10 +193,10 @@ class Gui implements IModule {
       // },
       theme: themeDark,
       createComponent: (options) => {
-        // console.log(`[gui] Creating component for panel:`, options);
         return new Panel();
       },
     });
+    console.log((this.gridElement.children[0] as HTMLDivElement).style);
 
     this.createDeploymentInfoElement();
     if (this.config.show_status !== "no") {
@@ -216,54 +250,99 @@ class Gui implements IModule {
   };
 
   onSystemLoadFinish = (): void => {
+    this.createGuiPanels();
+  };
+  // Dockview needs a bit of time to initialize, so we use a flag to ensure we
+  // only create the GUI panels after both the system and Dockview are ready.
+  isDoneInitializing = false;
+
+  elements: Record<string, HTMLElement> = {};
+  createGuiPanels = (): void => {
+    // if (!this.isDoneInitializing) {
+    //   this.isDoneInitializing = true;
+    //   return;
+    // }
+
     this.et.emit("ui:language", this.language);
     // Now that the system is loaded, we can start rendering the GUI, and (most importantly) tell
     // the other modules that the GUI is ready, and what their panel ids are.
     console.log(`[${this.id}] Creating GUI panels`);
+
+    const [screenWidth, screenHeight] = [window.innerWidth, window.innerHeight];
+    const rowHeight = screenHeight / this.config.rows;
+    const colWidth = screenWidth / this.config.columns;
+
+    console.log(`[${this.id}] Screen size: ${screenWidth}x${screenHeight}`);
+    console.log(`[${this.id}] Rows: ${this.config.rows}, Columns: ${this.config.columns}`);
+    console.log(`[${this.id}] Row height: ${rowHeight}, Column width: ${colWidth}`);
+
     for (const panel of this.config.panels) {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
+      let [colPos, colSpan] = parsePosition(panel.column);
+      let [rowPos, rowSpan] = parsePosition(panel.row);
+      colSpan ??= 1; // Default to 1 if not specified
+      rowSpan ??= 1; // Default to 1 if not specified
+
+      // Handle negative positions
+      if (colPos < 0) colPos = this.config.columns + colPos;
+      if (rowPos < 0) rowPos = this.config.rows + rowPos;
+      rowSpan = Math.abs(rowSpan); // Ensure span is positive (we have already handled negative positions)
+
+      console.log(
+        `[${this.id}] Creating panel ${panel.id} at column ${colPos} (span ${colSpan}) and row ${rowPos} (span ${rowSpan})`,
+      );
+      console.log(
+        `[${this.id}] Panel position: (${colPos * colWidth}, ${rowPos * rowHeight}), size: (${colSpan * colWidth}, ${rowSpan * rowHeight})`,
+      );
       const dvPanel = this.dockViewApi.addPanel({
         id: panel.id,
         component: "default",
         title: panel.langName[this.language] || panel.name || panel.id,
       });
-      this.dockViewApi.addFloatingGroup(dvPanel, {
-        // x: panel.column!,
-        // y: panel.row!,
-      });
+
+      console.log(`[${this.id}] Panel created:`, dvPanel);
+
+      // debugger;
       const panel_content = dvPanel.view.content.element;
-      console.log(`[${this.id}] Panel ${panel.id} created with content element:`, panel_content);
-
-      const children = [];
-
-      // If the config says to show titles, we create a header for the panel,
-      // and use the name from the config or the id of the panel, if no name is
-      // provided.
-
-      // This panel content div is the main area where the module will render
-      // its content. This is passed to the module.
-      // const panel_content = element("div", {
-      //   className: "gui-panel-content",
-      //   id: `panel_content_${panel.id}`,
-      // });
-      // children.push(panel_content);
-
-      // const panel_element = element(
-      //   "div",
-      //   {
-      //     id: `panel_${panel.id}`,
-      //     className: "gui-panel",
-      //     style: {
-      //       gridColumn: `${panel.column}`,
-      //       gridRow: `${panel.row}`,
-      //     },
-      //   },
-      //   ...children,
-      // );
-      // this.gridElement.appendChild(panel_element);
-
-      // Notify other modules that the panel has been created
       this.et.emit("gui:panel_created", panel.id, panel_content, this.language);
+    }
+    setTimeout(this.moveGuiPanels, 10);
+  };
+  moveGuiPanels = (): void => {
+    const [screenWidth, screenHeight] = [window.innerWidth, window.innerHeight];
+    const rowHeight = screenHeight / this.config.rows;
+    const colWidth = screenWidth / this.config.columns;
+
+    console.log(`[${this.id}] Screen size: ${screenWidth}x${screenHeight}`);
+    console.log(`[${this.id}] Rows: ${this.config.rows}, Columns: ${this.config.columns}`);
+    console.log(`[${this.id}] Row height: ${rowHeight}, Column width: ${colWidth}`);
+
+    for (const panel of this.config.panels) {
+      console.log(`[${this.id}] Moving panel ${panel.id}`);
+      let [colPos, colSpan] = parsePosition(panel.column);
+      let [rowPos, rowSpan] = parsePosition(panel.row);
+      colSpan ??= 1; // Default to 1 if not specified
+      rowSpan ??= 1; // Default to 1 if not specified
+
+      // Handle negative positions
+      if (colPos < 0) colPos = this.config.columns + colPos;
+      if (rowPos < 0) rowPos = this.config.rows + rowPos;
+      rowSpan = Math.abs(rowSpan); // Ensure span is positive (we have already handled negative positions)
+
+      console.log(
+        `[${this.id}] Moving panel ${panel.id} at column ${colPos} (span ${colSpan}) and row ${rowPos} (span ${rowSpan})`,
+      );
+      console.log(
+        `[${this.id}] Panel position: (${colPos * colWidth}, ${rowPos * rowHeight}), size: (${colSpan * colWidth}, ${rowSpan * rowHeight})`,
+      );
+      const dvPanel = this.dockViewApi.getPanel(panel.id)!;
+      this.dockViewApi.addFloatingGroup(dvPanel, {
+        width: colSpan * colWidth,
+        height: rowSpan * rowHeight,
+        position: { left: colPos * colWidth, top: rowPos * rowHeight },
+      });
+
+      console.log(`[${this.id}] Panel moved:`, dvPanel);
     }
   };
 }
