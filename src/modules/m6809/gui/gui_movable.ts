@@ -349,43 +349,6 @@ class Gui implements IModule {
       setTimeout(this.ensureCorrectPanelPositions, 0);
     }
   };
-  moveGuiPanels = (): void => {
-    const [screenWidth, screenHeight] = [window.innerWidth, window.innerHeight];
-    const rowHeight = screenHeight / this.config.rows;
-    const colWidth = screenWidth / this.config.columns;
-
-    console.log(`[${this.id}] Screen size: ${screenWidth}x${screenHeight}`);
-    console.log(`[${this.id}] Rows: ${this.config.rows}, Columns: ${this.config.columns}`);
-    console.log(`[${this.id}] Row height: ${rowHeight}, Column width: ${colWidth}`);
-
-    for (const panel of this.config.panels) {
-      console.log(`[${this.id}] Moving panel ${panel.id}`);
-      let [colPos, colSpan] = parsePosition(panel.column);
-      let [rowPos, rowSpan] = parsePosition(panel.row);
-      colSpan ??= 1; // Default to 1 if not specified
-      rowSpan ??= 1; // Default to 1 if not specified
-
-      // Handle negative positions
-      if (colPos < 0) colPos = this.config.columns + colPos;
-      if (rowPos < 0) rowPos = this.config.rows + rowPos;
-      rowSpan = Math.abs(rowSpan); // Ensure span is positive (we have already handled negative positions)
-
-      console.log(
-        `[${this.id}] Moving panel ${panel.id} at column ${colPos} (span ${colSpan}) and row ${rowPos} (span ${rowSpan})`,
-      );
-      console.log(
-        `[${this.id}] Panel position: (${colPos * colWidth}, ${rowPos * rowHeight}), size: (${colSpan * colWidth}, ${rowSpan * rowHeight})`,
-      );
-      const dvPanel = this.dockViewApi.getPanel(panel.id)!;
-      this.dockViewApi.addFloatingGroup(dvPanel, {
-        width: colSpan * colWidth,
-        height: rowSpan * rowHeight,
-        position: { left: colPos * colWidth, top: rowPos * rowHeight },
-      });
-
-      console.log(`[${this.id}] Panel moved:`, dvPanel);
-    }
-  };
 }
 
 export default Gui;
