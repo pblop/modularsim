@@ -72,7 +72,7 @@ class CustomTabRenderer implements ITabRenderer {
 
   constructor() {
     this._element = document.createElement("div");
-    this._element.className = "";
+    this._element.style.position = "absolute";
   }
 
   // Required methods for the interface
@@ -236,6 +236,7 @@ class Gui implements IModule {
       },
       disableDnd: true,
       locked: true,
+      scrollbars: "native",
     });
     console.log((this.gridElement.children[0] as HTMLDivElement).style);
 

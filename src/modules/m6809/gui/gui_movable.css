@@ -21,16 +21,25 @@
       box-decoration-break: clone;
       text-transform: uppercase;
       border-bottom: 1px solid var(--gui-color-border);
+
+      position: relative !important;
     }
     .dv-tab {
       background-color: var(--gui-color-background);
       /* Disable user interaction so they cannot drag and drop the tab */
       pointer-events: none;
+      position: initial !important;
+      height: 2em;
+      padding: 0.25em;
+    }
+    .dv-scrollable {
+      position: initial !important;
     }
     .dv-content-container {
       font-family: var(--gui-font-monospace);
       font-weight: var(--gui-font-monospace-weight, auto);
       font-size: var(--gui-font-monospace-size, auto);
+      overflow: auto;
     }
   }
 }
