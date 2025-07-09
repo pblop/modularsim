@@ -308,9 +308,9 @@ class Gui implements IModule {
     const rowHeight = screenHeight / this.config.rows;
     const colWidth = screenWidth / this.config.columns;
 
-    console.log(`[${this.id}] Screen size: ${screenWidth}x${screenHeight}`);
-    console.log(`[${this.id}] Rows: ${this.config.rows}, Columns: ${this.config.columns}`);
-    console.log(`[${this.id}] Row height: ${rowHeight}, Column width: ${colWidth}`);
+    // console.log(`[${this.id}] Screen size: ${screenWidth}x${screenHeight}`);
+    // console.log(`[${this.id}] Rows: ${this.config.rows}, Columns: ${this.config.columns}`);
+    // console.log(`[${this.id}] Row height: ${rowHeight}, Column width: ${colWidth}`);
 
     for (const panel of this.config.panels) {
       console.log(`[${this.id}] Creating panel ${panel.id}`);
@@ -324,21 +324,27 @@ class Gui implements IModule {
       if (rowPos < 0) rowPos = this.config.rows + rowPos;
       rowSpan = Math.abs(rowSpan); // Ensure span is positive (we have already handled negative positions)
 
-      console.log(
-        `[${this.id}] Creating panel ${panel.id} at column ${colPos} (span ${colSpan}) and row ${rowPos} (span ${rowSpan})`,
-      );
-      console.log(
-        `[${this.id}] Panel position: (${colPos * colWidth}, ${rowPos * rowHeight}), size: (${colSpan * colWidth}, ${rowSpan * rowHeight})`,
-      );
+      // -1 because of 1-based indexing in the CSS grid format we're copying.
+      const requiredX = (colPos - 1) * colWidth;
+      const requiredY = (rowPos - 1) * rowHeight;
+      const requiredWidth = colSpan * colWidth;
+      const requiredHeight = rowSpan * rowHeight;
+
+      // console.log(
+      //   `[${this.id}] Creating panel ${panel.id} at column ${colPos} (span ${colSpan}) and row ${rowPos} (span ${rowSpan})`,
+      // );
+      // console.log(
+      //   `[${this.id}] Panel position: (${requiredX}, ${requiredY}), size: (${requiredWidth}, ${requiredHeight})`,
+      // );
       const dvPanel = this.dockViewApi.addPanel({
         id: panel.id,
         component: "default",
         tabComponent: "no-x",
         title: panel.langName[this.language] || panel.name || panel.id,
         floating: {
-          width: colSpan * colWidth,
-          height: rowSpan * rowHeight,
-          position: { left: colPos * colWidth, top: rowPos * rowHeight },
+          width: requiredWidth,
+          height: requiredHeight,
+          position: { left: requiredX, top: requiredY },
         },
       });
 
@@ -346,12 +352,10 @@ class Gui implements IModule {
       // used to place the panel in the correct position after it is created,
       // if Dockview does not place it correctly (which most likely won't
       // happen).
-      const requiredX = colPos * colWidth;
-      const requiredY = rowPos * rowHeight;
       if (requiredX !== 0 || requiredY !== 0) {
         this.requiredPositions[panel.id] = {
-          x: colPos * colWidth,
-          y: rowPos * rowHeight,
+          x: requiredX,
+          y: requiredY,
         };
       }
 
@@ -391,7 +395,7 @@ class Gui implements IModule {
       const requiredPosition = this.requiredPositions[panelId];
       const panelX = floatingPanel.overlay.element.style.left;
       const panelY = floatingPanel.overlay.element.style.top;
-      if (panelX === `${requiredPosition.x}px` || panelY === `${requiredPosition.y}px`) {
+      if (panelX === `${requiredPosition.x}px` && panelY === `${requiredPosition.y}px`) {
         delete this.requiredPositions[panelId];
         continue;
       }
