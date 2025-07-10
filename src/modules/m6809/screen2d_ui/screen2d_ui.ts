@@ -59,7 +59,9 @@ class ScreenUI implements IModule {
           [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
           "gui:panel_created": this.onGuiPanelCreated,
         },
-        optional: {},
+        optional: {
+          "ui:memory:clear": this.onReset,
+        },
       },
     };
   }
