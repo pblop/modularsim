@@ -87,8 +87,14 @@ class AssemblerUI implements IModule {
       const inputText = this.textArea?.value || "";
       const inputU8Arr = AssemblerLinker.textToUint8Array(inputText);
       const rel = await AssemblerLinker.assemble(inputU8Arr);
+      await AssemblerLinker.assemble(inputU8Arr);
+      console.log(`[${this.id}] Assembling result:`, AssemblerLinker.uint8ArrayToText(rel));
+      const [s19, noi] = await AssemblerLinker.link(rel);
 
-      console.log(`[${this.id}] Linking result:`, rel);
+      console.log(`[${this.id}] Linking result:`, {
+        s19: AssemblerLinker.uint8ArrayToText(s19),
+        noi: AssemblerLinker.uint8ArrayToText(noi),
+      });
     } catch (error) {
       console.error(`[${this.id}] Error during linking:`, error);
     } finally {
