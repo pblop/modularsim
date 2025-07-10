@@ -20,7 +20,7 @@ test: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.json,$(TEST_F
 
 # Assemble .asm file
 %.rel: %.asm
-	$(AS) $(ASFLAGS) -o $< 
+	$(AS) $(ASFLAGS) -a -o $< 
 
 %.lst: %.asm
 	$(AS) $(ASFLAGS) -l $<
