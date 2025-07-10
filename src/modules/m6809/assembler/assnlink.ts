@@ -33,7 +33,13 @@ class AssemblerLinker {
           const result = instance.callMain([...options, "-o", "output.rel", "input.asm"]);
 
           if (result !== 0) {
-            reject({ error: new Error(`Linking failed with exit code ${result}`), stderr, stdout });
+            reject({
+              from: "assemble",
+              msg: `non-zero exit code ${result}`,
+              error: new Error(`Linking failed with exit code ${result}`),
+              stderr,
+              stdout,
+            });
             return;
           }
 
@@ -41,7 +47,7 @@ class AssemblerLinker {
           resolve(output);
         })
         .catch((error) => {
-          reject({ error, stderr, stdout });
+          reject({ from: "assemble", msg: "wasm error", error, stderr, stdout });
         });
     });
   }
@@ -65,6 +71,7 @@ class AssemblerLinker {
 
           if (result !== 0) {
             reject({
+              from: "link",
               msg: `non-zero exit code ${result}`,
               error: new Error(`Linking failed with exit code ${result}`),
               stderr,
@@ -73,9 +80,9 @@ class AssemblerLinker {
             return;
           }
 
-          console.log(instance.FS.readdir("/"));
           if (!instance.FS.analyzePath("input.s19", false).exists) {
             reject({
+              from: "link",
               msg: "s19 not found",
               error: new Error("Linking did not produce 'input.s19' file"),
               stderr,
@@ -85,6 +92,7 @@ class AssemblerLinker {
           }
           if (!instance.FS.analyzePath("input.noi", false).exists) {
             reject({
+              from: "link",
               msg: "noi not found",
               error: new Error("Linking did not produce 'input.noi' file"),
               stderr,
@@ -97,7 +105,7 @@ class AssemblerLinker {
           resolve([s19, noi]);
         })
         .catch((error) => {
-          reject({ msg: "wasm failed", error, stderr, stdout });
+          reject({ from: "link", msg: "wasm failed", error, stderr, stdout });
         });
     });
   }

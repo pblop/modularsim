@@ -76,6 +76,8 @@ class Loader implements IModule {
         },
         optional: {
           "dbg:program:reload": this.onProgramReload,
+          "dbg:program:load": this.onProgramLoad,
+          "dbg:symbols:load": this.onSymbolsLoad,
         },
       },
     };
@@ -238,67 +240,104 @@ class Loader implements IModule {
     if (this.config.reloadOnFileChange === "fast_reset") this.evt.emit("ui:clock:fast_reset");
   };
 
+  loadBinFile = (filename: string, bytes: Uint8Array): void => {
+    this.evt.emit("ui:memory:bulk:write", 0, bytes);
+    this.evt.emit("dbg:program:loaded", filename);
+  };
+  loadS19File = (filename: string, text: string): void => {
+    const lines = text.trim().split("\n");
+    for (const line of lines) {
+      // .s19 files have 16-bit addresses (s0, s1, s5, s9 records)
+      const recordType = line.slice(0, 2);
+      const byteCountStr = line.slice(2, 4);
+      const addressStr = line.slice(4, 8);
+      const dataStr = line.slice(8, line.length - 2);
+
+      const byteCount = Number.parseInt(byteCountStr, 16);
+      const address = Number.parseInt(addressStr, 16);
+      const checksum = Number.parseInt(line.slice(line.length - 2), 16);
+
+      // Check the byte count.
+      // The byte count is the number of bytes in the rest of the record
+      if (byteCount < 3) {
+        console.error(
+          `[${this.id}] Invalid record length: byte count is ${byteCount}, and it cannot be less than 3`,
+        );
+        continue;
+      }
+      if (byteCount * 2 !== line.length - 4) {
+        console.error(
+          `[${this.id}] Invalid record length: count is ${byteCount}, but the record has ${(line.length - 4) / 2} bytes`,
+        );
+        continue;
+      }
+
+      const data = hexStringToBytes(dataStr);
+
+      // Check the checksum.
+      const calculatedChecksum = calculateSRECChecksum(
+        hexStringToBytes(byteCountStr),
+        hexStringToBytes(addressStr),
+        data,
+      );
+      if (calculatedChecksum !== checksum) {
+        console.error(
+          `[${this.id}] Invalid checksum: expected ${checksum}, but got ${calculatedChecksum}`,
+        );
+        continue;
+      }
+
+      // Write the data to memory.
+      if (recordType === "S1") {
+        this.evt.emit("ui:memory:bulk:write", address, data);
+      }
+    }
+
+    this.evt.emit("dbg:program:loaded", filename);
+  };
+
   loadFile = async (file: string, fileType: "s19" | "bin"): Promise<void> => {
     const r = await fetch(file);
+    const filename = file.split(/(\\|\/)/g).pop()!;
+
     if (fileType === "bin") {
-      const buffer = await r.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      this.evt.emit("ui:memory:bulk:write", 0, bytes);
+      this.loadBinFile(filename, new Uint8Array(await r.arrayBuffer()));
     } else if (fileType === "s19") {
       const text = await r.text();
-      const lines = text.trim().split("\n");
-      for (const line of lines) {
-        // .s19 files have 16-bit addresses (s0, s1, s5, s9 records)
-        const recordType = line.slice(0, 2);
-        const byteCountStr = line.slice(2, 4);
-        const addressStr = line.slice(4, 8);
-        const dataStr = line.slice(8, line.length - 2);
-
-        const byteCount = Number.parseInt(byteCountStr, 16);
-        const address = Number.parseInt(addressStr, 16);
-        const checksum = Number.parseInt(line.slice(line.length - 2), 16);
-
-        // Check the byte count.
-        // The byte count is the number of bytes in the rest of the record
-        if (byteCount < 3) {
-          console.error(
-            `[${this.id}] Invalid record length: byte count is ${byteCount}, and it cannot be less than 3`,
-          );
-          continue;
-        }
-        if (byteCount * 2 !== line.length - 4) {
-          console.error(
-            `[${this.id}] Invalid record length: count is ${byteCount}, but the record has ${(line.length - 4) / 2} bytes`,
-          );
-          continue;
-        }
-
-        const data = hexStringToBytes(dataStr);
-
-        // Check the checksum.
-        const calculatedChecksum = calculateSRECChecksum(
-          hexStringToBytes(byteCountStr),
-          hexStringToBytes(addressStr),
-          data,
-        );
-        if (calculatedChecksum !== checksum) {
-          console.error(
-            `[${this.id}] Invalid checksum: expected ${checksum}, but got ${calculatedChecksum}`,
-          );
-          continue;
-        }
-
-        // Write the data to memory.
-        if (recordType === "S1") {
-          this.evt.emit("ui:memory:bulk:write", address, data);
-        }
-      }
+      this.loadS19File(filename, text);
     } else {
       throw new Error(`[${this.id}] Invalid file type: ${fileType}. Must be 's19' or 'bin'.`);
     }
+  };
 
-    const filename = file.split(/(\\|\/)/g).pop()!;
-    this.evt.emit("dbg:program:loaded", filename);
+  loadNoiceSymbols = (text: string): void => {
+    /* NOICE symbols contain the following types of lines:
+     * (https://github.com/pblop/asxxxx/blob/bb548e30b92d9e2a918acf92596bf0b3c614632f/asxv5pxx/linksrc/lknoice.c)
+     * -    global symbols: DEF <symbol> <address>
+     * -    scoped symbols: DEFS <symbol> <address>
+     * -             files: FILE <filename> <address>
+     *             (or just FILE <filename>, if no address present)
+     * -         functions: DEF <symbol> <address> & FUNC <symbol> <address>
+     *             (or just FUNC <symbol>, if no address present)
+     * -  static functions: DEFS <symbol> <address> & SFUNC <symbol> <address>
+     *             (or just SFUNC <symbol>, if no address present)
+     * -     end functions: ENDF <symbol> <address>
+     * -             lines: LINE <line> <address>
+     *
+     * But, so far, only the DEFs are relevant to us.
+     */
+    const lines = text.trim().split("\n");
+    for (const line of lines) {
+      const words = line.trim().split(" ");
+      switch (words[0]) {
+        case "DEF": {
+          const symbol = words[1];
+          const address = Number.parseInt(words[2], 16);
+          this.conditionalEmitAddSymbol(symbol, address, "global");
+          break;
+        }
+      }
+    }
   };
 
   loadSymbols = async (file: string, fileType: "noice"): Promise<void> => {
@@ -307,33 +346,9 @@ class Loader implements IModule {
     const r = await fetch(file);
     const text = await r.text();
     if (fileType === "noice") {
-      /* NOICE symbols contain the following types of lines:
-       * (https://github.com/pblop/asxxxx/blob/bb548e30b92d9e2a918acf92596bf0b3c614632f/asxv5pxx/linksrc/lknoice.c)
-       * -    global symbols: DEF <symbol> <address>
-       * -    scoped symbols: DEFS <symbol> <address>
-       * -             files: FILE <filename> <address>
-       *             (or just FILE <filename>, if no address present)
-       * -         functions: DEF <symbol> <address> & FUNC <symbol> <address>
-       *             (or just FUNC <symbol>, if no address present)
-       * -  static functions: DEFS <symbol> <address> & SFUNC <symbol> <address>
-       *             (or just SFUNC <symbol>, if no address present)
-       * -     end functions: ENDF <symbol> <address>
-       * -             lines: LINE <line> <address>
-       *
-       * But, so far, only the DEFs are relevant to us.
-       */
-      const lines = text.trim().split("\n");
-      for (const line of lines) {
-        const words = line.trim().split(" ");
-        switch (words[0]) {
-          case "DEF": {
-            const symbol = words[1];
-            const address = Number.parseInt(words[2], 16);
-            this.conditionalEmitAddSymbol(symbol, address, "global");
-            break;
-          }
-        }
-      }
+      this.loadNoiceSymbols(text);
+    } else {
+      throw new Error(`[${this.id}] Invalid symbols file type: ${fileType}. Must be 'noice'.`);
     }
   };
 
@@ -351,6 +366,27 @@ class Loader implements IModule {
   onLoadFinish = () => {
     if (!this.config.reloadOnPowerOn) return;
     return this.loadAll();
+  };
+
+  onProgramLoad = (type: string, data: Uint8Array | string) => {
+    if (type === "bin" && typeof data === "object") {
+      this.loadBinFile("ensamblador.bin", data);
+    } else if (type === "s19" && typeof data === "string") {
+      this.loadS19File("ensamblador.s19", data);
+    } else {
+      throw new Error(
+        `[${this.id}] Invalid program load type or argument value: ${type}. Must be 'bin' or 's19', and data must be Uint8Array or string respectively (got ${typeof data}).`,
+      );
+    }
+  };
+  onSymbolsLoad = (type: string, data: Uint8Array | string) => {
+    if (type === "noice" && typeof data === "string") {
+      this.loadNoiceSymbols(data);
+    } else {
+      throw new Error(
+        `[${this.id}] Invalid symbols load type or argument value: ${type}. Must be 'noice', and data must be a string (got ${typeof data}).`,
+      );
+    }
   };
 
   /**

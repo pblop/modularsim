@@ -40,7 +40,7 @@ class AssemblerUI implements IModule {
   getModuleDeclaration(): ModuleDeclaration {
     return {
       events: {
-        provided: [],
+        provided: ["dbg:program:load", "dbg:symbols:load"],
         required: {
           "gui:panel_created": this.onGuiPanelCreated,
         },
@@ -87,14 +87,14 @@ class AssemblerUI implements IModule {
       const inputText = this.textArea?.value || "";
       const inputU8Arr = AssemblerLinker.textToUint8Array(inputText);
       const rel = await AssemblerLinker.assemble(inputU8Arr);
-      await AssemblerLinker.assemble(inputU8Arr);
-      console.log(`[${this.id}] Assembling result:`, AssemblerLinker.uint8ArrayToText(rel));
+      // console.log(`[${this.id}] Assembling result:`, AssemblerLinker.uint8ArrayToText(rel));
       const [s19, noi] = await AssemblerLinker.link(rel);
 
-      console.log(`[${this.id}] Linking result:`, {
-        s19: AssemblerLinker.uint8ArrayToText(s19),
-        noi: AssemblerLinker.uint8ArrayToText(noi),
-      });
+      const s19Text = AssemblerLinker.uint8ArrayToText(s19);
+      const noiText = AssemblerLinker.uint8ArrayToText(noi);
+
+      this.event_transceiver.emit("dbg:program:load", "s19", s19Text);
+      this.event_transceiver.emit("dbg:symbols:load", "noice", noiText);
     } catch (error) {
       console.error(`[${this.id}] Error during linking:`, error);
     } finally {

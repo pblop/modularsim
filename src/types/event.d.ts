@@ -23,6 +23,8 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "dbg:breakpoint:disable": [address: number];
   "dbg:symbol:add": [symbol: string, address: number, type: "global"];
   "dbg:symbol:clear": [];
+  "dbg:program:load": [type: string, data: Uint8Array | string];
+  "dbg:symbols:load": [type: string, data: Uint8Array | string];
   "dbg:program:loaded": [name: string];
   "dbg:program:reload": [];
   "dbg:register_update": [register: string, value: number];
