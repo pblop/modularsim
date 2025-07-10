@@ -24,7 +24,8 @@
     "build-test-programs": "cd ./programs/ && make test",
     "copy-libraries": "mkdir -p ./dist/lib && cp ./node_modules/dockview-core/dist/dockview-core.esm.min.js* ./dist/lib/",
     "copy-static": "cp -r ./public/* ./dist/ && copyfiles -u 1 src/**/*.{css,svg,js,wasm} ./dist/ && mkdir -p ./dist/programs/ && cp ./programs/*.{bin,s19,noi} ./dist/programs/",
-    "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static && (npm run copy-libraries || true)",
+    "___COMMENT___": "true # the space after the '(' in the build command is to allow bun to replace 'npm' with 'bun'. If I write '(npm', it fails to do so",
+    "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static && ( npm run copy-libraries || true)",
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'",
     "cov:instructions": "bun ./scripts/instruction-coverage.ts"
