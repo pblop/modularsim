@@ -10,7 +10,7 @@ import type {
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import type { Registers } from "../cpu/cpu_parts.js";
-import AssemblerLinker from "./assnlink.js";
+import { AssemblerLinker, type AssemblerLinkerError } from "./assnlink.js";
 
 type AssemblerUIConfig = {
   content?: string;
@@ -86,7 +86,11 @@ class AssemblerUI implements IModule {
     try {
       const inputText = this.textArea?.value || "";
       const inputU8Arr = AssemblerLinker.textToUint8Array(inputText);
-      const rel = await AssemblerLinker.assemble(inputU8Arr);
+      const [rel, errors] = await AssemblerLinker.assemble(inputU8Arr);
+      if (errors.length > 0) {
+        console.error(`[${this.id}] Assembly errors:`, errors);
+        return;
+      }
       // console.log(`[${this.id}] Assembling result:`, AssemblerLinker.uint8ArrayToText(rel));
       const [s19, noi] = await AssemblerLinker.link(rel);
 
@@ -96,7 +100,11 @@ class AssemblerUI implements IModule {
       this.event_transceiver.emit("dbg:program:load", "s19", s19Text);
       this.event_transceiver.emit("dbg:symbols:load", "noice", noiText);
     } catch (error) {
-      console.error(`[${this.id}] Error during linking:`, error);
+      const typederror = error as AssemblerLinkerError;
+      console.error(`[${this.id}] Error during build:`, typederror);
+      if (typederror.from === "assemble") {
+        console.error(`[${this.id}] Assembly errors:`, typederror.errors);
+      }
     } finally {
       this.isRunningBuild = false;
     }
