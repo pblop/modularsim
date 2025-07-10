@@ -55,6 +55,23 @@ class Loader implements IModule {
   symbolsType: "noice" | undefined;
   symbolIgnoreRegex: RegExp | undefined;
 
+  program?: {
+    name: string;
+  } & (
+    | {
+        type: "bin";
+        data: Uint8Array;
+      }
+    | {
+        type: "s19";
+        data: string;
+      }
+  );
+  symbols?: {
+    type: "noice";
+    data: string;
+  };
+
   language!: string;
   localeStrings = LoaderStrings.en;
 
@@ -241,13 +258,7 @@ class Loader implements IModule {
     if (this.config.reloadOnFileChange === "fast_reset") this.evt.emit("ui:clock:fast_reset");
   };
 
-  loadBinFile = (filename: string, bytes: Uint8Array): void => {
-    this.evt.emit("ui:memory:clear");
-    this.evt.emit("ui:memory:bulk:write", 0, bytes);
-    this.evt.emit("dbg:program:loaded", filename);
-  };
   loadS19File = (filename: string, text: string): void => {
-    this.evt.emit("ui:memory:clear");
     const lines = text.trim().split("\n");
     for (const line of lines) {
       // .s19 files have 16-bit addresses (s0, s1, s5, s9 records)
@@ -295,26 +306,47 @@ class Loader implements IModule {
         this.evt.emit("ui:memory:bulk:write", address, data);
       }
     }
-
-    this.evt.emit("dbg:program:loaded", filename);
   };
 
-  loadFile = async (file: string, fileType: "s19" | "bin"): Promise<void> => {
-    const r = await fetch(file);
-    const filename = file.split(/(\\|\/)/g).pop()!;
+  loadFile = async (file?: string, fileType?: "s19" | "bin"): Promise<void> => {
+    if (this.program === undefined) {
+      if (file === undefined || fileType === undefined) {
+        throw new Error(
+          `[${this.id}] No file or file type specified for loading and no file was loaded previously.`,
+        );
+      }
+      const r = await fetch(file);
+      const filename = file.split(/(\\|\/)/g).pop()!;
 
-    if (fileType === "bin") {
-      this.loadBinFile(filename, new Uint8Array(await r.arrayBuffer()));
-    } else if (fileType === "s19") {
-      const text = await r.text();
-      this.loadS19File(filename, text);
-    } else {
-      throw new Error(`[${this.id}] Invalid file type: ${fileType}. Must be 's19' or 'bin'.`);
+      if (fileType === "bin") {
+        const uint8Array = new Uint8Array(await r.arrayBuffer());
+        this.program = {
+          type: "bin",
+          name: filename,
+          data: uint8Array,
+        };
+      } else if (fileType === "s19") {
+        const text = await r.text();
+        this.program = {
+          type: "s19",
+          name: filename,
+          data: text,
+        };
+      } else {
+        throw new Error(`[${this.id}] Invalid file type: ${fileType}. Must be 's19' or 'bin'.`);
+      }
     }
+
+    this.evt.emit("ui:memory:clear");
+    if (this.program.type === "bin") {
+      this.evt.emit("ui:memory:bulk:write", 0, this.program.data);
+    } else if (this.program.type === "s19") {
+      this.loadS19File(this.program.name, this.program.data);
+    }
+    this.evt.emit("dbg:program:loaded", this.program.name);
   };
 
   loadNoiceSymbols = (text: string): void => {
-    this.evt.emit("dbg:symbol:clear");
     /* NOICE symbols contain the following types of lines:
      * (https://github.com/pblop/asxxxx/blob/bb548e30b92d9e2a918acf92596bf0b3c614632f/asxv5pxx/linksrc/lknoice.c)
      * -    global symbols: DEF <symbol> <address>
@@ -344,13 +376,29 @@ class Loader implements IModule {
     }
   };
 
-  loadSymbols = async (file: string, fileType: "noice"): Promise<void> => {
-    const r = await fetch(file);
-    const text = await r.text();
-    if (fileType === "noice") {
-      this.loadNoiceSymbols(text);
-    } else {
-      throw new Error(`[${this.id}] Invalid symbols file type: ${fileType}. Must be 'noice'.`);
+  loadSymbols = async (file?: string, fileType?: "noice"): Promise<void> => {
+    if (this.symbols === undefined) {
+      if (file === undefined || fileType === undefined) {
+        throw new Error(
+          `[${this.id}] No symbols file or file type specified for loading and no symbols were loaded previously.`,
+        );
+      }
+      const r = await fetch(file);
+      const text = await r.text();
+
+      if (fileType === "noice") {
+        this.symbols = {
+          type: "noice",
+          data: text,
+        };
+      } else {
+        throw new Error(`[${this.id}] Invalid symbols file type: ${fileType}. Must be 'noice'.`);
+      }
+    }
+
+    this.evt.emit("dbg:symbol:clear");
+    if (this.symbols.type === "noice") {
+      this.loadNoiceSymbols(this.symbols.data);
     }
   };
 
@@ -372,25 +420,38 @@ class Loader implements IModule {
 
   onProgramLoad = (type: string, data: Uint8Array | string) => {
     if (type === "bin" && typeof data === "object") {
-      this.loadBinFile("ensamblador.bin", data);
+      this.program = {
+        type: "bin",
+        name: "ensamblador.bin",
+        data: data,
+      };
     } else if (type === "s19" && typeof data === "string") {
-      this.loadS19File("ensamblador.s19", data);
+      this.program = {
+        type: "s19",
+        name: "ensamblador.s19",
+        data: data,
+      };
     } else {
       throw new Error(
         `[${this.id}] Invalid program load type or argument value: ${type}. Must be 'bin' or 's19', and data must be Uint8Array or string respectively (got ${typeof data}).`,
       );
     }
 
+    this.loadFile();
     this.userChangedFile();
   };
   onSymbolsLoad = (type: string, data: Uint8Array | string) => {
     if (type === "noice" && typeof data === "string") {
-      this.loadNoiceSymbols(data);
+      this.symbols = {
+        type: "noice",
+        data: data,
+      };
     } else {
       throw new Error(
         `[${this.id}] Invalid symbols load type or argument value: ${type}. Must be 'noice', and data must be a string (got ${typeof data}).`,
       );
     }
+    this.loadSymbols();
   };
 
   /**
