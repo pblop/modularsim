@@ -65,6 +65,7 @@ class Loader implements IModule {
           "signal:reset",
           "ui:clock:fast_reset",
           "ui:memory:write",
+          "ui:memory:clear",
           "ui:memory:bulk:write",
           "dbg:symbol:add",
           "dbg:symbol:clear",
@@ -241,10 +242,12 @@ class Loader implements IModule {
   };
 
   loadBinFile = (filename: string, bytes: Uint8Array): void => {
+    this.evt.emit("ui:memory:clear");
     this.evt.emit("ui:memory:bulk:write", 0, bytes);
     this.evt.emit("dbg:program:loaded", filename);
   };
   loadS19File = (filename: string, text: string): void => {
+    this.evt.emit("ui:memory:clear");
     const lines = text.trim().split("\n");
     for (const line of lines) {
       // .s19 files have 16-bit addresses (s0, s1, s5, s9 records)
@@ -311,6 +314,7 @@ class Loader implements IModule {
   };
 
   loadNoiceSymbols = (text: string): void => {
+    this.evt.emit("dbg:symbol:clear");
     /* NOICE symbols contain the following types of lines:
      * (https://github.com/pblop/asxxxx/blob/bb548e30b92d9e2a918acf92596bf0b3c614632f/asxv5pxx/linksrc/lknoice.c)
      * -    global symbols: DEF <symbol> <address>
@@ -341,8 +345,6 @@ class Loader implements IModule {
   };
 
   loadSymbols = async (file: string, fileType: "noice"): Promise<void> => {
-    this.evt.emit("dbg:symbol:clear");
-
     const r = await fetch(file);
     const text = await r.text();
     if (fileType === "noice") {
@@ -378,6 +380,8 @@ class Loader implements IModule {
         `[${this.id}] Invalid program load type or argument value: ${type}. Must be 'bin' or 's19', and data must be Uint8Array or string respectively (got ${typeof data}).`,
       );
     }
+
+    this.userChangedFile();
   };
   onSymbolsLoad = (type: string, data: Uint8Array | string) => {
     if (type === "noice" && typeof data === "string") {

@@ -128,6 +128,7 @@ class InstructionUI implements IModule {
           "gui:panel_created": this.onGuiPanelCreated,
           "cpu:registers_update": this.onRegistersUpdate,
           "signal:reset": this.onReset,
+          "ui:memory:clear": this.onMemoryClear,
         },
         optional: optionalEvents,
       },
@@ -276,6 +277,12 @@ class InstructionUI implements IModule {
     }
   };
 
+  onMemoryClear = (): void => {
+    this.history.clear();
+    this.cache.clear();
+    this.modificationNumber = 0;
+  };
+
   setInitialPosition = (): void => {
     if (!this.initialRegisters) {
       if (this.initialAddress !== undefined) {
@@ -355,7 +362,6 @@ class InstructionUI implements IModule {
   onAddSymbol = (symbol: string, address: number): void => {
     if (!this.instructionsElement) return;
 
-    console.log(`[${this.id}] Adding symbol ${symbol} at ${address.toString(16)}`);
     this.symbols.push([symbol, address]);
     this.symbolsMap.set(address, symbol);
     this.updateQueue.queueUpdate();

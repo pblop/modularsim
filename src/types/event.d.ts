@@ -67,6 +67,7 @@ export interface EventMap<AM extends AddressingMode = AddressingMode> {
   "ui:clock:step_instruction": [];
   "ui:clock:fast_reset": [];
   "ui:memory:read": [address: number];
+  "ui:memory:clear": [];
   "ui:memory:read:result": [address: number, data: number];
   "ui:memory:write": [address: number, data: number];
   "ui:memory:write:result": [address: number, data: number];

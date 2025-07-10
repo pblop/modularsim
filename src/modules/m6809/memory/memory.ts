@@ -48,6 +48,7 @@ class Memory implements IModule {
         ],
         required: {},
         optional: {
+          "ui:memory:clear": this.onMemoryClear,
           [eventAsMultiplexedInput("memory:read")]: this.onMemoryRead,
           [eventAsMultiplexedInput("memory:write")]: this.onMemoryWrite,
           [eventAsMultiplexedInput("ui:memory:read")]: this.onUiMemoryRead,
@@ -99,6 +100,10 @@ class Memory implements IModule {
       this.simulation.emit(event, ...args);
     }
   }
+
+  onMemoryClear = (ctx: EventContext): void => {
+    this.memory.fill(0);
+  };
 
   onUiMemoryRead = (address: number, ctx: EventContext): void => {
     const data = this.memory[address];
