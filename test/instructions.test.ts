@@ -1,9 +1,9 @@
 import { generateCpuOnlySimulator } from "./common.ts";
 
 import { describe, it, expect, test, beforeEach, afterAll, afterEach } from "bun:test";
-import type { ccToShortStrings, Registers } from "../src/modules/m6809/cpu/cpu_parts.ts";
+import { ccToShortStrings, type Registers } from "../src/modules/m6809/cpu/cpu_parts.ts";
 import {
-  decompileInstruction,
+  disassembleInstruction,
   generateRowData,
   type InstructionRowData,
 } from "../src/modules/m6809/cpu/decompile.ts";
@@ -63,17 +63,17 @@ async function generateDecompilation(
   address: number,
   registers: Registers,
 ): Promise<string> {
-  const decompiled = await decompileInstruction(
+  const decompiled = await disassembleInstruction(
     async (addr, bytes = 1) =>
       memory.slice(addr, addr + bytes).reduce((acc, val) => (acc << 8) | val, 0),
-    registers,
     registers.pc,
+    registers,
   );
   const decompiledRowData = generateRowData(decompiled, (addr) =>
     addr.toString(16).padStart(4, "0"),
   ) as InstructionRowData;
 
-  return decompiledRowData.data;
+  return `${decompiledRowData.mnemonic} ${decompiledRowData.args}`;
 }
 
 function snapshotToHumanReadable(regObject: Record<string, unknown>) {

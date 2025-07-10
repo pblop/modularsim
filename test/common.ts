@@ -1,4 +1,4 @@
-import M6809Simulator from "../src/modules/simulator.ts";
+import M6809Simulator from "../src/modules/simulator/simulator.ts";
 import Cpu from "../src/modules/m6809/cpu/cpu.ts";
 import type { EventDeclaration, TypedEventTransceiver } from "../src/types/event.d.ts";
 import type { IModule, ModuleConstructor, ModuleDeclaration } from "../src/types/module.d.ts";
