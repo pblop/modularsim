@@ -178,7 +178,9 @@
         "id": "assembler_ui",
         "url": "./modules/m6809/assembler/assembler_ui.js",
         "css": ["./modules/m6809/assembler/assembler_ui.css"],
-        "config": {}
+        "config": {
+          "content": "; Programa de ejemplo: hola.asm\n\n        .area PROG (ABS)\n\n        .org 0x100\ncadena: .ascii \"Hola, mundo.\"\n        .byte   10      ; 10 es CTRL-J: salto de lInea\n        .byte   0       ; 0 es CTRL-@: fin de cadena\n\n        .globl programa\nprograma:\n        ldx #cadena\nbucle:  lda ,x+\n        beq acabar\n        sta 0xFF00      ; salida por pantalla\n        bra bucle\nacabar: clra\n        sta 0xFF01\n\n        .org 0xFFFE     ; Vector de RESET\n        .word programa\n"
+        }
       },
       {
         "id": "register_ui",
