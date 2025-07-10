@@ -23,7 +23,7 @@
     "build-programs": "cd ./programs/ && make",
     "build-test-programs": "cd ./programs/ && make test",
     "copy-libraries": "mkdir -p ./dist/lib && cp ./node_modules/dockview-core/dist/dockview-core.esm.min.js* ./dist/lib/",
-    "copy-static": "cp -r ./public/* ./dist/ && copyfiles -u 1 src/**/*.{css,svg} ./dist/ && mkdir -p ./dist/programs/ && cp ./programs/*.{bin,s19,noi} ./dist/programs/",
+    "copy-static": "cp -r ./public/* ./dist/ && copyfiles -u 1 src/**/*.{css,svg,js,wasm} ./dist/ && mkdir -p ./dist/programs/ && cp ./programs/*.{bin,s19,noi} ./dist/programs/",
     "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static && (npm run copy-libraries || true)",
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'",
