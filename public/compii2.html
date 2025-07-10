@@ -1,0 +1,459 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/Profiles/xhtml1-strict.dtd">
+  <head>
+    <title>Computadores II - Segunda sesi&oacute;n</title>
+    <style>
+      .simulator-container {
+        width: calc(100vw - 96px) !important;
+        aspect-ratio: 16/9;
+        border: 1px solid black;
+        box-sizing: border-box;
+
+        /* CSS Reset */
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+        }
+
+        * {
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          line-height: 1.5;
+        }
+
+        img,
+        picture,
+        video,
+        canvas,
+        svg {
+          display: block;
+          max-inline-size: 100%;
+        }
+
+        input,
+        button,
+        textarea,
+        select {
+          font: inherit;
+          letter-spacing: inherit;
+          word-spacing: inherit;
+          color: currentColor;
+        }
+
+        p,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+          overflow-wrap: break-word;
+        }
+
+        ol,
+        ul {
+          list-style: none;
+        }
+
+        :not([class]) {
+          h1&,
+          h2&,
+          h3&,
+          h4&,
+          h5&,
+          h6& {
+            margin-block: 0.75em;
+            line-height: 1.25;
+            text-wrap: balance;
+            letter-spacing: -0.05ch;
+          }
+
+          p&,
+          ol&,
+          ul& {
+            margin-block: 1em;
+          }
+
+          ol&,
+          ul& {
+            padding-inline-start: 1.5em;
+            list-style: revert;
+          }
+
+          li& {
+            margin-block: 0.5em;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <center>
+      <h1>PR&Aacute;CTICAS DE COMPUTADORES II</h1>
+      <h2>SEGUNDA SESIÓN</h2>
+    </center>
+    <hr />
+    <ol>
+      <li>
+        <h3>Operaciones aritm&eacute;ticas</h3>
+        Una vez tenemos datos en nuestros registros, lo primero que podemos
+        necesitar es realizar operaciones con ellos. Las operaciones
+        aritm&eacute;ticas que nos proporciona el 6809 se centran
+        fundamentalmente en sumas/restas de n&uacute;meros enteros y operaciones
+        relacionadas. Ve&aacute;moslas:
+        <ul>
+          <li>
+            <strong>Incremento</strong>: la orden es INCA o INCB y suma una
+            unidad a A o B, respectivamente
+          </li>
+          <li>
+            <strong>Decremento</strong>: igual que en el caso anterior hay dos
+            versiones: DECA y DECB
+          </li>
+          <li>
+            <strong>Puesta a cero</strong>: CLRA (<em>CLeaR A</em>) y CLRB,
+            equivalentes a LDA #0 y LDB #0, pero m&aacute;s r&aacute;pidas
+          </li>
+          <li>
+            <strong>Negativo</strong>: NEGA y NEGB cambian de signo el valor que
+            haya en A y B, respectivamente (hacen el complemento a dos)
+          </li>
+          <li>
+            <strong>Suma</strong>: cuatro versiones: ADDA, ADDB, ADDD, ABX. Las
+            tres primeras toman como primer sumando el contenido del registro y
+            el segundo sumando el que se indique (al igual que la
+            operaci&oacute;n de carga LD puede ser un valor o el contenido de
+            una direcci&oacute;n de memoria). El resultado se almacena en el
+            registro. La instrucci&oacute;n ABX es especial y hace X=X+B (sin
+            signo)
+          </li>
+          <li>
+            <strong>Suma con el bit de acarreo</strong>: existen solamente dos
+            versiones ADCA y ADCB. Funcionan como las equivalentes del caso
+            anterior, pero tambi&eacute;n suman el bit de acarreo.
+          </li>
+          <li>
+            <strong>Resta</strong>: SUBA, SUBB y SUBD. El minuendo es el
+            registro, el sustraendo es el valor o direcci&oacute;n que
+            especifiquemos y la diferencia se almacena en el registro
+          </li>
+          <li>
+            <strong>Resta con acarreo</strong>: SBCA y SBCB, se resta,
+            adem&aacute;s de lo del punto anterior, el bit de acarreo
+          </li>
+          <li>
+            <strong>Extensi&oacute;n del signo</strong>: la orden es SEX (<em
+              >Sign EXtension</em
+            >). Exiende el signo de B en A de modo que el registro D exprese el
+            mismo n&uacute;mero en complemento a dos
+          </li>
+          <li>
+            <strong>Multiplicaci&oacute;n</strong>: MUL multiplica sin signo A
+            por B y el resultado queda en D
+          </li>
+        </ul>
+        <p>
+          Las &oacute;rdenes INC, DEC, CLR y NEG se pueden usar tambi&eacute;n
+          directamente sobre el contenido de una posici&oacute;n de memoria.
+        </p>
+      </li>
+      <li>
+        <h3>Ejemplo</h3>
+        Veamos, con un peque&ntilde;o ejemplo, c&oacute;mo realizar la suma de
+        dos n&uacute;meros de 16 bits almacenados en la memoria. Primero lo
+        haremos con el registro D y, posteriormente, solamente con el registro
+        A, para aprender a usar la instrucci&oacute;n ADC:
+
+        <p>
+          Centrémonos en la parte en que se hace la suma con el registro A. Se
+          trata de hacer la suma por columnas de dígitos (en este caso las
+          columnas son de registros) considerando los posibles acarreos a las
+          columnas posteriores, como se hace tradicionalmente:
+        </p>
+        <div
+          class="simulator-container"
+          id="simulador1"
+          data-color-scheme="light"></div>
+      </li>
+      <li>
+        <h3>Simulador 2</h3>
+        <div
+          class="simulator-container"
+          data-color-scheme="light"
+          id="simulador2"></div>
+      </li>
+    </ol>
+    <hr />
+    &copy; 2025 Guillermo González Talaván, pblop
+    <hr />
+    <script type="module">
+      import Controller from "/controller.js";
+
+      const basicConfig = {
+        simulator: {
+          // "url" es la ruta del archivo que contiene el simulador
+          url: "./modules/simulator/simulator.js",
+          modules: [
+            {
+              // "id" es un identificador único para cada módulo
+              id: "main_memory",
+              type: "memory",
+              // "url" es la ruta del archivo que contiene el módulo
+              url: "./modules/m6809/memory/memory.js",
+              config: {
+                multiplexer: "multiplexer",
+                size: 65536,
+                type: "ram",
+              },
+            },
+            {
+              id: "main_memory_ui",
+              type: "ui",
+              url: "./modules/m6809/infinite_memory_ui/memory_ui.js",
+              css: ["./modules/m6809/infinite_memory_ui/memory_ui.css"],
+              config: {
+                size: "0x10000",
+                autoPosition: "m6809",
+              },
+            },
+            {
+              id: "gui",
+              type: "gui",
+              url: "./modules/m6809/gui/gui.js",
+              css: [
+                "./modules/m6809/gui/scale-small.gui.css",
+                "./config-colors-small.css",
+              ],
+              config: {
+                language: "es",
+                panels: [
+                  {
+                    langName: {
+                      en: "Registers",
+                      es: "Registros",
+                    },
+                    id: "register_ui",
+                    column: "1 / span 6",
+                    row: "1 / span 2",
+                  },
+                  {
+                    langName: {
+                      en: "Instructions",
+                      es: "Instrucciones",
+                    },
+                    id: "instruction_ui",
+                    column: "6 / span 7",
+                    row: "3 / span 12",
+                  },
+                  {
+                    langName: {
+                      en: "Memory",
+                      es: "Memoria",
+                    },
+                    id: "main_memory_ui",
+                    column: "1 / span 5",
+                    row: "3 / span 7",
+                  },
+                  {
+                    langName: {
+                      en: "Screen",
+                      es: "Pantalla",
+                    },
+                    id: "screen_ui",
+                    column: "1 / span 5",
+                    row: "10 / span 5",
+                  },
+                  {
+                    langName: {
+                      en: "Simulation control",
+                      es: "Control de la simulación",
+                    },
+                    id: "clock_ui",
+                    column: "9 / span 4",
+                    row: "1 / span 2",
+                  },
+                ],
+              },
+            },
+            {
+              id: "clock",
+              type: "clock",
+              url: "./modules/m6809/clock/clock.js",
+              config: {
+                frequency: 10000000, // Hz
+              },
+            },
+            {
+              id: "clock_ui",
+              type: "ui",
+              url: "./modules/m6809/clock_ui/clock_ui.js",
+              css: ["./modules/m6809/clock_ui/clock_ui.css"],
+              config: {
+                frequency: 10000000,
+              },
+            },
+            {
+              id: "cpu",
+              type: "cpu",
+              url: "./modules/m6809/cpu/cpu.js",
+              config: {},
+            },
+            {
+              id: "loader",
+              type: "extra",
+              url: "./modules/m6809/loader/loader.js",
+              css: ["./modules/m6809/loader/loader.css"],
+              config: {
+                file: "./programs/sumar.s19",
+                symbolsFile: "./programs/sumar.noi",
+              },
+            },
+            {
+              id: "instruction_ui",
+              type: "ui",
+              url: "./modules/m6809/instruction_ui/instruction_ui.js",
+              css: ["./modules/m6809/instruction_ui/instruction_ui.css"],
+              config: {
+                symbols: "single",
+                autoPosition: "m6809",
+              },
+            },
+            {
+              id: "breakpoint_ui",
+              type: "ui",
+              url: "./modules/m6809/breakpoint_ui/breakpoint_ui.js",
+              css: ["./modules/m6809/breakpoint_ui/breakpoint_ui.css"],
+              config: {},
+            },
+            {
+              id: "history_ui",
+              type: "ui",
+              url: "./modules/m6809/history_ui/history_ui.js",
+              css: ["./modules/m6809/history_ui/history_ui.css"],
+              config: {},
+            },
+            {
+              id: "screen_ui",
+              type: "ui",
+              url: "./modules/m6809/screen_ui/screen_ui.js",
+              css: ["./modules/m6809/screen_ui/screen_ui.css"],
+              config: {
+                multiplexer: "multiplexer",
+              },
+            },
+            {
+              id: "stopper",
+              type: "extra",
+              url: "./modules/m6809/stop/stop.js",
+              config: {
+                multiplexer: "multiplexer",
+              },
+            },
+            {
+              id: "register_ui",
+              type: "ui",
+              url: "./modules/m6809/register_ui/register_ui.js",
+              css: ["./modules/m6809/register_ui/register_ui.css"],
+              config: {
+                registers: {
+                  A: {
+                    bits: 8,
+                    mirror: {
+                      register: "D",
+                      mask: "0xFF00",
+                    },
+                  },
+                  B: {
+                    bits: 8,
+                    mirror: {
+                      register: "D",
+                      mask: "0x00FF",
+                    },
+                  },
+                  D: {
+                    bits: 16,
+                  },
+                  X: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  Y: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  U: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  S: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  pc: {
+                    bits: 16,
+                    pointer: true,
+                  },
+                  cc: {
+                    bits: 8,
+                    flags: ["E", "F", "H", "I", "N", "Z", "V", "C"],
+                  },
+                  dp: {
+                    bits: 8,
+                  },
+                },
+              },
+            },
+            {
+              id: "multiplexer",
+              type: "hw",
+              url: "./modules/m6809/multiplexer/multiplexer.js",
+              config: {
+                entries: [
+                  {
+                    start: "0xFF00",
+                    size: 1,
+                    module: "screen_ui",
+                    priority: 0,
+                  },
+                  {
+                    start: "0xFF01",
+                    size: 1,
+                    module: "stopper",
+                    priority: 0,
+                  },
+                  {
+                    start: "0x0",
+                    module: "main_memory",
+                    size: 65536,
+                    priority: 1,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      };
+      // Crea una instancia del controlador
+      const controller1 = new Controller();
+      const controller2 = new Controller();
+
+      const config1 = structuredClone(basicConfig);
+      config1.simulator.modules.find(
+        (m) => m.id === "gui"
+      ).config.root_selector = "#simulador1";
+      const config2 = structuredClone(basicConfig);
+      config2.simulator.modules.find(
+        (m) => m.id === "gui"
+      ).config.root_selector = "#simulador2";
+
+      controller1.init(config1);
+      window.controller1 = controller1;
+      controller2.init(config2);
+      window.controller2 = controller2;
+    </script>
+  </body>
+</html>
