@@ -12,6 +12,11 @@ suma1:  .word 0
 suma2:  .word 0
 
         .globl programa
+        .globl sumando1
+        .globl sumando2
+        .globl suma1
+        .globl suma2
+        .globl fin
 programa:
         ; hagamos, primero, la suma con el registro D
         ldd sumando1

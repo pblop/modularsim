@@ -48,4 +48,4 @@ test: $(patsubst %.asm,%.bin,$(wildcard *.asm)) $(patsubst %.asm,%.json,$(TEST_F
 
 # Clean build artifacts
 clean:
-	rm -rf *.rel *.lst *.s19 *.bin
+	rm -rf *.rel *.lst *.s19 *.bin *.noi *.map *.json
