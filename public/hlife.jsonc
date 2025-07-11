@@ -29,7 +29,8 @@
         "css": [
           "./modules/m6809/gui/reset.css",
           "./modules/m6809/gui/gui.css",
-          "./config-colors.css"
+          "./config-colors.css",
+          "./config-fonts.css"
         ],
         "config": {
           "language": "es",
