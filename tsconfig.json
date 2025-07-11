@@ -19,6 +19,7 @@
       "https://esm.sh/codemirror@6.0": ["./node_modules/codemirror/dist"],
       "https://esm.sh/@codemirror/commands@6.8": ["./node_modules/@codemirror/commands/dist"],
       "https://esm.sh/@codemirror/view@6": ["./node_modules/@codemirror/view/dist"],
+      "https://esm.sh/@codemirror/lint@6": ["./node_modules/@codemirror/lint/dist"],
       "https://esm.sh/@codemirror/language@6": ["./node_modules/@codemirror/language/dist"],
       "https://esm.sh/@codemirror/legacy-modes/*": ["./node_modules/@codemirror/legacy-modes/*"],
       "https://esm.sh/@catppuccin/codemirror": ["./node_modules/@catppuccin/codemirror/dist"],

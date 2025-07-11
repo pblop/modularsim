@@ -10,10 +10,11 @@ import type {
 import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import type { ISimulator } from "../../../types/simulator.js";
 import type { Registers } from "../cpu/cpu_parts.js";
-import { AssemblerLinker, type AssemblerLinkerError } from "./assnlink.js";
+import { AssemblerLinker, type AsxxxxError, type AssemblerLinkerError } from "./assnlink.js";
 
 import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0";
 import { keymap } from "https://esm.sh/@codemirror/view@6";
+import { linter, type Diagnostic, setDiagnostics } from "https://esm.sh/@codemirror/lint@6";
 import { indentWithTab } from "https://esm.sh/@codemirror/commands@6.8";
 import { StreamLanguage } from "https://esm.sh/@codemirror/language@6";
 import { lang6809 } from "./lang6809.js";
@@ -106,11 +107,20 @@ class AssemblerUI implements IModule {
 
       this.event_transceiver.emit("dbg:program:load", "s19", s19Text);
       this.event_transceiver.emit("dbg:symbols:load", "noice", noiText);
-    } catch (error) {
-      const typederror = error as AssemblerLinkerError;
-      console.error(`[${this.id}] Error during build:`, typederror);
-      if (typederror.from === "assemble") {
-        console.error(`[${this.id}] Assembly errors:`, typederror.errors);
+
+      // Set diagnostics from the assembly errors
+      const diagnostics: Diagnostic[] = this.errorsToDiagnostics(errors);
+      this.editor?.dispatch(setDiagnostics(this.editor!.state, diagnostics));
+    } catch (_error) {
+      const error = _error as AssemblerLinkerError;
+      console.error(`[${this.id}] Error during build:`, error);
+
+      if (error.from === "assemble") {
+        console.error(`[${this.id}] Assembly errors:`, error.errors);
+
+        // Set diagnostics in the editor
+        const diagnostics = this.errorsToDiagnostics(error.errors);
+        this.editor?.dispatch(setDiagnostics(this.editor!.state, diagnostics));
       }
     } finally {
       this.isRunningBuild = false;
@@ -120,6 +130,20 @@ class AssemblerUI implements IModule {
     // Ensure only one build operation is in progress at a time
     if (this.isRunningBuild) return;
     this._performBuild();
+  };
+
+  errorsToDiagnostics = (errors: AsxxxxError[]): Diagnostic[] => {
+    return errors.map((err) => {
+      const lineNum = err.line;
+      const lineInfo = this.editor!.state.doc.line(lineNum);
+
+      return {
+        from: lineInfo.from,
+        to: lineInfo.to,
+        severity: "error",
+        message: err.message,
+      };
+    });
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string) => {
@@ -132,7 +156,8 @@ class AssemblerUI implements IModule {
       extensions: [
         basicSetup,
         StreamLanguage.define(lang6809),
-        keymap.of([indentWithTab]) /*, catppuccinLatte*/,
+        keymap.of([indentWithTab]),
+        // linter(this.linterFn),
       ],
       parent: this.panel,
       doc: this.config.content || "",

@@ -19,7 +19,7 @@ const AsxxxxErrorTypes = [
   "z",
 ] as const;
 type AsxxxxErrorType = (typeof AsxxxxErrorTypes)[number];
-type AsxxxxError = {
+export type AsxxxxError = {
   line: number;
   type: AsxxxxErrorType;
   message: string;
