@@ -2,25 +2,39 @@
   --gui-color-background: #1e1e1e;
   --gui-color-foreground-dark: #555555;
   --gui-color-highlight: #4e4e4e;
+  --gui-color-higherlight: #3a3a3a;
   --gui-color-border: #4e4e4e;
   --gui-color-text: #d4d4d4;
+  
+  --gui-color-text-gray: oklch(69.17% 0.004 247.88);
   --gui-color-text-blue: oklch(80.17% 0.091 258.88);
+  --gui-color-text-dark-blue: oklch(70.94% 0.136 258.06);
+  --gui-color-text-orange: oklch(78.75% 0.14163582809066333 54.32911089172009);
+  --gui-color-text-green: oklch(79.33% 0.179 145.62);
+  --gui-color-text-purple: oklch(0.7323 0.17 303.78); /* purple 3 but a bit more saturated */
 
   --gui-color-red: oklch(58.63% 0.231 19.6);
   --gui-color-red-highlight: oklch(0.4644 0.157 16.58);
 
   --gui-color-red-background: oklch(41.17% 0.157 16.58);
-  --gui-color-green-background: oklch(79.33% 0.179 145.62);
   --gui-color-blue-background: oklch(62.39% 0.181 258.33);
   --gui-color-yellow-background: oklch(90.92% 0.125 92.56);
 }
 [data-color-scheme="light"] .gui-root, .gui-root[data-color-scheme="light"] {
   --gui-color-background: #ffffff;
   --gui-color-foreground-dark: #555555;
-  --gui-color-highlight: #f0f0f0;
+  --gui-color-highlight: #e0e0e0;
+  --gui-color-higherlight: #d0d0d0;
   --gui-color-border: #d4d4d4;
   --gui-color-text: #111111;
+
+  --color-text-gray: oklch(69.17% 0.004 247.88);
   --gui-color-text-blue: oklch(62.39% 0.181 258.33);
+  --gui-color-text-dark-blue: oklch(54.87% 0.222 260.33);
+  --gui-color-text-orange: oklch(74.61% 0.171 51.56);
+  --gui-color-text-green: oklch(64.24% 0.175 144.92);
+  --gui-color-text-purple: oklch(49.39% 0.215 298.31); /* purple 3 but a bit more saturated */
+
 
   --gui-color-red-highlight: oklch(69.86% 0.162 7.82);
   
@@ -32,10 +46,18 @@
   .gui-root {
     --gui-color-background: #ffffff;
     --gui-color-foreground-dark: #555555;
-    --gui-color-highlight: #f0f0f0;
+    --gui-color-highlight: #e0e0e0;
+    --gui-color-higherlight: #d0d0d0;
     --gui-color-border: #d4d4d4;
     --gui-color-text: #111111;
-    --gui-color-text-blue: oklch(54.87% 0.222 260.33);
+
+    --color-text-gray: oklch(69.17% 0.004 247.88);
+    --gui-color-text-blue: oklch(62.39% 0.181 258.33);
+    --gui-color-text-dark-blue: oklch(54.87% 0.222 260.33);
+    --gui-color-text-orange: oklch(74.61% 0.171 51.56);
+    --gui-color-text-green: oklch(64.24% 0.175 144.92);
+    --gui-color-text-purple: oklch(49.39% 0.215 298.31); /* purple 3 but a bit more saturated */
+
 
     --gui-color-red-highlight: oklch(69.86% 0.162 7.82);
     

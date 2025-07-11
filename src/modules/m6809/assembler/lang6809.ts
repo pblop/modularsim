@@ -37,7 +37,7 @@ function mk6809(): StreamParser<Lang6809State> {
           if (state.context === "arguments") {
             if (registers.test(word)) {
               state.context = "arguments";
-              return "variableName.special";
+              return "variableName";
             }
           }
 
@@ -64,7 +64,7 @@ function mk6809(): StreamParser<Lang6809State> {
         if (stream.match(/\\?.'/)) return "number";
       } else if (stream.eat(".")) {
         state.context = "done";
-        if (stream.eatWhile(/\w/)) return "def";
+        if (stream.eatWhile(/\w/)) return "definitionOperator";
       } else if (stream.eat("$")) {
         if (stream.eatWhile(/[01]/)) return "number";
       } else {

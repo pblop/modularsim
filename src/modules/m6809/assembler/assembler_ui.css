@@ -23,7 +23,7 @@
 
   .gui-icon.ok {
     --icon: url("../gui/icons/check.svg");
-    --icon-color: var(--gui-color-green-background)
+    --icon-color: var(--gui-color-text-green)
   }
   .gui-icon-container:has(.gui-icon.ok) {
     opacity: 0;
@@ -35,6 +35,45 @@
     max-width: 200px;
     transition: max-width 3s ease-out, opacity 0.5s ease-out;
     /* animation: aui-slide-left 6s forwards; */
+  }
+
+  .cmt-keyword {
+    color: var(--gui-color-text-purple);
+  }
+  .cmt-def {
+    color: var(--gui-color-text-dark-blue);
+  }
+  .cmt-number {
+    color: var(--gui-color-text-orange);
+  }
+  .cmt-string {
+    color: var(--gui-color-text-green);
+  }
+  .cmt-comment {
+    color: var(--gui-color-text-gray);
+  }
+  .cmt-variable-name {
+    color: var(--gui-color-text-blue);
+  }
+  .cm-activeLine {
+    background-color: color-mix(in srgb, var(--gui-color-highlight) 40%, transparent);
+  }
+  .cm-selectionMatch {
+    background-color: var(--gui-color-higherlight) !important;
+  }
+  .cm-selectionBackground {
+    background-color: var(--gui-color-higherlight) !important;
+  }
+  .cm-activeLineGutter {
+    background-color: color-mix(in srgb, var(--gui-color-highlight) 40%, transparent);
+  }
+  .ͼ2 .cm-gutters {
+    background-color: unset;
+    color: var(--gui-color-text);
+    border: none;
+  }
+  .ͼ1 .cm-scroller {
+    font-family: inherit;
   }
 }
 

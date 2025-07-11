@@ -16,7 +16,12 @@ import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0";
 import { keymap } from "https://esm.sh/@codemirror/view@6";
 import { type Diagnostic, setDiagnostics } from "https://esm.sh/@codemirror/lint@6";
 import { indentWithTab } from "https://esm.sh/@codemirror/commands@6.8";
-import { StreamLanguage } from "https://esm.sh/@codemirror/language@6";
+import {
+  StreamLanguage,
+  HighlightStyle,
+  syntaxHighlighting,
+} from "https://esm.sh/@codemirror/language@6";
+import { tags } from "https://esm.sh/@lezer/highlight@1.2.1";
 import { lang6809 } from "./lang6809.js";
 import { catppuccinLatte } from "https://esm.sh/@catppuccin/codemirror";
 
@@ -176,8 +181,24 @@ class AssemblerUI implements IModule {
     this.panel = panel;
     this.panel.classList.add("assembler-ui");
 
+    console.log(tags);
+
+    const highlightStyle = HighlightStyle.define([
+      { tag: tags.comment, class: "cmt-comment" },
+      { tag: tags.keyword, class: "cmt-keyword" },
+      { tag: tags.number, class: "cmt-number" },
+      { tag: tags.definitionOperator, class: "cmt-def" },
+      { tag: tags.string, class: "cmt-string" },
+      { tag: tags.variableName, class: "cmt-variable-name" },
+    ]);
+
     this.editor = new EditorView({
-      extensions: [basicSetup, StreamLanguage.define(lang6809), keymap.of([indentWithTab])],
+      extensions: [
+        basicSetup,
+        StreamLanguage.define(lang6809),
+        keymap.of([indentWithTab]),
+        syntaxHighlighting(highlightStyle),
+      ],
       parent: this.panel,
       doc: this.config.content || "",
     });
