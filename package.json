@@ -29,5 +29,14 @@
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'",
     "cov:instructions": "bun ./scripts/instruction-coverage.ts"
+  },
+  "dependencies": {
+    "@catppuccin/codemirror": "^1.0.1",
+    "@codemirror/commands": "^6.8.1",
+    "@codemirror/language": "^6.11.2",
+    "@codemirror/legacy-modes": "^6.5.1",
+    "@codemirror/view": "^6.38.0",
+    "@lezer/highlight": "^1.2.1",
+    "codemirror": "^6.0.2"
   }
 }

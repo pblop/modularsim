@@ -12,6 +12,13 @@ import type { ISimulator } from "../../../types/simulator.js";
 import type { Registers } from "../cpu/cpu_parts.js";
 import { AssemblerLinker, type AssemblerLinkerError } from "./assnlink.js";
 
+import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0";
+import { keymap } from "https://esm.sh/@codemirror/view@6";
+import { indentWithTab } from "https://esm.sh/@codemirror/commands@6.8";
+import { StreamLanguage } from "https://esm.sh/@codemirror/language@6";
+import { lang6809 } from "./lang6809.js";
+import { catppuccinLatte } from "https://esm.sh/@catppuccin/codemirror";
+
 type AssemblerUIConfig = {
   content?: string;
 };
@@ -32,7 +39,7 @@ class AssemblerUI implements IModule {
   config: AssemblerUIConfig;
 
   panel?: HTMLElement;
-  textArea?: HTMLTextAreaElement;
+  editor?: EditorView;
 
   language!: string;
   localeStrings!: typeof AssemblerUIStrings.en;
@@ -84,7 +91,7 @@ class AssemblerUI implements IModule {
   _performBuild = async () => {
     this.isRunningBuild = true;
     try {
-      const inputText = this.textArea?.value || "";
+      const inputText = this.editor?.state.doc.toString() || "";
       const inputU8Arr = AssemblerLinker.textToUint8Array(inputText);
       const [rel, errors] = await AssemblerLinker.assemble(inputU8Arr);
       if (errors.length > 0) {
@@ -121,11 +128,15 @@ class AssemblerUI implements IModule {
     this.panel = panel;
     this.panel.classList.add("assembler-ui");
 
-    this.textArea = this.panel.appendChild(
-      element("textarea", {
-        textContent: this.config.content || "",
-      }),
-    );
+    this.editor = new EditorView({
+      extensions: [
+        basicSetup,
+        StreamLanguage.define(lang6809),
+        keymap.of([indentWithTab]) /*, catppuccinLatte*/,
+      ],
+      parent: this.panel,
+      doc: this.config.content || "",
+    });
 
     this.panel.appendChild(
       element(
