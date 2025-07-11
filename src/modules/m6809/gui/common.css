@@ -103,6 +103,11 @@ button:hover {
     
     cursor: pointer;
   }
+  .gui-icon-container {
+    margin: 0.25em;
+    border: 0px;
+    border-radius: 4px;
+  }
 }
 
 .gui-panel {

@@ -10,9 +10,58 @@
     position: absolute;
     top: 0;
     right: 0;
+    display: flex;
+    flex-direction: row;
   }
 
   .gui-icon.build {
     --icon: url("../gui/icons/cog.svg");
+  }
+  .gui-icon-button.active > .gui-icon.build {
+    animation: aui-rotate 1s linear infinite;
+  }
+
+  .gui-icon.ok {
+    --icon: url("../gui/icons/check.svg");
+    --icon-color: var(--gui-color-green-background)
+  }
+  .gui-icon-container:has(.gui-icon.ok) {
+    opacity: 0;
+    max-width: 0;
+    transition: max-width 0.5s ease-out, opacity 1s ease-out;
+  }
+  .gui-icon-container.move:has(.gui-icon.ok) {
+    opacity: 1;
+    max-width: 200px;
+    transition: max-width 3s ease-out, opacity 0.5s ease-out;
+    /* animation: aui-slide-left 6s forwards; */
+  }
+}
+
+@keyframes aui-rotate {
+  0% {
+    rotate: 0deg;
+  }
+  100% {
+    rotate: 360deg;
+  }
+}
+
+@keyframes aui-slide-left {
+  0% {
+    max-width: 0;
+    opacity: 0;
+  }
+  20% {
+    max-width: 200px;
+    opacity: 1;
+  }
+  80% {
+    max-width: 200px;
+    opacity: 1;
+  }
+  100% {
+    max-width: 0;
+    opacity: 0;
   }
 }

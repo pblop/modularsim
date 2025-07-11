@@ -96,6 +96,21 @@ export function element<K extends keyof TagNameMap>(
   return el;
 }
 
+export function icon(iconClass: string, title: string): HTMLDivElement {
+  const span = element("span", {
+    className: `gui-icon ${iconClass}`,
+    title: title,
+  });
+  const container = element(
+    "div",
+    {
+      className: "gui-icon-container",
+    },
+    span,
+  );
+  return container;
+}
+
 export function iconButton(
   iconClass: string,
   title: string,

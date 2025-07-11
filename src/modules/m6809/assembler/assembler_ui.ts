@@ -1,5 +1,5 @@
 import { verify } from "../../../utils/config.js";
-import { element, iconButton } from "../../../utils/html.js";
+import { element, icon, iconButton } from "../../../utils/html.js";
 import { createLanguageStrings } from "../../../utils/lang.js";
 import { UpdateQueue } from "../../../utils/updatequeue.js";
 import type {
@@ -14,11 +14,13 @@ import { AssemblerLinker, type AsxxxxError, type AssemblerLinkerError } from "./
 
 import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0";
 import { keymap } from "https://esm.sh/@codemirror/view@6";
-import { linter, type Diagnostic, setDiagnostics } from "https://esm.sh/@codemirror/lint@6";
+import { type Diagnostic, setDiagnostics } from "https://esm.sh/@codemirror/lint@6";
 import { indentWithTab } from "https://esm.sh/@codemirror/commands@6.8";
 import { StreamLanguage } from "https://esm.sh/@codemirror/language@6";
 import { lang6809 } from "./lang6809.js";
 import { catppuccinLatte } from "https://esm.sh/@catppuccin/codemirror";
+
+const OK_ICON_ANIMATION_DURATION = 5000; // 5 seconds
 
 type AssemblerUIConfig = {
   content?: string;
@@ -27,9 +29,11 @@ type AssemblerUIConfig = {
 const AssemblerUIStrings = createLanguageStrings({
   en: {
     build: "Assemble and link",
+    ok: "Assembly & linking finished successfully",
   },
   es: {
     build: "Ensamblar y enlazar",
+    ok: "Ensamblado y enlazado exitoso",
   },
 });
 
@@ -40,6 +44,9 @@ class AssemblerUI implements IModule {
   config: AssemblerUIConfig;
 
   panel?: HTMLElement;
+  button?: HTMLButtonElement;
+  okIcon?: HTMLDivElement;
+  stopOkIconTimeout?: number;
   editor?: EditorView;
 
   language!: string;
@@ -91,6 +98,14 @@ class AssemblerUI implements IModule {
   isRunningBuild = false;
   _performBuild = async () => {
     this.isRunningBuild = true;
+    this.button?.classList.add("active");
+    // Stop any previous ok icon animation
+    if (this.stopOkIconTimeout) {
+      window.clearTimeout(this.stopOkIconTimeout);
+      this.stopOkIconTimeout = undefined;
+    }
+    this.okIcon?.classList.remove("move");
+
     try {
       const inputText = this.editor?.state.doc.toString() || "";
       const inputU8Arr = AssemblerLinker.textToUint8Array(inputText);
@@ -111,6 +126,12 @@ class AssemblerUI implements IModule {
       // Set diagnostics from the assembly errors
       const diagnostics: Diagnostic[] = this.errorsToDiagnostics(errors);
       this.editor?.dispatch(setDiagnostics(this.editor!.state, diagnostics));
+
+      // Show the ok icon with animation
+      this.okIcon?.classList.add("move");
+      this.stopOkIconTimeout = window.setTimeout(() => {
+        this.okIcon?.classList.remove("move");
+      }, OK_ICON_ANIMATION_DURATION);
     } catch (_error) {
       const error = _error as AssemblerLinkerError;
       console.error(`[${this.id}] Error during build:`, error);
@@ -124,6 +145,7 @@ class AssemblerUI implements IModule {
       }
     } finally {
       this.isRunningBuild = false;
+      this.button?.classList.remove("active");
     }
   };
   performBuild = () => {
@@ -149,19 +171,19 @@ class AssemblerUI implements IModule {
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string) => {
     if (panel_id !== this.id) return;
 
+    this.setLanguage(language);
+
     this.panel = panel;
     this.panel.classList.add("assembler-ui");
 
     this.editor = new EditorView({
-      extensions: [
-        basicSetup,
-        StreamLanguage.define(lang6809),
-        keymap.of([indentWithTab]),
-        // linter(this.linterFn),
-      ],
+      extensions: [basicSetup, StreamLanguage.define(lang6809), keymap.of([indentWithTab])],
       parent: this.panel,
       doc: this.config.content || "",
     });
+
+    this.button = iconButton("build", this.localeStrings.build, this.performBuild);
+    this.okIcon = icon("ok", this.localeStrings.ok);
 
     this.panel.appendChild(
       element(
@@ -169,7 +191,8 @@ class AssemblerUI implements IModule {
         {
           className: "aui-overlay",
         },
-        iconButton("build", "Build", this.performBuild),
+        this.okIcon,
+        this.button,
       ),
     );
 
