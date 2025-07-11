@@ -67,12 +67,49 @@
   .cm-activeLineGutter {
     background-color: color-mix(in srgb, var(--gui-color-highlight) 40%, transparent);
   }
-  .ͼ2 .cm-gutters {
+  .cm-cursor.cm-cursor-primary {
+    border-left-color: var(--gui-color-text);
+  }
+  .cm-tooltip-hover {
+    background-color: var(--gui-color-background);
+    color: var(--gui-color-text);
+    border-color: var(--gui-color-border);
+    .cm-diagnostic-error {
+      border-color: var(--gui-color-red);
+    }
+  }
+  .cm-lintRange-error {
+    background-image: none;
+    position: relative;
+  }
+  .cm-lintRange-error::after {
+    content: '';
+    width: 100%; /* as wide as the lintRange-error */
+    height: 1lh; /* it must be at least as high as the squiggly line */
+    pointer-events: none; /* be transparent to clicks and other mouse events, they will fall through to the editor */
+
+    position: absolute; /* position it on top of the lintRange-error */
+    bottom: 0;          /* idem */
+    left: 0;            /* idem */
+
+    /* draw the squiggly line, red-colored */
+    --squiggly-line: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="6" height="3"><path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="black" fill="transparent" stroke-width=".7"/></svg>');
+    background-color: var(--gui-color-red);
+    mask-image: var(--squiggly-line);
+    -webkit-mask-image: var(--squiggly-line);
+    mask-repeat: repeat-x;
+    -webkit-mask-repeat: repeat-x;
+    mask-size: auto;
+    -webkit-mask-size: auto;
+    mask-position: bottom;
+    -webkit-mask-position: bottom;
+  }
+  .cm-gutters {
     background-color: unset;
     color: var(--gui-color-text);
     border: none;
   }
-  .ͼ1 .cm-scroller {
+  .cm-scroller {
     font-family: inherit;
   }
 }
