@@ -311,8 +311,10 @@ export async function disassembleInstruction(
     case "relative": {
       const offsetBytes = instruction.extra.isLongBranch ? 2 : 1;
 
-      const offset = await read(startAddress + size++, offsetBytes);
-      const address = truncate(startAddress + signExtend(offset, offsetBytes * 2, 16), 16);
+      const offset = await read(startAddress + size, offsetBytes);
+      size += offsetBytes;
+      const offsetSignExtended = signExtend(offset, offsetBytes * 8, 16);
+      const address = truncate(startAddress + size + offsetSignExtended, 16);
       args.push(address);
 
       addressing = { mode: "relative", offset, address };
@@ -525,7 +527,8 @@ export function generateRowData(
     case "relative": {
       // NOTE: Convert the relative address to a signed number for display.
       const offset = intNToNumber(addressing.offset, 8);
-      argsField += ` ${formatOffset(offset, decompiled.startAddress, "relative")}`;
+      argsField += ` ${formatOffset(offset, addressing.address, "relative")}`;
+      // If the instruction is a branch, we can display the address it branches to.
       // argsField += ` pc${offset >= 0 ? "+" : ""}${offset}`;
       // extraField += ` <${formatAddress(addressing.address, "extra")}>`;
       break;
