@@ -25,12 +25,16 @@
     --icon: url("../gui/icons/check.svg");
     --icon-color: var(--gui-color-text-green)
   }
-  .gui-icon-container:has(.gui-icon.ok) {
+  .gui-icon.fail {
+    --icon: url("../gui/icons/x.svg");
+    --icon-color: var(--gui-color-red)
+  }
+  .gui-icon-container:has(.gui-icon.ok), .gui-icon-container:has(.gui-icon.fail) {
     opacity: 0;
     max-width: 0;
     transition: max-width 0.5s ease-out, opacity 1s ease-out;
   }
-  .gui-icon-container.move:has(.gui-icon.ok) {
+  .gui-icon-container.move:has(.gui-icon.ok), .gui-icon-container.move:has(.gui-icon.fail) {
     opacity: 1;
     max-width: 200px;
     transition: max-width 3s ease-out, opacity 0.5s ease-out;

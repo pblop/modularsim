@@ -25,7 +25,7 @@ import { tags } from "https://esm.sh/@lezer/highlight@1.2.1";
 import { lang6809 } from "./lang6809.js";
 import { catppuccinLatte } from "https://esm.sh/@catppuccin/codemirror";
 
-const OK_ICON_ANIMATION_DURATION = 5000; // 5 seconds
+const STATUS_ICON_ANIMATION_DURATION = 5000; // 5 seconds
 
 type AssemblerUIConfig = {
   content?: string;
@@ -35,10 +35,12 @@ const AssemblerUIStrings = createLanguageStrings({
   en: {
     build: "Assemble and link",
     ok: "Assembly & linking finished successfully",
+    error: "Assembly & linking failed",
   },
   es: {
     build: "Ensamblar y enlazar",
     ok: "Ensamblado y enlazado exitoso",
+    error: "Ensamblado y enlazado fallido",
   },
 });
 
@@ -50,8 +52,8 @@ class AssemblerUI implements IModule {
 
   panel?: HTMLElement;
   button?: HTMLButtonElement;
-  okIcon?: HTMLDivElement;
-  stopOkIconTimeout?: number;
+  statusIcon?: HTMLDivElement;
+  retractStatusIconTimeoutId?: number;
   editor?: EditorView;
 
   language!: string;
@@ -105,11 +107,7 @@ class AssemblerUI implements IModule {
     this.isRunningBuild = true;
     this.button?.classList.add("active");
     // Stop any previous ok icon animation
-    if (this.stopOkIconTimeout) {
-      window.clearTimeout(this.stopOkIconTimeout);
-      this.stopOkIconTimeout = undefined;
-    }
-    this.okIcon?.classList.remove("move");
+    this.retractStatusIcon();
 
     try {
       const inputText = this.editor?.state.doc.toString() || "";
@@ -133,10 +131,7 @@ class AssemblerUI implements IModule {
       this.editor?.dispatch(setDiagnostics(this.editor!.state, diagnostics));
 
       // Show the ok icon with animation
-      this.okIcon?.classList.add("move");
-      this.stopOkIconTimeout = window.setTimeout(() => {
-        this.okIcon?.classList.remove("move");
-      }, OK_ICON_ANIMATION_DURATION);
+      this.showStatusIcon("ok", this.localeStrings.ok);
     } catch (_error) {
       const error = _error as AssemblerLinkerError;
       console.error(`[${this.id}] Error during build:`, error);
@@ -148,6 +143,7 @@ class AssemblerUI implements IModule {
         const diagnostics = this.errorsToDiagnostics(error.errors);
         this.editor?.dispatch(setDiagnostics(this.editor!.state, diagnostics));
       }
+      this.showStatusIcon("fail", this.localeStrings.error);
     } finally {
       this.isRunningBuild = false;
       this.button?.classList.remove("active");
@@ -171,6 +167,25 @@ class AssemblerUI implements IModule {
         message: err.message,
       };
     });
+  };
+
+  showStatusIcon(iconName: string, titleString: string): void {
+    if (!this.statusIcon) return;
+    this.statusIcon.classList.add("move");
+    const child = this.statusIcon.children[0] as HTMLSpanElement;
+    child.title = titleString;
+    child.className = `gui-icon ${iconName}`;
+
+    this.retractStatusIconTimeoutId = window.setTimeout(() => {
+      this.statusIcon?.classList.remove("move");
+    }, STATUS_ICON_ANIMATION_DURATION);
+  }
+  retractStatusIcon = () => {
+    if (this.retractStatusIconTimeoutId) {
+      window.clearTimeout(this.retractStatusIconTimeoutId);
+      this.retractStatusIconTimeoutId = undefined;
+    }
+    this.statusIcon?.classList.remove("move");
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string) => {
@@ -204,7 +219,7 @@ class AssemblerUI implements IModule {
     });
 
     this.button = iconButton("build", this.localeStrings.build, this.performBuild);
-    this.okIcon = icon("ok", this.localeStrings.ok);
+    this.statusIcon = icon("ok", this.localeStrings.ok);
 
     this.panel.appendChild(
       element(
@@ -212,7 +227,7 @@ class AssemblerUI implements IModule {
         {
           className: "aui-overlay",
         },
-        this.okIcon,
+        this.statusIcon,
         this.button,
       ),
     );
