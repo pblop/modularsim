@@ -53,6 +53,10 @@
     cursor: pointer;
   }
 
+  .backwards-disass {
+    color: var(--gui-color-text-gray);
+  }
+
   .row {
     &:hover, &.pc {
       --current-bg: var(--gui-color-highlight);

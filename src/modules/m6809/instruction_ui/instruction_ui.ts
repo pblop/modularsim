@@ -59,12 +59,15 @@ const InstructionUIStrings = createLanguageStrings({
     lockAlt: "Scroll with PC",
     overlappedInfo: "This instruction is overlapped by another instruction.",
     overwrittenInfo: "This instruction was overwritten.",
+    backwardsDisassemblyInfo: "This instruction was disassembled backwards, it might be incorrect.",
   },
   es: {
     clearAlt: "Limpiar la caché de instrucciones",
     lockAlt: "Desplazarse con el PC",
     overlappedInfo: "Esta instrucción está superpuesta por otra instrucción.",
     overwrittenInfo: "Esta instrucción fue sobrescrita.",
+    backwardsDisassemblyInfo:
+      "Esta instrucción ha sido desensamblada hacia atrás, puede ser incorrecta.",
   },
 });
 
@@ -448,6 +451,7 @@ class InstructionUI implements IModule {
       isPC?: boolean;
       isOverlapped?: boolean;
       isOverwritten?: boolean;
+      isBackwardsDisass?: boolean;
     } = {},
   ): Promise<number> => {
     const children = Array.from(row.children) as HTMLSpanElement[];
@@ -459,6 +463,8 @@ class InstructionUI implements IModule {
     row.classList.toggle("overwritten", !!extras.isOverwritten);
     if (extras.isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
     else if (extras.isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
+    if (extras.isBackwardsDisass) row.classList.add("backwards-disass");
+    row.title = this.localeStrings.backwardsDisassemblyInfo;
 
     const rowData = generateRowData(
       disass,
@@ -538,6 +544,7 @@ class InstructionUI implements IModule {
       const rowElement = this.#createBasicRowElement();
       await this.populateRow(rowElement, largestSuccess, {
         isPC: largestSuccess.startAddress === this.registers.pc,
+        isBackwardsDisass: true,
       });
       elements.push(rowElement);
 
