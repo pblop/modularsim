@@ -209,7 +209,8 @@ class Loader implements IModule {
           if (target.files === null) return;
           const file = target.files[0];
           const url = URL.createObjectURL(file);
-          this.loadFile(url, file.name.endsWith(".bin") ? "bin" : "s19");
+          this.program = undefined;
+          this.loadFile(url, file.name.endsWith(".bin") ? "bin" : "s19", file.name);
           this.userChangedFile();
         },
       }),
@@ -239,6 +240,7 @@ class Loader implements IModule {
           if (target.files === null) return;
           const file = target.files[0];
           const url = URL.createObjectURL(file);
+          this.symbols = undefined;
           this.loadSymbols(url, "noice");
           this.userChangedFile();
         },
@@ -308,7 +310,7 @@ class Loader implements IModule {
     }
   };
 
-  loadFile = async (file?: string, fileType?: "s19" | "bin"): Promise<void> => {
+  loadFile = async (file?: string, fileType?: "s19" | "bin", filename?: string): Promise<void> => {
     if (this.program === undefined) {
       if (file === undefined || fileType === undefined) {
         throw new Error(
@@ -316,7 +318,9 @@ class Loader implements IModule {
         );
       }
       const r = await fetch(file);
-      const filename = file.split(/(\\|\/)/g).pop()!;
+      if (filename === undefined) {
+        filename = file.split(/(\\|\/)/g).pop()!;
+      }
 
       if (fileType === "bin") {
         const uint8Array = new Uint8Array(await r.arrayBuffer());
