@@ -34,6 +34,8 @@
         ],
         "config": {
           "language": "es",
+          "columns": "13",
+          "rows": "14",
           "panels": [
             {
               "langName": {
@@ -50,7 +52,7 @@
                 "es": "Instrucciones"
               },
               "id": "instruction_ui",
-              "column": "8 / span 5",
+              "column": "8 / span 6",
               "row": "3 / span 12"
             },
             {
@@ -86,7 +88,7 @@
                 "es": "Control de la simulación"
               },
               "id": "clock_ui",
-              "column": "9 / span 4",
+              "column": "9 / span 5",
               "row": "1 / span 2"
             }
           ]

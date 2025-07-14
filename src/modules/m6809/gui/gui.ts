@@ -21,6 +21,8 @@ type GuiConfig = {
   root_selector: string;
   show_titles: boolean;
   show_status: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "no";
+  columns?: number; // Number of columns in the grid, optional.
+  rows?: number; // Number of rows in the grid, optional.
 };
 
 class Gui implements IModule {
@@ -101,6 +103,14 @@ class Gui implements IModule {
           default: "bottom-left",
           enum: ["top-left", "top-right", "bottom-left", "bottom-right", "no"],
         },
+        columns: {
+          type: "number",
+          required: false,
+        },
+        rows: {
+          type: "number",
+          required: false,
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -124,6 +134,10 @@ class Gui implements IModule {
     const gridElement = element("div", {
       className: "gui-grid",
     });
+    if (this.config.columns)
+      gridElement.style.setProperty("--config-columns", `${this.config.columns}`);
+    if (this.config.rows) gridElement.style.setProperty("--config-rows", `${this.config.rows}`);
+
     this.rootElement.appendChild(gridElement);
     this.gridElement = gridElement;
 
