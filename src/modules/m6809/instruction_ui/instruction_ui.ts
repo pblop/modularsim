@@ -226,6 +226,7 @@ class InstructionUI implements IModule {
   onMemoryWrite = (address: number, data: number): void => {
     this.cache.invalidate(address);
     this.history.markOverwritten(address);
+    this.updateQueue.queueUpdate(this.registers);
   };
 
   onGuiPanelCreated = (panel_id: string, panel: HTMLElement, language: string): void => {
@@ -467,8 +468,10 @@ class InstructionUI implements IModule {
     row.classList.toggle("overwritten", !!extras.isOverwritten);
     if (extras.isOverlapped) row.setAttribute("title", this.localeStrings.overlappedInfo);
     else if (extras.isOverwritten) row.setAttribute("title", this.localeStrings.overwrittenInfo);
-    if (extras.isBackwardsDisass) row.classList.add("backwards-disass");
-    row.title = this.localeStrings.backwardsDisassemblyInfo;
+    if (extras.isBackwardsDisass) {
+      row.classList.add("backwards-disass");
+      row.title = this.localeStrings.backwardsDisassemblyInfo;
+    }
 
     const rowData = generateRowData(
       disass,

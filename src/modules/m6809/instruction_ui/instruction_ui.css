@@ -79,7 +79,7 @@
     
 
     
-    &.overlap {
+    &.overlap, &.overwritten {
       cursor: help;
       text-decoration: line-through;
       .data {
