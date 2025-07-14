@@ -178,6 +178,15 @@
           class="simulator-container"
           id="simulador1"
           data-color-scheme="light"></div>
+        <br />
+        Centr&eacute;monos en la parte en que se hace la suma con el registro A.
+        Se trata de hacer la suma por columnas de d&iacute;gitos (en este caso
+        las columnas son de registros) considerando los posibles acarreos a las
+        columnas posteriores, como se hace tradicionalmente:
+        <br /><br />
+        <center>
+          <img src="assets/sumando.png" alt="Suma de 16 bits con A" />
+        </center>
       </li>
       <li>
         <h3>Simulador 2</h3>
@@ -301,6 +310,13 @@
               id: "cpu",
               type: "cpu",
               url: "./modules/m6809/cpu/cpu.js",
+              config: {},
+            },
+            {
+              id: "breakpointui",
+              type: "ui",
+              url: "./modules/m6809/breakpoint_ui/breakpoint_ui.js",
+              css: ["./modules/m6809/breakpoint_ui/breakpoint_ui.css"],
               config: {},
             },
             {
