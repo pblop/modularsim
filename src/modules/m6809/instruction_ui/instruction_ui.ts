@@ -284,6 +284,10 @@ class InstructionUI implements IModule {
     this.history.clear();
     this.cache.clear();
     this.modificationNumber = 0;
+    this.instructionsElement!.innerHTML = "";
+    this.initialRegisters = undefined;
+    this.initialAddress = undefined;
+    this.registers = undefined;
   };
 
   setInitialPosition = (): void => {
