@@ -141,7 +141,7 @@ class Gui implements IModule {
     this.rootElement.appendChild(gridElement);
     this.gridElement = gridElement;
 
-    this.createDeploymentInfoElement();
+    // this.createDeploymentInfoElement();
     if (this.config.show_status !== "no") {
       this.statusElement = this.createStatusElement();
       this.statusMessage = "";

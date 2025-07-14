@@ -237,7 +237,7 @@ class Gui implements IModule {
       floatingGroupBounds: this.config.bounded ? "boundedWithinViewport" : undefined,
     });
 
-    this.createDeploymentInfoElement();
+    // this.createDeploymentInfoElement();
     if (this.config.show_status !== "no") {
       this.statusElement = this.createStatusElement();
       this.statusMessage = "";
