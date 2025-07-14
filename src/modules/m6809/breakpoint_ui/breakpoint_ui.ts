@@ -255,10 +255,10 @@ class BreakpointUI implements IModule {
  * parseAddress("label", { label: 0x1000 }); // returns 4096
  */
 function parseAddress(input: string, symbols: Record<string, number>): number | null {
-  // debugger;
-  const parsed = Number.parseInt(input, 16);
+  const isNumber = input.match(/^(?:0x)?[0-9a-fA-F]+$/);
+
   // If the input is a valid number, we just return it.
-  if (!Number.isNaN(parsed) && Number.isFinite(parsed)) return parsed;
+  if (isNumber) return Number.parseInt(input, 16);
 
   // If the input is not a number, we try to parse it as a symbol with an
   // offset.
