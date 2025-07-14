@@ -410,7 +410,9 @@ class RegisterUI implements IModule {
               // cell accordingly, then.
               this.et.emit("dbg:register_update", name, num);
             };
-            const flagsString = config.flags.join("");
+            const flagsString =
+              config.flags.map((f) => f.toLowerCase()).join("") +
+              config.flags.map((f) => f.toUpperCase()).join("");
             pattern = `(?!.*([${flagsString}]).*\\1)[${flagsString}_ ]+`;
           } else {
             // If the register does not have flags, we expect a hex number.
