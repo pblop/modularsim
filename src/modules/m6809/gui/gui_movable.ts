@@ -32,6 +32,7 @@ type GuiConfig = {
   show_status: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "no";
   rows: number; // Number of rows in the grid.
   columns: number; // Number of columns in the grid.
+  bounded: boolean; // Whether the floating panels should be bounded within the viewport.
 };
 
 /**
@@ -61,7 +62,6 @@ class CustomTabRenderer implements ITabRenderer {
     if (!this.draggableSetToFalse) {
       setTimeout(() => {
         //https://github.com/mathuo/dockview/issues/950
-        console.log(this._element.closest(".dv-tab"));
         const parentTab = this._element.closest(".dv-tab") as HTMLElement | null;
         if (!parentTab) return;
         parentTab.draggable = false;
@@ -82,9 +82,7 @@ class CustomTabRenderer implements ITabRenderer {
     });
     this._element.innerText = parameters.api.title || parameters.api.id;
   }
-  update() {
-    console.log(this._element.closest(".dv-tab"));
-  }
+  update() {}
   dispose() {}
 }
 
@@ -99,9 +97,7 @@ class Panel implements IContentRenderer {
     this._element = document.createElement("div");
   }
 
-  init(parameters: GroupPanelPartInitParameters): void {
-    console.log(`[gui] Panel initialized with parameters:`, parameters);
-  }
+  init(parameters: GroupPanelPartInitParameters): void {}
 }
 
 class Gui implements IModule {
@@ -193,6 +189,11 @@ class Gui implements IModule {
           required: false,
           default: 10,
         },
+        bounded: {
+          type: "boolean",
+          required: false,
+          default: false,
+        },
       },
       `[${this.id}] configuration error: `,
     );
@@ -220,10 +221,6 @@ class Gui implements IModule {
     this.gridElement = gridElement;
 
     this.dockViewApi = createDockview(gridElement, {
-      // theme: {
-      //   name: "mytheme",
-      //   className: "",
-      // },
       theme: {
         name: "simtheme",
         className: "dv-theme-sim",
@@ -237,8 +234,8 @@ class Gui implements IModule {
       disableDnd: true,
       locked: true,
       scrollbars: "native",
+      floatingGroupBounds: this.config.bounded ? "boundedWithinViewport" : undefined,
     });
-    console.log((this.gridElement.children[0] as HTMLDivElement).style);
 
     this.createDeploymentInfoElement();
     if (this.config.show_status !== "no") {
