@@ -172,30 +172,26 @@ class BreakpointUI implements IModule {
   };
 
   addBreakpoint = (address: number, internal = true) => {
-    if (!this.list) return;
-
     if (this.breakpoints.includes(address)) return;
     this.breakpoints.push(address);
     this.breakpoints.sort((a, b) => a - b);
 
+    if (!this.list) return;
     this.updateQueue.queueUpdate({ type: "add", address });
 
     if (internal) this.event_transceiver.emit("ui:breakpoint:add", address);
   };
   removeBreakpoint = (address: number, internal = true) => {
-    if (!this.list) return;
-
     if (!this.breakpoints.includes(address)) return;
     this.breakpoints = this.breakpoints.filter((a) => a !== address);
 
+    if (!this.list) return;
     this.updateQueue.queueUpdate({ type: "remove", address });
 
     if (internal) this.event_transceiver.emit("ui:breakpoint:remove", address);
   };
 
   onRegistersUpdate = (registers: Registers) => {
-    if (!this.panel) return;
-
     this.registers = registers.copy();
   };
 
