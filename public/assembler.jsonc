@@ -131,8 +131,8 @@
         "url": "./modules/m6809/loader/loader.js",
         "css": ["./modules/m6809/loader/loader.css"],
         "config": {
-          "file": "./programs/recumples.s19",
-          "symbolsFile": "./programs/recumples.noi",
+          "file": "./programs/hola.s19",
+          "symbolsFile": "./programs/hola.noi",
           // Ignorar los símbolos extra que genera el ensamblador.
           "symbolIgnoreRegex": "^(\\.__\\.|s_|l_).*$"
           // "file": "http://localhost:6809/programs/loop.bin"
