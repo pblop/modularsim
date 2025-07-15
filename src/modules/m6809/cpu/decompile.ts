@@ -407,7 +407,7 @@ export function getSymbolicAddress(
       const offset = address - symbolAddress;
       if (offset > maxOffset)
         // If the offset is greater than the maximum offset, we don't return it.
-        return [undefined, undefined];
+        continue;
       return [symbol, offset];
     }
   }
