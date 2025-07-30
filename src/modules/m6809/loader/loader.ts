@@ -6,7 +6,7 @@ import type { IModule, ModuleDeclaration } from "../../../types/module.js";
 import { createLanguageStrings } from "../../../utils/lang.js";
 
 type LoaderConfig = {
-  file: string;
+  file?: string;
   symbolsFile?: string;
   reloadOnPowerOn: boolean;
   reloadOnFileChange: "no" | "reset" | "fast_reset";
@@ -51,7 +51,7 @@ class Loader implements IModule {
   id: string;
   config: LoaderConfig;
 
-  fileType: "bin" | "s19";
+  fileType: "bin" | "s19" | undefined;
   symbolsType: "noice" | undefined;
   symbolIgnoreRegex: RegExp | undefined;
 
@@ -117,7 +117,7 @@ class Loader implements IModule {
       {
         file: {
           type: "string",
-          required: true,
+          required: false,
         },
         symbolsFile: {
           type: "string",
@@ -150,12 +150,22 @@ class Loader implements IModule {
       `[${this.id}] configuration error: `,
     );
 
-    if (this.config.file.endsWith(".bin")) {
-      this.fileType = "bin";
-    } else if (this.config.file.endsWith(".s19")) {
-      this.fileType = "s19";
-    } else {
-      throw new Error(`[${this.id}] Invalid file extension. Must be .bin or .s19`);
+    if (this.config.file !== undefined) {
+      if (this.config.file.startsWith("data:")) {
+        // If the file is a data URL, determine the type from the mime type.
+        this.fileType = getUrlFileType(this.config.file);
+        if (this.fileType === undefined) {
+          throw new Error(`[${this.id}] Invalid mime type in data URL: ${this.config.file}`);
+        }
+      } else {
+        if (this.config.file.endsWith(".bin")) {
+          this.fileType = "bin";
+        } else if (this.config.file.endsWith(".s19")) {
+          this.fileType = "s19";
+        } else {
+          throw new Error(`[${this.id}] Invalid file extension. Must be .bin or .s19`);
+        }
+      }
     }
 
     if (this.config.symbolsFile !== undefined) {
@@ -408,10 +418,11 @@ class Loader implements IModule {
 
   loadAll = () => {
     console.log(`[${this.id}] Loading program and symbols...`);
-    const promises = [this.loadFile(this.config.file, this.fileType)];
-    if (this.config.symbolsFile !== undefined) {
+    const promises = [];
+    if (this.config.file !== undefined)
+      promises.push(this.loadFile(this.config.file, this.fileType));
+    if (this.config.symbolsFile !== undefined)
       promises.push(this.loadSymbols(this.config.symbolsFile, this.symbolsType!));
-    }
     return Promise.all(promises);
   };
   onProgramReload = () => {
@@ -471,4 +482,34 @@ class Loader implements IModule {
   };
 }
 
+const DATA_URL_REGEX = /^data:([^/]+\/[^,;]+)(?:[^,]*?)(;base64)?,([\s\S]*)$/;
+/**
+ * Gets the file type from a URL.
+ * * In the case of a normal URL, it checks the file extension.
+ *   * s19 -> SREC file
+ *   * bin -> binary file
+ * * In the case of a data URL, it checks the mime type.
+ *   * If the mime type is not recognized, it returns undefined.
+ *   * If the mime type is text/x-srec, it returns SREC file.
+ *   * If the mime type is application/octet-stream, it returns binary file.
+ * @param url The URL to check.
+ * @returns The file type, either "s19" or "bin", or undefined if the type is not recognized.
+ */
+function getUrlFileType(url: string): "bin" | "s19" | undefined {
+  if (url.startsWith("data:")) {
+    // Data URL
+    const match = DATA_URL_REGEX.exec(url);
+    if (!match) return undefined;
+    const { 0: fullMatch, 1: mimeType, 2: base64, 3: data } = match;
+    if (mimeType === "text/x-srec") return "s19";
+    if (mimeType === "application/octet-stream") return "bin";
+    return undefined;
+  } else {
+    // Normal URL
+    const extension = url.split(".").pop()?.toLowerCase();
+    if (extension === "s19") return "s19";
+    if (extension === "bin") return "bin";
+    return undefined;
+  }
+}
 export default Loader;
