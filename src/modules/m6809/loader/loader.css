@@ -11,6 +11,6 @@
     display: none;
   }
   .gui-icon.file-up {
-    --icon: url("../gui/icons/file-up.svg");
+    --icon: var(--gui-icon-file-up);
   }
 }

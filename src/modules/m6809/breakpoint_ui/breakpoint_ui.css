@@ -45,12 +45,12 @@
   }
 
   .gui-icon.add {
-    --icon: url("../gui/icons/plus.svg");
+    --icon: var(--gui-icon-plus);
   }
   .gui-icon.remove-all {
-    --icon: url("../gui/icons/playlist-x.svg");
+    --icon: var(--gui-icon-playlist-x);
   }
   .gui-icon.remove-one {
-    --icon: url("../gui/icons/trash-x.svg");
+    --icon: var(--gui-icon-trash-x);
   }
 }

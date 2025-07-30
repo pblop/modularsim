@@ -15,18 +15,18 @@
   }
 
   .gui-icon.build {
-    --icon: url("../gui/icons/cog.svg");
+    --icon: var(--gui-icon-cog);
   }
   .gui-icon-button.active > .gui-icon.build {
     animation: aui-rotate 1s linear infinite;
   }
 
   .gui-icon.ok {
-    --icon: url("../gui/icons/check.svg");
+    --icon: var(--gui-icon-check);
     --icon-color: var(--gui-color-text-green)
   }
   .gui-icon.fail {
-    --icon: url("../gui/icons/x.svg");
+    --icon: var(--gui-icon-x);
     --icon-color: var(--gui-color-red)
   }
   .gui-icon-container:has(.gui-icon.ok), .gui-icon-container:has(.gui-icon.fail) {

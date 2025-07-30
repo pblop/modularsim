@@ -10,29 +10,29 @@
     border-radius: 4px;
   }
   .gui-icon.reset {
-    --icon: url("../gui/icons/reload.svg")
+    --icon: var(--gui-icon-reload);
   }
   .gui-icon.fast-reset {
-    --icon: url("../gui/icons/refresh-dot.svg")
+    --icon: var(--gui-icon-refresh-dot);
   }
   .gui-icon.pause {
-    --icon: url("../gui/icons/player-pause.svg")
+    --icon: var(--gui-icon-player-pause);
   }
   .gui-icon.continue{
-    --icon: url("../gui/icons/player-play.svg")
+    --icon: var(--gui-icon-player-play);
   }
   .gui-icon.step-cycle {
-    --icon: url("../gui/icons/arrow-right-circle.svg")
+    --icon: var(--gui-icon-arrow-right-circle);
   }
   .gui-icon.step-instruction {
-    --icon: url("../gui/icons/player-skip-forward.svg")
+    --icon: var(--gui-icon-player-skip-forward);
   }
   .gui-icon.cycle-counter {
-    --icon: url("../gui/icons/stopwatch.svg");
+    --icon: var(--gui-icon-stopwatch);
     display: inline-block;
   }
   .gui-icon.heartbeat {
-    --icon: url("../gui/icons/heart.svg");
+    --icon: var(--gui-icon-heart);
     --icon-color: var(--gui-color-red-background);
   }
 
@@ -79,7 +79,7 @@
       text-align: center;
       margin-right: 1em;
 
-      vertical-align: middle;
+      vertical-align: sub;
     }
   }
 }
