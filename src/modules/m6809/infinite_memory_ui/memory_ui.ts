@@ -171,9 +171,6 @@ class MemoryUI implements IModule {
     if (!this.panel || !this.memoryTable) return;
 
     this.memory[address] = data;
-    console.log(
-      `[${this.id}] Memory write result: 0x${address.toString(16).padStart(4, "0")} = 0x${data.toString(16).padStart(2, "0")}`,
-    );
     this.updateQueue.queueUpdate();
   };
   onReset = (): void => {
