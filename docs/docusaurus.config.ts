@@ -10,13 +10,13 @@ const config: Config = {
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
-  url: "https://your-docusaurus-site.example.com",
-  baseUrl: "/tfg/",
+  url: "https://pblop.github.io/",
+  baseUrl: "/modularsim/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "pblop",
-  projectName: "tfg",
+  projectName: "modularsim",
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -36,7 +36,7 @@ const config: Config = {
         docs: {
           sidebarPath: "./sidebars.ts",
           // Remove this to remove the "edit this page" links.
-          editUrl: "https://github.com/pblop/tfg/tree/main/docs/",
+          editUrl: "https://github.com/pblop/modularsim/tree/main/docs/",
         },
         blog: {
           showReadingTime: true,
@@ -45,7 +45,7 @@ const config: Config = {
             xslt: true,
           },
           // Remove this to remove the "edit this page" links.
-          editUrl: "https://github.com/pblop/tfg/tree/main/docs/",
+          editUrl: "https://github.com/pblop/modularsim/tree/main/docs/",
           // Useful options to enforce blogging best practices
           onInlineTags: "warn",
           onInlineAuthors: "warn",
@@ -92,7 +92,7 @@ const config: Config = {
         },
         { to: "blog", label: "Blog", position: "left" },
         {
-          href: "https://github.com/pblop/tfg",
+          href: "https://github.com/pblop/modularsim",
           label: "GitHub",
           position: "right",
         },
@@ -127,11 +127,11 @@ const config: Config = {
             },
             {
               label: "GitHub",
-              href: "https://github.com/pblop/tfg",
+              href: "https://github.com/pblop/modularsim",
             },
             {
               label: "Simulator",
-              href: "https://m6809.milu.0000234.xyz/",
+              href: "https://simulator.pabl.eu/",
             },
           ],
         },
