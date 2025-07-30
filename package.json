@@ -18,7 +18,7 @@
   "keywords": [],
   "license": "GPL-3.0-or-later",
   "scripts": {
-    "clean": "rm -rf ./dist/",
+    "clean": "rm -rf ./dist/ build.tar.gz",
     "build-ts": "tsc && cp -r ./src/ ./dist/source/",
     "build-programs": "cd ./programs/ && make",
     "build-test-programs": "cd ./programs/ && make test",
@@ -28,6 +28,7 @@
     "build": "npm run clean && npm run build-ts && npm run build-programs && npm run copy-static && ( npm run copy-libraries || true)",
     "start": "serve -n -C -l 6809 ./dist/",
     "dev": "nodemon -e ts,js,json,jsonc,html,css --watch './src/*' --watch './public/*' --exec 'npm run build && npm run start || true'",
+    "pack-ts": "npm run clean && npm run build-ts && tar cvzf build.tar.gz --directory=dist .",
     "cov:instructions": "bun ./scripts/instruction-coverage.ts"
   },
   "dependencies": {
