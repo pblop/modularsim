@@ -153,10 +153,11 @@ class Loader implements IModule {
     if (this.config.file !== undefined) {
       if (this.config.file.startsWith("data:")) {
         // If the file is a data URL, determine the type from the mime type.
-        this.fileType = getUrlFileType(this.config.file);
-        if (this.fileType === undefined) {
+        const type = getUrlFileType(this.config.file);
+        if (type !== "s19" && type !== "bin") {
           throw new Error(`[${this.id}] Invalid mime type in data URL: ${this.config.file}`);
         }
+        this.fileType = type;
       } else {
         if (this.config.file.endsWith(".bin")) {
           this.fileType = "bin";
@@ -169,10 +170,19 @@ class Loader implements IModule {
     }
 
     if (this.config.symbolsFile !== undefined) {
-      if (this.config.symbolsFile.endsWith(".noi")) {
-        this.symbolsType = "noice";
+      if (this.config.symbolsFile.startsWith("data:")) {
+        // If the symbols file is a data URL, determine the type from the mime type.
+        const type = getUrlFileType(this.config.symbolsFile);
+        if (type !== "noice") {
+          throw new Error(`[${this.id}] Invalid mime type in data URL: ${this.config.symbolsFile}`);
+        }
+        this.symbolsType = type;
       } else {
-        throw new Error(`[${this.id}] Invalid symbols file extension. Must be .noi`);
+        if (this.config.symbolsFile.endsWith(".noi")) {
+          this.symbolsType = "noice";
+        } else {
+          throw new Error(`[${this.id}] Invalid symbols file extension. Must be .noi`);
+        }
       }
     }
 
@@ -491,17 +501,19 @@ const DATA_URL_REGEX = /^data:([^/]+\/[^,;]+)(?:[^,]*?)(;base64)?,([\s\S]*)$/;
  * * In the case of a data URL, it checks the mime type.
  *   * If the mime type is not recognized, it returns undefined.
  *   * If the mime type is text/x-srec, it returns SREC file.
+ *   * If the mime type is application/x-noice, it returns NOICE file.
  *   * If the mime type is application/octet-stream, it returns binary file.
  * @param url The URL to check.
  * @returns The file type, either "s19" or "bin", or undefined if the type is not recognized.
  */
-function getUrlFileType(url: string): "bin" | "s19" | undefined {
+function getUrlFileType(url: string): "bin" | "s19" | "noice" | undefined {
   if (url.startsWith("data:")) {
     // Data URL
     const match = DATA_URL_REGEX.exec(url);
     if (!match) return undefined;
     const { 0: fullMatch, 1: mimeType, 2: base64, 3: data } = match;
     if (mimeType === "text/x-srec") return "s19";
+    if (mimeType === "application/x-noice") return "noice";
     if (mimeType === "application/octet-stream") return "bin";
     return undefined;
   } else {
