@@ -1,6 +1,7 @@
 name: Deploy Docusaurus to GitHub Pages
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -27,7 +28,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Install dependencies
+      - name: Install dependencies (project)
+        run: cd .. && bun install --frozen-lockfile
+      - name: Install dependencies (docs)
         run: bun install --frozen-lockfile
       - name: Build website
         run: bun run build
