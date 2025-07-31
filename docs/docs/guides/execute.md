@@ -75,4 +75,4 @@ de cómo hacerlo:
 
 Para distribuir el simulador, simplemente copia este archivo HTML y los
 archivos CSS necesarios a una carpeta, y podrás abrirlo en cualquier
-navegador.
+navegador (manteniendo la estructura de carpetas)
